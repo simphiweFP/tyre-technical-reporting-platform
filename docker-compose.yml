@@ -1,0 +1,32 @@
+services:
+  database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: tyre_reports
+      POSTGRES_USER: tyre_app
+      POSTGRES_PASSWORD: tyre_app
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tyre_app -d tyre_reports"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      database:
+        condition: service_healthy
+    command: ["sh", "-c", "alembic upgrade head && python -m backend.app.seed && uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"]
+
+volumes:
+  postgres_data:
+
