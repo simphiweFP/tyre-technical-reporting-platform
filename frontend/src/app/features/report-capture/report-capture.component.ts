@@ -1,19 +1,23 @@
+import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, OnDestroy, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { debounceTime, Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { ReportStore } from '../../core/data/report.store';
+import { ReportDeliveryService } from '../../core/delivery/report-delivery.service';
 import { ReportIntelligenceService } from '../../core/media/report-intelligence.service';
 import {
+  DeliveryAttempt,
   ExtractedTyreValue,
   PHOTO_CATEGORIES,
   ReportPhoto,
+  ReportRecipient,
   TechnicalReport,
 } from '../../shared/models/report.models';
 @Component({
   selector: 'app-report-capture',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, DatePipe],
   template: `
     <section class="capture-page">
       <header class="capture-header">
@@ -327,6 +331,50 @@ import {
                   {{ pdfBusy() ? 'Generating…' : 'Download PDF' }}
                 </button>
               </div>
+              <section class="delivery-panel">
+                <div>
+                  <span>Third-party delivery</span>
+                  <p>Send the PDF to an approved recipient. No approval step is required.</p>
+                </div>
+                <select [value]="selectedRecipient()" (change)="selectRecipient($event)">
+                  <option value="">Select a recipient</option>
+                  @for (recipient of recipients(); track recipient.id) {
+                    <option [value]="recipient.id">
+                      {{ recipient.company }} · {{ recipient.email }}
+                    </option>
+                  }
+                </select>
+                <button
+                  class="button primary"
+                  type="button"
+                  [disabled]="deliveryBusy() || !selectedRecipient()"
+                  (click)="sendReport()"
+                >
+                  {{ deliveryBusy() ? 'Sending…' : 'Email PDF' }}
+                </button>
+              </section>
+              @if (deliveryMessage()) {
+                <div class="validation-callout" role="status">{{ deliveryMessage() }}</div>
+              }
+              @if (deliveryHistory().length) {
+                <section class="delivery-history">
+                  <h3>Delivery history</h3>
+                  @for (item of deliveryHistory(); track item.id) {
+                    <article>
+                      <div>
+                        <strong>{{ item.recipient_email }}</strong>
+                        <small>{{ item.last_attempt_at | date: 'medium' }}</small>
+                      </div>
+                      <span [class.failed]="item.status === 'Failed'">
+                        {{ item.status }} · attempt {{ item.attempt_count }}
+                      </span>
+                      @if (item.status === 'Failed') {
+                        <button type="button" (click)="retryDelivery(item.id)">Retry</button>
+                      }
+                    </article>
+                  }
+                </section>
+              }
             }
           </main>
           <aside class="context-card card">
@@ -376,6 +424,7 @@ export class ReportCaptureComponent implements OnDestroy {
   private readonly store = inject(ReportStore);
   private readonly auth = inject(AuthService);
   private readonly intelligence = inject(ReportIntelligenceService);
+  private readonly delivery = inject(ReportDeliveryService);
   private readonly destroy$ = new Subject<void>();
   readonly step = signal(0);
   readonly saved = signal(true);
@@ -383,6 +432,11 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly captureMessage = signal('');
   readonly suggestions = signal<ExtractedTyreValue[]>([]);
   readonly pdfBusy = signal(false);
+  readonly deliveryBusy = signal(false);
+  readonly deliveryMessage = signal('');
+  readonly recipients = signal<ReportRecipient[]>([]);
+  readonly selectedRecipient = signal('');
+  readonly deliveryHistory = signal<DeliveryAttempt[]>([]);
   readonly stepLabels = ['Claim', 'Tyre', 'Photos', 'Review'];
   readonly photoCategories = PHOTO_CATEGORIES;
   readonly requiredCount = PHOTO_CATEGORIES.filter((p) => p.required).length;
@@ -456,6 +510,7 @@ export class ReportCaptureComponent implements OnDestroy {
       this.report().photos;
     });
     this.persist();
+    void this.loadDeliveryData();
   }
   ngOnDestroy(): void {
     this.persist();
@@ -564,6 +619,61 @@ export class ReportCaptureComponent implements OnDestroy {
     } finally {
       this.pdfBusy.set(false);
     }
+  }
+  selectRecipient(event: Event): void {
+    this.selectedRecipient.set((event.target as HTMLSelectElement).value);
+  }
+  async sendReport(): Promise<void> {
+    if (!this.readyForReview() || !this.selectedRecipient()) return;
+    this.deliveryBusy.set(true);
+    this.deliveryMessage.set('');
+    this.persist();
+    try {
+      const result = await this.delivery.deliver(this.report(), this.selectedRecipient());
+      this.deliveryMessage.set(
+        result.status === 'Sent'
+          ? `PDF emailed to ${result.recipient_email}.`
+          : `Delivery failed: ${result.error_message || 'SMTP service unavailable'}`,
+      );
+      const updated = {
+        ...this.report(),
+        status: result.status === 'Sent' ? ('Email Sent' as const) : ('Email Failed' as const),
+      };
+      this.report.set(updated);
+      this.store.save(updated);
+      await this.loadHistory();
+    } catch {
+      this.deliveryMessage.set('The delivery request could not be completed. Try again.');
+    } finally {
+      this.deliveryBusy.set(false);
+    }
+  }
+  async retryDelivery(deliveryId: string): Promise<void> {
+    this.deliveryBusy.set(true);
+    try {
+      const result = await this.delivery.retry(deliveryId);
+      this.deliveryMessage.set(
+        result.status === 'Sent'
+          ? `Retry succeeded for ${result.recipient_email}.`
+          : `Retry failed: ${result.error_message || 'SMTP service unavailable'}`,
+      );
+      await this.loadHistory();
+    } catch {
+      this.deliveryMessage.set('The retry request could not be completed. Try again.');
+    } finally {
+      this.deliveryBusy.set(false);
+    }
+  }
+  private async loadDeliveryData(): Promise<void> {
+    try {
+      const [recipients] = await Promise.all([this.delivery.recipients(), this.loadHistory()]);
+      this.recipients.set(recipients);
+    } catch {
+      this.deliveryMessage.set('Delivery contacts are temporarily unavailable.');
+    }
+  }
+  private async loadHistory(): Promise<void> {
+    this.deliveryHistory.set(await this.delivery.history(this.report().claimReference));
   }
   private readyForReview(): boolean {
     this.persist();

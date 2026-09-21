@@ -14,6 +14,13 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:4200"
     seed_admin_email: str = "admin@royaltyres.co.za"
     seed_admin_password: str = "ChangeMe123!"
+    smtp_host: str = "localhost"
+    smtp_port: int = 1025
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = False
+    email_from: str = "technical-reports@royaltyres.co.za"
+    email_from_name: str = "Royal Tyres Technical Reports"
 
     @property
     def cors_origins(self) -> list[str]:

@@ -1,12 +1,7 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-interface Recipient {
-  company: string;
-  contact: string;
-  email: string;
-  cc: string;
-  active: boolean;
-}
+import { ReportDeliveryService } from '../../core/delivery/report-delivery.service';
+import { ReportRecipient } from '../../shared/models/report.models';
 @Component({
   selector: 'app-recipients',
   imports: [FormsModule],
@@ -32,16 +27,23 @@ interface Recipient {
             <div class="company-icon">✉</div>
             <div class="person">
               <strong>{{ item.company }}</strong
-              ><span>{{ item.contact }}</span>
+              ><span>{{ item.contact_name }}</span>
             </div>
             <div>
               <strong>{{ item.email }}</strong
-              ><span>{{ item.cc ? 'CC: ' + item.cc : 'No default CC' }}</span>
+              ><span>{{ item.default_cc ? 'CC: ' + item.default_cc : 'No default CC' }}</span>
             </div>
-            <span class="active" [class.off]="!item.active">{{
-              item.active ? 'Active' : 'Inactive'
+            <span class="active" [class.off]="!item.is_active">{{
+              item.is_active ? 'Active' : 'Inactive'
             }}</span
-            ><button class="more" aria-label="Recipient options">•••</button>
+            ><button
+              class="more"
+              type="button"
+              (click)="toggle(item)"
+              [attr.aria-label]="'Toggle ' + item.company"
+            >
+              {{ item.is_active ? 'Disable' : 'Enable' }}
+            </button>
           </article>
         }
       </section>
@@ -80,35 +82,39 @@ interface Recipient {
   styleUrl: './admin.component.scss',
 })
 export class RecipientsComponent {
+  private readonly delivery = inject(ReportDeliveryService);
   readonly showForm = signal(false);
   readonly query = signal('');
-  readonly recipients = signal<Recipient[]>([
-    {
-      company: 'Manufacturer Claims Desk',
-      contact: 'Claims Department',
-      email: 'claims@example.co.za',
-      cc: '',
-      active: true,
-    },
-    {
-      company: 'Fleet Partner',
-      contact: 'Fleet Operations',
-      email: 'fleet@example.co.za',
-      cc: 'manager@example.co.za',
-      active: true,
-    },
-  ]);
+  readonly recipients = signal<ReportRecipient[]>([]);
   newRecipient = { company: '', contact: '', email: '', cc: '' };
-  filtered(): Recipient[] {
+  constructor() {
+    void this.load();
+  }
+  filtered(): ReportRecipient[] {
     const q = this.query().toLowerCase();
     return this.recipients().filter(
-      (r) => !q || `${r.company} ${r.email} ${r.contact}`.toLowerCase().includes(q),
+      (r) => !q || `${r.company} ${r.email} ${r.contact_name}`.toLowerCase().includes(q),
     );
   }
-  addRecipient(): void {
+  async addRecipient(): Promise<void> {
     if (!this.newRecipient.company || !this.newRecipient.email) return;
-    this.recipients.update((v) => [...v, { ...this.newRecipient, active: true }]);
+    const created = await this.delivery.createRecipient({
+      company: this.newRecipient.company,
+      contact_name: this.newRecipient.contact,
+      email: this.newRecipient.email,
+      default_cc: this.newRecipient.cc || null,
+    });
+    this.recipients.update((items) => [...items, created]);
     this.newRecipient = { company: '', contact: '', email: '', cc: '' };
     this.showForm.set(false);
+  }
+  async toggle(recipient: ReportRecipient): Promise<void> {
+    const updated = await this.delivery.setRecipientStatus(recipient.id, !recipient.is_active);
+    this.recipients.update((items) =>
+      items.map((item) => (item.id === updated.id ? updated : item)),
+    );
+  }
+  private async load(): Promise<void> {
+    this.recipients.set(await this.delivery.recipients(false));
   }
 }

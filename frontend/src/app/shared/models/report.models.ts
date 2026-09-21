@@ -99,6 +99,26 @@ export interface ImageAnalysisResponse {
   raw_text: string;
   quality_score: number;
 }
+export interface ReportRecipient {
+  id: string;
+  company: string;
+  contact_name: string;
+  email: string;
+  default_cc: string;
+  is_active: boolean;
+}
+export interface DeliveryAttempt {
+  id: string;
+  claim_reference: string;
+  recipient_email: string;
+  cc: string[];
+  status: 'Pending' | 'Sent' | 'Failed';
+  attempt_count: number;
+  message_id: string | null;
+  error_message: string | null;
+  created_at: string;
+  last_attempt_at: string;
+}
 export interface TechnicalReport {
   id: string;
   claimReference: string;

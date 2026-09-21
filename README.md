@@ -68,6 +68,22 @@ Phase 3 adds local Tesseract OCR for tyre markings, browser-side image compressi
 
 When all required fields and photographs are complete, the review screen generates a branded Royal Tyres PDF through the authenticated API. Install `tesseract-ocr` when running outside Docker.
 
+## Email delivery
+
+Administrators maintain approved third-party recipients. Technicians and salespeople select a recipient on the report review screen and send the generated PDF directly; there is no approval or rejection workflow. Every successful or failed attempt is recorded, failed attempts can be retried, and recipient changes and deliveries create audit events.
+
+Docker Compose includes Mailpit for safe local email testing. Its inbox is available at `http://localhost:8025`. For deployment, configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_USE_TLS`, `EMAIL_FROM` and `EMAIL_FROM_NAME` with the organisation's SMTP provider.
+
+## Production deployment checklist
+
+- Replace the JWT secret and seeded administrator password with managed secrets.
+- Use PostgreSQL with encrypted backups and run `alembic upgrade head` before starting the API.
+- Configure an HTTPS reverse proxy and restrict `ALLOWED_ORIGINS` to the deployed Angular URL.
+- Configure authenticated SMTP with TLS and verify the sender domain's SPF, DKIM and DMARC records.
+- Retain delivery and audit records according to the organisation's privacy policy.
+- Monitor failed deliveries and database health; never expose Mailpit in production.
+- Run `pytest`, `npm test -- --watch=false` and `npm run build` in CI before deployment.
+
 ## Roles
 
 - **Administrator:** manages users, roles, branches, recipients and all reports.
