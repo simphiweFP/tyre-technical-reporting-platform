@@ -1,0 +1,141 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(420px, 1.15fr) minmax(420px, 0.85fr);
+  background: #fff;
+}
+.story-panel {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding: 8vh 7vw;
+  color: #fff;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 75% 18%, rgba(215, 25, 32, 0.38), transparent 28%),
+    linear-gradient(145deg, #101214 15%, #262a2e 70%, #111315);
+}
+.story-panel:before {
+  content: '';
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  border: 90px solid rgba(255, 255, 255, 0.025);
+  border-radius: 50%;
+  right: -180px;
+  top: -150px;
+}
+.story-content {
+  position: relative;
+  max-width: 650px;
+}
+.brand-lockup,
+.mobile-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brand-lockup > span,
+.mobile-logo > span {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: var(--red);
+  border-radius: 12px;
+  font-weight: 900;
+}
+.brand-lockup strong {
+  font-family: 'Manrope';
+  font-size: 1.08rem;
+}
+.kicker {
+  margin: 17vh 0 18px;
+  color: #f06d71;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+}
+.story-content h1 {
+  max-width: 620px;
+  font-size: clamp(2.45rem, 4vw, 4.4rem);
+  line-height: 1.05;
+}
+.story-content > p:not(.kicker) {
+  max-width: 540px;
+  color: #b9bec2;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+.trust-row {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-top: 34px;
+  color: #dadddf;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+.form-panel {
+  display: grid;
+  place-items: center;
+  padding: 42px;
+}
+.login-card {
+  width: min(420px, 100%);
+}
+.mobile-logo {
+  display: none;
+  margin-bottom: 48px;
+}
+.mobile-logo strong {
+  font-family: 'Manrope';
+}
+.login-card h2 {
+  margin: 0;
+  font-size: 2rem;
+}
+.subtext {
+  margin: 9px 0 30px;
+  color: var(--muted);
+}
+form {
+  display: grid;
+  gap: 19px;
+}
+form .button {
+  width: 100%;
+  margin-top: 5px;
+}
+.login-error {
+  padding: 11px 13px;
+  border-radius: 9px;
+  background: #fff0f1;
+  color: #a9121b;
+  font-size: 0.8rem;
+}
+.support {
+  margin-top: 26px;
+  text-align: center;
+  color: #8b9298;
+  font-size: 0.76rem;
+}
+@media (max-width: 850px) {
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+  .story-panel {
+    display: none;
+  }
+  .form-panel {
+    padding: 32px 22px;
+  }
+  .mobile-logo {
+    display: flex;
+  }
+}

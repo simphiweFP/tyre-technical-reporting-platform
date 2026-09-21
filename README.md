@@ -50,6 +50,18 @@ pytest
 
 The seeded development administrator defaults are defined in `.env.example`. Change them before any shared deployment.
 
+## Angular frontend
+
+Phase 2 adds a feature-based Angular application in `frontend/`. It uses lazy-loaded features, route-level role guards, an authentication interceptor and a responsive application shell.
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+The frontend expects the API at `http://localhost:8000/api/v1`. Report drafts and image previews are currently saved in browser storage so an interrupted capture can be recovered on the same device. Server-side report persistence is introduced with the reporting API module before production deployment.
+
 ## Roles
 
 - **Administrator:** manages users, roles, branches, recipients and all reports.
