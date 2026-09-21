@@ -4,7 +4,13 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { debounceTime, Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { ReportStore } from '../../core/data/report.store';
-import { PHOTO_CATEGORIES, ReportPhoto, TechnicalReport } from '../../shared/models/report.models';
+import { ReportIntelligenceService } from '../../core/media/report-intelligence.service';
+import {
+  ExtractedTyreValue,
+  PHOTO_CATEGORIES,
+  ReportPhoto,
+  TechnicalReport,
+} from '../../shared/models/report.models';
 @Component({
   selector: 'app-report-capture',
   imports: [ReactiveFormsModule, RouterLink],
@@ -37,6 +43,9 @@ import { PHOTO_CATEGORIES, ReportPhoto, TechnicalReport } from '../../shared/mod
       <form [formGroup]="form" (ngSubmit)="next()">
         <div class="capture-layout">
           <main class="form-card card">
+            @if (captureMessage() && step() !== 2) {
+              <div class="validation-callout" role="status">{{ captureMessage() }}</div>
+            }
             @if (step() === 0) {
               <div class="section-title">
                 <span>01</span>
@@ -108,6 +117,28 @@ import { PHOTO_CATEGORIES, ReportPhoto, TechnicalReport } from '../../shared/mod
                   <p>Capture the markings and inspection measurements.</p>
                 </div>
               </div>
+              @if (suggestions().length) {
+                <section class="suggestion-panel" aria-live="polite">
+                  <div>
+                    <span>OCR-assisted suggestions</span>
+                    <p>Review each value before applying it. Nothing is filled automatically.</p>
+                  </div>
+                  @for (suggestion of suggestions(); track suggestion.field) {
+                    <article>
+                      <div>
+                        <small>{{ fieldLabel(suggestion.field) }}</small>
+                        <strong>{{ suggestion.value }}</strong>
+                        <em>{{ confidence(suggestion.confidence) }} confidence</em>
+                      </div>
+                      @if (suggestion.field !== 'tyreSize') {
+                        <button type="button" (click)="acceptSuggestion(suggestion)">
+                          Use value
+                        </button>
+                      }
+                    </article>
+                  }
+                </section>
+              }
               <div class="form-grid">
                 <div class="field">
                   <label>Brand *</label
@@ -184,6 +215,9 @@ import { PHOTO_CATEGORIES, ReportPhoto, TechnicalReport } from '../../shared/mod
                   <p>{{ photoCount() }} of {{ requiredCount }} required photographs captured.</p>
                 </div>
               </div>
+              @if (captureMessage()) {
+                <div class="validation-callout" role="status">{{ captureMessage() }}</div>
+              }
               <div class="photo-grid">
                 @for (item of photoCategories; track item.key) {
                   <article class="photo-slot" [class.complete]="photoFor(item.key)">
@@ -202,6 +236,9 @@ import { PHOTO_CATEGORIES, ReportPhoto, TechnicalReport } from '../../shared/mod
                           <em>*</em>
                         }</strong
                       ><small>{{ item.hint }}</small>
+                      @if (analysingCategory() === item.key) {
+                        <small class="analysing">Reading tyre markings…</small>
+                      }
                     </div>
                     <label class="capture-button"
                       ><input
@@ -275,12 +312,20 @@ import { PHOTO_CATEGORIES, ReportPhoto, TechnicalReport } from '../../shared/mod
                   <button type="button" (click)="goTo(2)">Review photographs</button>
                 </section>
               </div>
-              <div class="next-phase">
-                <span>PDF & email delivery</span>
-                <p>
-                  This report is ready for Phase 3 PDF generation once all required information and
-                  photographs are complete.
-                </p>
+              @if (duplicateWarning()) {
+                <div class="validation-callout">{{ duplicateWarning() }}</div>
+              }
+              <div class="next-phase ready">
+                <span>Royal Tyres PDF</span>
+                <p>Generate a branded, email-ready PDF containing the report and photographs.</p>
+                <button
+                  class="button primary"
+                  type="button"
+                  [disabled]="pdfBusy()"
+                  (click)="downloadPdf()"
+                >
+                  {{ pdfBusy() ? 'Generating…' : 'Download PDF' }}
+                </button>
               </div>
             }
           </main>
@@ -317,7 +362,7 @@ import { PHOTO_CATEGORIES, ReportPhoto, TechnicalReport } from '../../shared/mod
           @if (step() < 3) {
             <button class="button primary" type="submit">Continue →</button>
           } @else {
-            <a class="button primary" routerLink="/reports">Finish review</a>
+            <a class="button secondary" routerLink="/reports">Finish review</a>
           }
         </footer>
       </form>
@@ -330,9 +375,14 @@ export class ReportCaptureComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(ReportStore);
   private readonly auth = inject(AuthService);
+  private readonly intelligence = inject(ReportIntelligenceService);
   private readonly destroy$ = new Subject<void>();
   readonly step = signal(0);
   readonly saved = signal(true);
+  readonly analysingCategory = signal('');
+  readonly captureMessage = signal('');
+  readonly suggestions = signal<ExtractedTyreValue[]>([]);
+  readonly pdfBusy = signal(false);
   readonly stepLabels = ['Claim', 'Tyre', 'Photos', 'Review'];
   readonly photoCategories = PHOTO_CATEGORIES;
   readonly requiredCount = PHOTO_CATEGORIES.filter((p) => p.required).length;
@@ -381,6 +431,21 @@ export class ReportCaptureComponent implements OnDestroy {
       !!this.form.controls.serialNumber.value,
   );
   readonly photosComplete = computed(() => this.photoCount() === this.requiredCount);
+  readonly duplicateWarning = computed(() => {
+    const current = this.form.getRawValue();
+    const duplicate = this.store
+      .reports()
+      .find(
+        (item) =>
+          item.id !== this.report().id &&
+          ((current.customerInvoiceNumber &&
+            item.customerInvoiceNumber === current.customerInvoiceNumber) ||
+            (current.serialNumber && item.serialNumber === current.serialNumber)),
+      );
+    return duplicate
+      ? `Possible duplicate of ${duplicate.claimReference}. Verify before sending.`
+      : '';
+  });
   constructor() {
     if (!this.form.controls.salesperson.value)
       this.form.controls.salesperson.setValue(this.auth.user()?.full_name ?? '');
@@ -398,6 +463,7 @@ export class ReportCaptureComponent implements OnDestroy {
     this.destroy$.complete();
   }
   goTo(value: number): void {
+    if (value === 3 && !this.readyForReview()) return;
     this.step.set(value);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -413,30 +479,113 @@ export class ReportCaptureComponent implements OnDestroy {
   photoFor(category: string): ReportPhoto | undefined {
     return this.report().photos.find((p) => p.category === category);
   }
-  capture(event: Event, category: string): void {
+  async capture(event: Event, category: string): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
+    input.value = '';
+    this.captureMessage.set('');
+    try {
+      const optimized = await this.intelligence.optimize(file);
+      const duplicate = this.report().photos.find(
+        (photo) => photo.sha256 === optimized.sha256 && photo.category !== category,
+      );
+      if (duplicate) {
+        this.captureMessage.set(
+          `That image is already used for ${duplicate.label}. Capture a different view.`,
+        );
+        return;
+      }
+      const categoryDetails = PHOTO_CATEGORIES.find((item) => item.key === category);
       const photo: ReportPhoto = {
         category,
         name: file.name,
-        previewUrl: String(reader.result),
+        label: categoryDetails?.label ?? category,
+        previewUrl: optimized.previewUrl,
         capturedAt: new Date().toISOString(),
+        mimeType: optimized.blob.type,
+        byteSize: optimized.blob.size,
+        sha256: optimized.sha256,
       };
       this.report.update((r) => ({
         ...r,
         photos: [...r.photos.filter((p) => p.category !== category), photo],
       }));
       this.persist();
-    };
-    reader.readAsDataURL(file);
-    input.value = '';
+      if (['dot', 'serialNumber', 'entireTyreDot'].includes(category)) {
+        this.analysingCategory.set(category);
+        try {
+          const analysis = await this.intelligence.analyse(optimized.blob, file.name);
+          this.suggestions.set(analysis.values);
+          if (analysis.values.length) {
+            this.captureMessage.set(
+              'Tyre markings found. Review the suggestions in the Tyre step before applying them.',
+            );
+          }
+        } finally {
+          this.analysingCategory.set('');
+        }
+      }
+    } catch {
+      this.captureMessage.set('The image could not be processed. Try another photo.');
+      this.analysingCategory.set('');
+    }
   }
   removePhoto(category: string): void {
     this.report.update((r) => ({ ...r, photos: r.photos.filter((p) => p.category !== category) }));
     this.persist();
+  }
+  acceptSuggestion(suggestion: ExtractedTyreValue): void {
+    if (suggestion.field === 'tyreSize') return;
+    this.form.controls[suggestion.field].setValue(suggestion.value);
+    this.suggestions.update((items) => items.filter((item) => item.field !== suggestion.field));
+    this.persist();
+  }
+  fieldLabel(field: string): string {
+    return (
+      { rimSize: 'Rim size', serialNumber: 'Serial number', tyreSize: 'Tyre size' }[field] ??
+      field.toUpperCase()
+    );
+  }
+  confidence(value: number): string {
+    return `${Math.round(value * 100)}%`;
+  }
+  async downloadPdf(): Promise<void> {
+    if (!this.readyForReview()) return;
+    this.persist();
+    this.pdfBusy.set(true);
+    try {
+      await this.intelligence.downloadPdf(this.report());
+      const updated = { ...this.report(), status: 'Ready to Submit' as const };
+      this.report.set(updated);
+      this.store.save(updated);
+    } catch {
+      this.captureMessage.set('PDF generation failed. Check the API connection and try again.');
+    } finally {
+      this.pdfBusy.set(false);
+    }
+  }
+  private readyForReview(): boolean {
+    this.persist();
+    if (!this.claimComplete()) {
+      this.step.set(0);
+      this.captureMessage.set('Complete the required customer and invoice fields.');
+      return false;
+    }
+    if (!this.tyreComplete()) {
+      this.step.set(1);
+      this.captureMessage.set('Complete the required brand, DOT and serial number fields.');
+      return false;
+    }
+    if (!this.photosComplete()) {
+      this.step.set(2);
+      const remaining = this.requiredCount - this.photoCount();
+      this.captureMessage.set(
+        `Capture ${remaining} remaining required photograph${remaining === 1 ? '' : 's'}.`,
+      );
+      return false;
+    }
+    return true;
   }
   private loadReport(): TechnicalReport {
     const id = this.route.snapshot.paramMap.get('id');

@@ -154,6 +154,65 @@
   grid-template-columns: 1fr 1fr;
   gap: 19px;
 }
+.validation-callout {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border: 1px solid #efd49f;
+  border-radius: 9px;
+  background: #fff8e8;
+  color: #76500d;
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+.suggestion-panel {
+  margin: -7px 0 22px;
+  padding: 16px;
+  border: 1px solid #cbdce8;
+  border-radius: 12px;
+  background: #f4f9fc;
+}
+.suggestion-panel > div > span {
+  color: #245b78;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+.suggestion-panel > div > p {
+  margin: 4px 0 13px;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+.suggestion-panel article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid #dce8ef;
+}
+.suggestion-panel article div {
+  display: grid;
+  grid-template-columns: 105px minmax(80px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.suggestion-panel small,
+.suggestion-panel em {
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+.suggestion-panel em {
+  font-style: normal;
+}
+.suggestion-panel button {
+  border: 1px solid #aac6d7;
+  border-radius: 7px;
+  background: #fff;
+  padding: 7px 10px;
+  color: #245b78;
+  font-size: 0.67rem;
+  font-weight: 800;
+  cursor: pointer;
+}
 .field.full {
   grid-column: 1/-1;
 }
@@ -294,6 +353,10 @@
 .complete .photo-copy small {
   color: #d6d9db;
 }
+.photo-copy .analysing {
+  color: #fff;
+  font-weight: 800;
+}
 .capture-button {
   position: relative;
   z-index: 3;
@@ -397,6 +460,17 @@
   color: var(--muted);
   font-size: 0.72rem;
 }
+.next-phase.ready {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.next-phase.ready span {
+  margin: 0;
+}
+.next-phase.ready p {
+  flex: 1;
+}
 .capture-footer {
   position: fixed;
   z-index: 10;
@@ -484,5 +558,14 @@
   }
   .capture-header h1 {
     font-size: 1rem;
+  }
+  .suggestion-panel article,
+  .next-phase.ready {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .suggestion-panel article div {
+    grid-template-columns: 1fr;
+    gap: 3px;
   }
 }

@@ -52,7 +52,7 @@ The seeded development administrator defaults are defined in `.env.example`. Cha
 
 ## Angular frontend
 
-Phase 2 adds a feature-based Angular application in `frontend/`. It uses lazy-loaded features, route-level role guards, an authentication interceptor and a responsive application shell.
+The feature-based Angular application uses lazy-loaded features, route-level role guards, an authentication interceptor and a responsive application shell.
 
 ```bash
 cd frontend
@@ -60,7 +60,13 @@ npm install
 npm start
 ```
 
-The frontend expects the API at `http://localhost:8000/api/v1`. Report drafts and image previews are currently saved in browser storage so an interrupted capture can be recovered on the same device. Server-side report persistence is introduced with the reporting API module before production deployment.
+The frontend expects the API at `http://localhost:8000/api/v1`. Report drafts and compressed image previews are saved in browser storage so an interrupted capture can be recovered on the same device.
+
+## OCR-assisted capture and PDF generation
+
+Phase 3 adds local Tesseract OCR for tyre markings, browser-side image compression and duplicate-image detection. OCR values are suggestions only: the technician or salesperson must confirm each extracted value before it is copied into the report. This avoids silent AI decisions and keeps the operator accountable for the final data.
+
+When all required fields and photographs are complete, the review screen generates a branded Royal Tyres PDF through the authenticated API. Install `tesseract-ocr` when running outside Docker.
 
 ## Roles
 

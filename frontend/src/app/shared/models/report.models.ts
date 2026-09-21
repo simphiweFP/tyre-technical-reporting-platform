@@ -81,8 +81,23 @@ export const PHOTO_CATEGORIES = [
 export interface ReportPhoto {
   category: string;
   name: string;
+  label: string;
   previewUrl: string;
   capturedAt: string;
+  mimeType: string;
+  byteSize: number;
+  sha256: string;
+}
+export type ExtractableTyreField = 'brand' | 'rimSize' | 'dot' | 'serialNumber' | 'tyreSize';
+export interface ExtractedTyreValue {
+  field: ExtractableTyreField;
+  value: string;
+  confidence: number;
+}
+export interface ImageAnalysisResponse {
+  values: ExtractedTyreValue[];
+  raw_text: string;
+  quality_score: number;
 }
 export interface TechnicalReport {
   id: string;
