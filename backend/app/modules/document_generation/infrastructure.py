@@ -9,14 +9,15 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
+    BaseDocTemplate,
+    Frame,
     Image,
     PageBreak,
+    PageTemplate,
     Paragraph,
-    SimpleDocTemplate,
     Spacer,
     Table,
     TableStyle,
@@ -28,6 +29,7 @@ BLACK = colors.HexColor("#000000")
 NAVY = colors.HexColor("#10254A")
 BODY = colors.HexColor("#24344D")
 RED = colors.HexColor("#E3182D")
+TEAL = colors.HexColor("#18B99A")
 LIGHT_BLUE = colors.HexColor("#EAF3FC")
 PALE_BLUE = colors.HexColor("#F7FAFD")
 BORDER = colors.HexColor("#D9D9D9")
@@ -53,49 +55,39 @@ class ReportLabTechnicalReportGenerator:
     def generate(self, report: dict) -> bytes:
         _register_fonts()
         output = BytesIO()
-        document = SimpleDocTemplate(
+        document = BaseDocTemplate(
             output,
             pagesize=LETTER,
             rightMargin=0.7 * 25.4 * mm,
             leftMargin=0.7 * 25.4 * mm,
-            topMargin=64 * mm,
-            bottomMargin=40 * mm,
+            topMargin=60 * mm,
+            bottomMargin=36 * mm,
             title=f"Technical Claim Report {report.get('claimReference', '')}",
             author="Royal Tyres",
             subject="Tyre technical inspection claim",
         )
-        styles = self._styles()
-        story = self._cover(report, styles)
-        for heading, fields in (
-            ("Claim and customer details", self._claim_fields()),
-            ("Tyre inspection", self._inspection_fields()),
-            ("Vehicle and findings", self._vehicle_fields()),
-        ):
-            story.extend(
-                [
-                    Spacer(1, 6 / 72 * 25.4 * mm),
-                    Paragraph(heading, styles["SectionRT"]),
-                    Spacer(1, 3 / 72 * 25.4 * mm),
-                    self._details_table(report, styles, fields),
-                ]
-            )
-        story.extend(
+        content_frame = Frame(
+            document.leftMargin,
+            document.bottomMargin,
+            document.width,
+            document.height,
+            id="report-content",
+            showBoundary=0,
+        )
+        document.addPageTemplates(
             [
-                PageBreak(),
-                Paragraph("Inspection photographs", styles["SectionRT"]),
-                Spacer(1, 4 / 72 * 25.4 * mm),
-                Paragraph(
-                    "Photographs captured as supporting evidence for this "
-                    "technical claim.",
-                    styles["BodyRT"],
-                ),
-                Spacer(1, 3 * mm),
-                self._photos(report, styles),
+                PageTemplate(
+                    id="royal-tyres-report",
+                    frames=[content_frame],
+                    onPage=self._first_page_branding,
+                    onPageEnd=self._later_page_branding,
+                )
             ]
         )
-        document.build(
-            story, onFirstPage=self._page_branding, onLaterPages=self._page_branding
-        )
+        styles = self._styles()
+        story = [self._details_table(report, styles, self._all_fields())]
+        story.extend(self._photos(report, styles))
+        document.build(story)
         return output.getvalue()
 
     @staticmethod
@@ -165,26 +157,26 @@ class ReportLabTechnicalReportGenerator:
                 "FieldLabel",
                 "BodyText",
                 fontName=BOLD_FONT,
-                fontSize=9,
-                leading=11,
-                textColor=NAVY,
+                fontSize=6.5,
+                leading=8,
+                textColor=BLACK,
             ),
             "FieldValue": style(
                 "FieldValue",
                 "BodyText",
                 fontName=REGULAR_FONT,
-                fontSize=9,
-                leading=11,
-                textColor=BODY,
+                fontSize=6.5,
+                leading=8,
+                textColor=BLACK,
             ),
             "PhotoLabel": style(
                 "PhotoLabel",
                 "BodyText",
                 fontName=BOLD_FONT,
-                fontSize=9.5,
-                leading=11.5,
-                textColor=NAVY,
-                alignment=TA_CENTER,
+                fontSize=8,
+                leading=10,
+                textColor=BLACK,
+                alignment=TA_LEFT,
             ),
             "Empty": style(
                 "Empty",
@@ -262,112 +254,77 @@ class ReportLabTechnicalReportGenerator:
     def _details_table(
         self, report: dict, styles, fields: list[tuple[str, str]]
     ) -> Table:
-        rows = [
+        header_style = ParagraphStyle(
+            "OriginalHeader",
+            parent=styles["FieldLabel"],
+            textColor=colors.white,
+            fontName=BOLD_FONT,
+        )
+        rows = [[Paragraph("Field", header_style), Paragraph("Value", header_style)]]
+        rows.extend(
             [
-                Paragraph("FIELD", styles["FieldLabel"]),
-                Paragraph("RECORDED VALUE", styles["FieldLabel"]),
-                Paragraph("FIELD", styles["FieldLabel"]),
-                Paragraph("RECORDED VALUE", styles["FieldLabel"]),
+                Paragraph(escape(label), styles["FieldLabel"]),
+                Paragraph(
+                    escape(self._value(report, key, "N/A")), styles["FieldValue"]
+                ),
             ]
-        ]
-        for index in range(0, len(fields), 2):
-            left_label, left_key = fields[index]
-            row = [
-                Paragraph(escape(left_label), styles["FieldLabel"]),
-                Paragraph(escape(self._value(report, left_key)), styles["FieldValue"]),
-            ]
-            if index + 1 < len(fields):
-                right_label, right_key = fields[index + 1]
-                row.extend(
-                    [
-                        Paragraph(escape(right_label), styles["FieldLabel"]),
-                        Paragraph(
-                            escape(self._value(report, right_key)),
-                            styles["FieldValue"],
-                        ),
-                    ]
-                )
-            else:
-                row.extend(["", ""])
-            rows.append(row)
+            for label, key in fields
+        )
         commands = [
-            ("BACKGROUND", (0, 0), (-1, 0), LIGHT_BLUE),
-            ("GRID", (0, 0), (-1, -1), 0.45, BORDER),
+            ("BACKGROUND", (0, 0), (-1, 0), TEAL),
+            ("LINEBELOW", (0, 0), (-1, -1), 0.25, BORDER),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 3.5 * mm),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 3.5 * mm),
-            ("TOPPADDING", (0, 0), (-1, -1), 0.75 * mm),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0.75 * mm),
+            ("LEFTPADDING", (0, 0), (-1, -1), 1.5 * mm),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 1.5 * mm),
+            ("TOPPADDING", (0, 0), (-1, -1), 0.55 * mm),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0.55 * mm),
         ]
-        for row_index in range(2, len(rows), 2):
-            commands.append(("BACKGROUND", (0, row_index), (-1, row_index), PALE_BLUE))
         table = Table(
             rows,
-            colWidths=[35 * mm, 55.15 * mm, 35 * mm, 55.15 * mm],
+            colWidths=[67 * mm, 113.3 * mm],
             repeatRows=1,
         )
         table.setStyle(TableStyle(commands))
         return table
 
-    def _photos(self, report: dict, styles) -> Table | Paragraph:
-        cells = []
+    def _photos(self, report: dict, styles) -> list:
+        pages = []
         for photo in report.get("photos", []):
             try:
-                source = self._open_photo(photo)
-                source.thumbnail((1200, 800))
-                image_buffer = BytesIO()
-                source.save(image_buffer, "JPEG", quality=86, optimize=True)
-                image_buffer.seek(0)
+                if photo.get("filePath"):
+                    image_source = str(photo["filePath"])
+                    with PillowImage.open(image_source) as source:
+                        width, height = source.size
+                else:
+                    encoded = str(photo.get("previewUrl", "")).split(",", 1)[-1]
+                    image_source = BytesIO(base64.b64decode(encoded))
+                    with PillowImage.open(image_source) as source:
+                        width, height = source.size
+                    image_source.seek(0)
+                scale = min((75 * mm) / width, (112 * mm) / height)
                 picture = Image(
-                    image_buffer, width=80 * mm, height=26 * mm, kind="proportional"
+                    image_source, width=width * scale, height=height * scale
                 )
+                picture.hAlign = "LEFT"
                 name = str(photo.get("label") or photo.get("category", "Photo"))
-                card = Table(
+                pages.extend(
                     [
-                        [Paragraph(escape(name.upper()), styles["PhotoLabel"])],
-                        [picture],
-                    ],
-                    colWidths=[86 * mm],
-                    rowHeights=[7 * mm, 29 * mm],
+                        PageBreak(),
+                        Paragraph(escape(name.upper()), styles["PhotoLabel"]),
+                        Spacer(1, 3 * mm),
+                        picture,
+                    ]
                 )
-                card.setStyle(
-                    TableStyle(
-                        [
-                            ("BACKGROUND", (0, 0), (0, 0), LIGHT_BLUE),
-                            ("BOX", (0, 0), (-1, -1), 0.55, BORDER),
-                            ("LINEBELOW", (0, 0), (-1, 0), 0.55, BORDER),
-                            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                            ("LEFTPADDING", (0, 0), (-1, -1), 2 * mm),
-                            ("RIGHTPADDING", (0, 0), (-1, -1), 2 * mm),
-                            ("TOPPADDING", (0, 0), (-1, -1), 1.5 * mm),
-                            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.5 * mm),
-                        ]
-                    )
-                )
-                cells.append(card)
             except Exception:
                 continue
-        if not cells:
-            return Paragraph("No photographs were supplied.", styles["Empty"])
-        rows = [cells[index : index + 2] for index in range(0, len(cells), 2)]
-        if len(rows[-1]) == 1:
-            rows[-1].append("")
-        table = Table(
-            rows, colWidths=[90.15 * mm, 90.15 * mm], rowHeights=[38 * mm] * len(rows)
-        )
-        table.setStyle(
-            TableStyle(
+        if not pages:
+            pages.extend(
                 [
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 4 * mm),
-                    ("TOPPADDING", (0, 0), (-1, -1), 0),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4 * mm),
+                    PageBreak(),
+                    Paragraph("NO PHOTOGRAPHS SUPPLIED", styles["Empty"]),
                 ]
             )
-        )
-        return table
+        return pages
 
     @staticmethod
     def _open_photo(photo: dict) -> PillowImage.Image:
@@ -419,30 +376,47 @@ class ReportLabTechnicalReportGenerator:
             ("Other relevant information", "notes"),
         ]
 
+    @classmethod
+    def _all_fields(cls) -> list[tuple[str, str]]:
+        return [
+            ("Claim Reference", "claimReference"),
+            ("Date", "updatedAt"),
+            ("Class", "internalExternal"),
+            *cls._claim_fields()[1:],
+            *cls._inspection_fields(),
+            *cls._vehicle_fields(),
+        ]
+
+    @staticmethod
+    def _first_page_branding(canvas, document):
+        if canvas.getPageNumber() == 1:
+            ReportLabTechnicalReportGenerator._page_branding(canvas, document)
+
+    @staticmethod
+    def _later_page_branding(canvas, document):
+        if canvas.getPageNumber() > 1:
+            ReportLabTechnicalReportGenerator._page_branding(canvas, document)
+
     @staticmethod
     def _page_branding(canvas, document):
         settings = get_settings()
         asset_root = Path(__file__).resolve().parents[3] / "assets"
         header_path = Path(
             settings.royal_tyres_report_header_path
-            or asset_root / "royal-tyres-report-header.png"
+            or asset_root / "royal-tyres-report-header-print.png"
         )
         footer_path = Path(
             settings.royal_tyres_report_footer_path
-            or asset_root / "royal-tyres-report-footer.png"
+            or asset_root / "royal-tyres-report-footer-print.png"
         )
         canvas.saveState()
         side_margin = 0.7 * 25.4 * mm
         available_width = LETTER[0] - 2 * side_margin
         if header_path.is_file():
             with PillowImage.open(header_path) as source:
-                header = source.crop((35, 30, 970, 280)).convert("RGB")
-                header_buffer = BytesIO()
-                header.save(header_buffer, "PNG")
-                header_buffer.seek(0)
-                header_height = available_width * header.height / header.width
+                header_height = available_width * source.height / source.width
                 canvas.drawImage(
-                    ImageReader(header_buffer),
+                    str(header_path),
                     side_margin,
                     LETTER[1] - 10 * mm - header_height,
                     width=available_width,
@@ -452,13 +426,9 @@ class ReportLabTechnicalReportGenerator:
                 )
         if footer_path.is_file():
             with PillowImage.open(footer_path) as source:
-                footer = source.crop((43, 155, 935, 270)).convert("RGB")
-                footer_buffer = BytesIO()
-                footer.save(footer_buffer, "PNG")
-                footer_buffer.seek(0)
-                footer_height = available_width * footer.height / footer.width
+                footer_height = available_width * source.height / source.width
                 canvas.drawImage(
-                    ImageReader(footer_buffer),
+                    str(footer_path),
                     side_margin,
                     8 * mm,
                     width=available_width,
@@ -466,7 +436,4 @@ class ReportLabTechnicalReportGenerator:
                     preserveAspectRatio=True,
                     mask="auto",
                 )
-        canvas.setFont(REGULAR_FONT, 6.8)
-        canvas.setFillColor(MUTED)
-        canvas.drawRightString(LETTER[0] - side_margin, 4 * mm, f"Page {document.page}")
         canvas.restoreState()
