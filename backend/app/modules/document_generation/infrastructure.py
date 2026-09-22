@@ -5,8 +5,8 @@ from pathlib import Path
 
 from PIL import Image as PillowImage
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
@@ -23,12 +23,12 @@ from reportlab.platypus import (
 
 from backend.app.core.config import get_settings
 
-BLACK = colors.HexColor("#111111")
-NAVY = colors.HexColor("#122B52")
-BODY = colors.HexColor("#34445F")
-RED = colors.HexColor("#ED1C2E")
-LIGHT_BLUE = colors.HexColor("#DFEBF7")
-PALE_BLUE = colors.HexColor("#F4F8FC")
+BLACK = colors.HexColor("#000000")
+NAVY = colors.HexColor("#10254A")
+BODY = colors.HexColor("#24344D")
+RED = colors.HexColor("#E3182D")
+LIGHT_BLUE = colors.HexColor("#EAF3FC")
+PALE_BLUE = colors.HexColor("#F7FAFD")
 BORDER = colors.HexColor("#D9D9D9")
 MUTED = colors.HexColor("#69778C")
 REGULAR_FONT = "RoyalTyresSans"
@@ -54,11 +54,11 @@ class ReportLabTechnicalReportGenerator:
         output = BytesIO()
         document = SimpleDocTemplate(
             output,
-            pagesize=A4,
-            rightMargin=17 * mm,
-            leftMargin=17 * mm,
-            topMargin=16 * mm,
-            bottomMargin=17 * mm,
+            pagesize=LETTER,
+            rightMargin=0.7 * 25.4 * mm,
+            leftMargin=0.7 * 25.4 * mm,
+            topMargin=0.579861 * 25.4 * mm,
+            bottomMargin=0.55 * 25.4 * mm,
             title=f"Technical Claim Report {report.get('claimReference', '')}",
             author="Royal Tyres",
             subject="Tyre technical inspection claim",
@@ -72,9 +72,9 @@ class ReportLabTechnicalReportGenerator:
         ):
             story.extend(
                 [
-                    Spacer(1, 5 * mm),
+                    Spacer(1, 9 / 72 * 25.4 * mm),
                     Paragraph(heading, styles["SectionRT"]),
-                    Spacer(1, 2.5 * mm),
+                    Spacer(1, 4 / 72 * 25.4 * mm),
                     self._details_table(report, styles, fields),
                 ]
             )
@@ -82,13 +82,13 @@ class ReportLabTechnicalReportGenerator:
             [
                 PageBreak(),
                 Paragraph("Inspection photographs", styles["SectionRT"]),
-                Spacer(1, 1.5 * mm),
+                Spacer(1, 4 / 72 * 25.4 * mm),
                 Paragraph(
                     "Photographs captured as supporting evidence for this "
                     "technical claim.",
                     styles["BodyRT"],
                 ),
-                Spacer(1, 4 * mm),
+                Spacer(1, 3 * mm),
                 self._photos(report, styles),
             ]
         )
@@ -117,8 +117,8 @@ class ReportLabTechnicalReportGenerator:
                 "AccentRT",
                 "Heading2",
                 fontName=BOLD_FONT,
-                fontSize=12.5,
-                leading=15,
+                fontSize=10.5,
+                leading=13,
                 textColor=RED,
                 spaceBefore=0,
                 spaceAfter=0,
@@ -137,16 +137,16 @@ class ReportLabTechnicalReportGenerator:
                 "BodyRT",
                 "BodyText",
                 fontName=REGULAR_FONT,
-                fontSize=9.5,
-                leading=13,
+                fontSize=10.5,
+                leading=14,
                 textColor=BODY,
             ),
             "MetaLabel": style(
                 "MetaLabel",
                 "BodyText",
                 fontName=BOLD_FONT,
-                fontSize=7.5,
-                leading=10,
+                fontSize=8.5,
+                leading=10.5,
                 textColor=MUTED,
                 spaceAfter=1.5 * mm,
             ),
@@ -154,32 +154,32 @@ class ReportLabTechnicalReportGenerator:
                 "MetaValue",
                 "BodyText",
                 fontName=BOLD_FONT,
-                fontSize=10,
-                leading=12,
+                fontSize=9.5,
+                leading=11.5,
                 textColor=NAVY,
             ),
             "FieldLabel": style(
                 "FieldLabel",
                 "BodyText",
                 fontName=BOLD_FONT,
-                fontSize=7.2,
-                leading=8.5,
+                fontSize=9,
+                leading=11,
                 textColor=NAVY,
             ),
             "FieldValue": style(
                 "FieldValue",
                 "BodyText",
                 fontName=REGULAR_FONT,
-                fontSize=7.8,
-                leading=9.2,
+                fontSize=9,
+                leading=11,
                 textColor=BODY,
             ),
             "PhotoLabel": style(
                 "PhotoLabel",
                 "BodyText",
                 fontName=BOLD_FONT,
-                fontSize=8,
-                leading=10,
+                fontSize=9.5,
+                leading=11.5,
                 textColor=NAVY,
                 alignment=TA_CENTER,
             ),
@@ -195,36 +195,6 @@ class ReportLabTechnicalReportGenerator:
         }
 
     def _cover(self, report: dict, styles) -> list:
-        settings = get_settings()
-        logo_path = (
-            Path(settings.royal_tyres_logo_path)
-            if settings.royal_tyres_logo_path
-            else None
-        )
-        brand = (
-            Image(str(logo_path), width=42 * mm, height=13 * mm, kind="proportional")
-            if logo_path and logo_path.is_file()
-            else Paragraph("ROYAL TYRES", styles["AccentRT"])
-        )
-        company_style = ParagraphStyle(
-            "CompanyRT",
-            parent=styles["BodyRT"],
-            fontSize=8,
-            leading=10,
-            alignment=TA_RIGHT,
-        )
-        brand_row = Table(
-            [
-                [
-                    brand,
-                    Paragraph(
-                        escape(settings.royal_tyres_company_details), company_style
-                    ),
-                ]
-            ],
-            colWidths=[90 * mm, 86 * mm],
-        )
-        brand_row.setStyle(self._padding_style())
         metadata = Table(
             [
                 [
@@ -243,7 +213,7 @@ class ReportLabTechnicalReportGenerator:
                     ),
                 ]
             ],
-            colWidths=[58.6 * mm] * 3,
+            colWidths=[60.1 * mm] * 3,
         )
         metadata.setStyle(
             TableStyle(
@@ -260,12 +230,17 @@ class ReportLabTechnicalReportGenerator:
             )
         )
         return [
-            brand_row,
-            Spacer(1, 7 * mm),
             Paragraph("Royal Tyres Technical Claim Report", styles["TitleRT"]),
-            Spacer(1, 2.5 * mm),
+            Spacer(1, 4 / 72 * 25.4 * mm),
             Paragraph("Tyre inspection and supporting evidence", styles["AccentRT"]),
-            Spacer(1, 6 * mm),
+            Spacer(1, 3 / 72 * 25.4 * mm),
+            Paragraph(
+                "This report records the captured tyre inspection details, vehicle "
+                "information, technical findings and supporting photographs for the "
+                "claim shown below.",
+                styles["BodyRT"],
+            ),
+            Spacer(1, 6 / 72 * 25.4 * mm),
             metadata,
         ]
 
@@ -299,15 +274,30 @@ class ReportLabTechnicalReportGenerator:
             [
                 Paragraph("FIELD", styles["FieldLabel"]),
                 Paragraph("RECORDED VALUE", styles["FieldLabel"]),
+                Paragraph("FIELD", styles["FieldLabel"]),
+                Paragraph("RECORDED VALUE", styles["FieldLabel"]),
             ]
         ]
-        rows.extend(
-            [
-                Paragraph(escape(label), styles["FieldLabel"]),
-                Paragraph(escape(self._value(report, key)), styles["FieldValue"]),
+        for index in range(0, len(fields), 2):
+            left_label, left_key = fields[index]
+            row = [
+                Paragraph(escape(left_label), styles["FieldLabel"]),
+                Paragraph(escape(self._value(report, left_key)), styles["FieldValue"]),
             ]
-            for label, key in fields
-        )
+            if index + 1 < len(fields):
+                right_label, right_key = fields[index + 1]
+                row.extend(
+                    [
+                        Paragraph(escape(right_label), styles["FieldLabel"]),
+                        Paragraph(
+                            escape(self._value(report, right_key)),
+                            styles["FieldValue"],
+                        ),
+                    ]
+                )
+            else:
+                row.extend(["", ""])
+            rows.append(row)
         commands = [
             ("BACKGROUND", (0, 0), (-1, 0), LIGHT_BLUE),
             ("GRID", (0, 0), (-1, -1), 0.45, BORDER),
@@ -319,7 +309,11 @@ class ReportLabTechnicalReportGenerator:
         ]
         for row_index in range(2, len(rows), 2):
             commands.append(("BACKGROUND", (0, row_index), (-1, row_index), PALE_BLUE))
-        table = Table(rows, colWidths=[57 * mm, 119 * mm], repeatRows=1)
+        table = Table(
+            rows,
+            colWidths=[35 * mm, 55.15 * mm, 35 * mm, 55.15 * mm],
+            repeatRows=1,
+        )
         table.setStyle(TableStyle(commands))
         return table
 
@@ -333,7 +327,7 @@ class ReportLabTechnicalReportGenerator:
                 source.save(image_buffer, "JPEG", quality=86, optimize=True)
                 image_buffer.seek(0)
                 picture = Image(
-                    image_buffer, width=80 * mm, height=42 * mm, kind="proportional"
+                    image_buffer, width=80 * mm, height=38 * mm, kind="proportional"
                 )
                 name = str(photo.get("label") or photo.get("category", "Photo"))
                 card = Table(
@@ -341,8 +335,8 @@ class ReportLabTechnicalReportGenerator:
                         [Paragraph(escape(name.upper()), styles["PhotoLabel"])],
                         [picture],
                     ],
-                    colWidths=[84 * mm],
-                    rowHeights=[8 * mm, 46 * mm],
+                    colWidths=[86 * mm],
+                    rowHeights=[8 * mm, 42 * mm],
                 )
                 card.setStyle(
                     TableStyle(
@@ -368,7 +362,7 @@ class ReportLabTechnicalReportGenerator:
         if len(rows[-1]) == 1:
             rows[-1].append("")
         table = Table(
-            rows, colWidths=[88 * mm, 88 * mm], rowHeights=[58 * mm] * len(rows)
+            rows, colWidths=[90.15 * mm, 90.15 * mm], rowHeights=[52 * mm] * len(rows)
         )
         table.setStyle(
             TableStyle(
@@ -439,9 +433,14 @@ class ReportLabTechnicalReportGenerator:
         canvas.saveState()
         canvas.setStrokeColor(BORDER)
         canvas.setLineWidth(0.45)
-        canvas.line(17 * mm, 12 * mm, A4[0] - 17 * mm, 12 * mm)
+        side_margin = 0.7 * 25.4 * mm
+        canvas.line(side_margin, 10 * mm, LETTER[0] - side_margin, 10 * mm)
         canvas.setFont(REGULAR_FONT, 6.8)
         canvas.setFillColor(MUTED)
-        canvas.drawString(17 * mm, 8 * mm, settings.royal_tyres_pdf_disclaimer[:150])
-        canvas.drawRightString(A4[0] - 17 * mm, 8 * mm, f"Page {document.page}")
+        canvas.drawString(
+            side_margin, 6.5 * mm, settings.royal_tyres_pdf_disclaimer[:150]
+        )
+        canvas.drawRightString(
+            LETTER[0] - side_margin, 6.5 * mm, f"Page {document.page}"
+        )
         canvas.restoreState()
