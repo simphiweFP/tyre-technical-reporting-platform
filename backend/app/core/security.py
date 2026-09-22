@@ -18,7 +18,9 @@ def verify_password(password: str, password_digest: str) -> bool:
     return password_hash.verify(password, password_digest)
 
 
-def create_token(subject: str, token_type: str, expires_delta: timedelta) -> tuple[str, str, datetime]:
+def create_token(
+    subject: str, token_type: str, expires_delta: timedelta
+) -> tuple[str, str, datetime]:
     settings = get_settings()
     expires_at = datetime.now(UTC) + expires_delta
     token_id = str(uuid4())
@@ -34,4 +36,3 @@ def decode_token(token: str) -> dict:
 
 def token_digest(token: str) -> str:
     return sha256(token.encode("utf-8")).hexdigest()
-

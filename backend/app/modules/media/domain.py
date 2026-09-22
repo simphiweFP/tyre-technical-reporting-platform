@@ -13,4 +13,3 @@ class ImageAnalysis:
     values: tuple[ExtractedValue, ...]
     raw_text: str
     quality_score: float
-

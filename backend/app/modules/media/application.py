@@ -15,4 +15,3 @@ class AnalyseTyreImage:
         if not content:
             raise ValueError("The image is empty")
         return self.extractor.analyse(content)
-

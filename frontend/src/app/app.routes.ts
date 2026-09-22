@@ -8,6 +8,28 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/login.component').then((m) => m.LoginComponent),
   },
   {
+    path: 'register',
+    loadComponent: () =>
+      import('./features/auth/register.component').then((m) => m.RegisterComponent),
+  },
+  {
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('./features/auth/password.component').then((m) => m.ForgotPasswordComponent),
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('./features/auth/password.component').then((m) => m.ResetPasswordComponent),
+  },
+  {
+    path: 'auth/callback',
+    loadComponent: () =>
+      import('./features/auth/microsoft-callback.component').then(
+        (m) => m.MicrosoftCallbackComponent,
+      ),
+  },
+  {
     path: '',
     component: AppShellComponent,
     canActivate: [authGuard],
@@ -19,11 +41,13 @@ export const routes: Routes = [
       },
       {
         path: 'reports',
+        canActivate: [roleGuard('administrator', 'report_capturer', 'viewer')],
         loadComponent: () =>
           import('./features/reports/report-list.component').then((m) => m.ReportListComponent),
       },
       {
         path: 'reports/new',
+        canActivate: [roleGuard('administrator', 'report_capturer')],
         loadComponent: () =>
           import('./features/report-capture/report-capture.component').then(
             (m) => m.ReportCaptureComponent,
@@ -31,6 +55,7 @@ export const routes: Routes = [
       },
       {
         path: 'reports/:id/edit',
+        canActivate: [roleGuard('administrator', 'report_capturer', 'viewer')],
         loadComponent: () =>
           import('./features/report-capture/report-capture.component').then(
             (m) => m.ReportCaptureComponent,

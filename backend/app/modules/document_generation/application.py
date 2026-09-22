@@ -11,4 +11,3 @@ class GenerateTechnicalReport:
 
     def execute(self, report: dict) -> bytes:
         return self.generator.generate(report)
-

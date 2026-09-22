@@ -27,8 +27,12 @@ import {
           <h1>Technical report</h1>
         </div>
         <div class="save-state">
-          <span [class.saved]="saved()">{{ saved() ? '✓ Saved' : 'Saving…' }}</span
-          ><button class="button secondary" type="button" (click)="saveDraft()">Save draft</button>
+          <span [class.saved]="saved()">{{
+            store.saveError() ? 'Not saved' : saved() ? '✓ Saved' : 'Saving…'
+          }}</span>
+          @if (!readonlyView()) {
+            <button class="button secondary" type="button" (click)="saveDraft()">Save draft</button>
+          }
         </div>
       </header>
       <div class="step-bar">
@@ -228,7 +232,9 @@ import {
                     @if (photoFor(item.key); as photo) {
                       <img [src]="photo.previewUrl" [alt]="item.label" />
                       <div class="photo-overlay">
-                        <button type="button" (click)="removePhoto(item.key)">Remove</button>
+                        @if (!readonlyView()) {
+                          <button type="button" (click)="removePhoto(item.key)">Remove</button>
+                        }
                       </div>
                     } @else {
                       <div class="camera-icon">▣<b>＋</b></div>
@@ -244,14 +250,16 @@ import {
                         <small class="analysing">Reading tyre markings…</small>
                       }
                     </div>
-                    <label class="capture-button"
-                      ><input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        (change)="capture($event, item.key)"
-                      />{{ photoFor(item.key) ? 'Replace' : 'Capture photo' }}</label
-                    >
+                    @if (!readonlyView()) {
+                      <label class="capture-button"
+                        ><input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          (change)="capture($event, item.key)"
+                        />{{ photoFor(item.key) ? 'Replace' : 'Capture photo' }}</label
+                      >
+                    }
                   </article>
                 }
               </div>
@@ -421,7 +429,7 @@ import {
 export class ReportCaptureComponent implements OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
-  private readonly store = inject(ReportStore);
+  readonly store = inject(ReportStore);
   private readonly auth = inject(AuthService);
   private readonly intelligence = inject(ReportIntelligenceService);
   private readonly delivery = inject(ReportDeliveryService);
@@ -432,6 +440,7 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly captureMessage = signal('');
   readonly suggestions = signal<ExtractedTyreValue[]>([]);
   readonly pdfBusy = signal(false);
+  readonly readonlyView = computed(() => this.auth.hasRole('viewer'));
   readonly deliveryBusy = signal(false);
   readonly deliveryMessage = signal('');
   readonly recipients = signal<ReportRecipient[]>([]);
@@ -501,6 +510,7 @@ export class ReportCaptureComponent implements OnDestroy {
       : '';
   });
   constructor() {
+    if (this.readonlyView()) this.form.disable({ emitEvent: false });
     if (!this.form.controls.salesperson.value)
       this.form.controls.salesperson.setValue(this.auth.user()?.full_name ?? '');
     this.form.valueChanges
@@ -509,11 +519,15 @@ export class ReportCaptureComponent implements OnDestroy {
     effect(() => {
       this.report().photos;
     });
-    this.persist();
+    effect(() => {
+      this.saved.set(!this.store.saving() && !this.store.saveError());
+    });
     void this.loadDeliveryData();
+    if (this.route.snapshot.paramMap.get('id')) void this.loadServerReport();
+    else this.persist();
   }
   ngOnDestroy(): void {
-    this.persist();
+    if (!this.readonlyView()) this.persist();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -566,6 +580,19 @@ export class ReportCaptureComponent implements OnDestroy {
         ...r,
         photos: [...r.photos.filter((p) => p.category !== category), photo],
       }));
+      const current = {
+        ...this.report(),
+        ...this.form.getRawValue(),
+        updatedAt: new Date().toISOString(),
+      };
+      await this.store.saveNow(current);
+      const stored = await this.store.uploadImage(current.id, category, optimized.blob, file.name);
+      this.report.update((r) => ({
+        ...r,
+        photos: r.photos.map((item) =>
+          item.category === category ? { ...item, storageId: stored.id } : item,
+        ),
+      }));
       this.persist();
       if (['dot', 'serialNumber', 'entireTyreDot'].includes(category)) {
         this.analysingCategory.set(category);
@@ -586,7 +613,9 @@ export class ReportCaptureComponent implements OnDestroy {
       this.analysingCategory.set('');
     }
   }
-  removePhoto(category: string): void {
+  async removePhoto(category: string): Promise<void> {
+    const photo = this.photoFor(category);
+    if (photo?.storageId) await this.store.deleteImage(this.report().id, photo.storageId);
     this.report.update((r) => ({ ...r, photos: r.photos.filter((p) => p.category !== category) }));
     this.persist();
   }
@@ -631,13 +660,20 @@ export class ReportCaptureComponent implements OnDestroy {
     try {
       const result = await this.delivery.deliver(this.report(), this.selectedRecipient());
       this.deliveryMessage.set(
-        result.status === 'Sent'
-          ? `PDF emailed to ${result.recipient_email}.`
-          : `Delivery failed: ${result.error_message || 'SMTP service unavailable'}`,
+        result.status === 'Pending' || result.status === 'Retrying'
+          ? `PDF queued for delivery to ${result.recipient_email}.`
+          : result.status === 'Sent'
+            ? `PDF emailed to ${result.recipient_email}.`
+            : `Delivery failed: ${result.error_message || 'SMTP service unavailable'}`,
       );
       const updated = {
         ...this.report(),
-        status: result.status === 'Sent' ? ('Email Sent' as const) : ('Email Failed' as const),
+        status:
+          result.status === 'Sent'
+            ? ('Email Sent' as const)
+            : result.status === 'Failed'
+              ? ('Email Failed' as const)
+              : ('Submitted' as const),
       };
       this.report.set(updated);
       this.store.save(updated);
@@ -699,9 +735,21 @@ export class ReportCaptureComponent implements OnDestroy {
   }
   private loadReport(): TechnicalReport {
     const id = this.route.snapshot.paramMap.get('id');
-    return (id && this.store.get(id)) || this.store.create();
+    if (!id) return this.store.create();
+    return this.store.get(id) ?? { ...this.store.create(), id };
+  }
+  private async loadServerReport(): Promise<void> {
+    try {
+      const loaded = await this.store.loadOne(this.report().id);
+      this.report.set(loaded);
+      this.form.patchValue(loaded, { emitEvent: false });
+      await this.loadHistory();
+    } catch {
+      this.captureMessage.set('This report could not be loaded from the server.');
+    }
   }
   private persist(): void {
+    if (this.readonlyView()) return;
     this.saved.set(false);
     const value = this.form.getRawValue();
     const updated = { ...this.report(), ...value, updatedAt: new Date().toISOString() };

@@ -22,9 +22,11 @@ import { AuthService } from '../auth/auth.service';
           <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()"
             ><span>⌂</span>Overview</a
           >
-          <a routerLink="/reports" routerLinkActive="active" (click)="closeMenu()"
-            ><span>▤</span>Reports</a
-          >
+          @if (canViewReports()) {
+            <a routerLink="/reports" routerLinkActive="active" (click)="closeMenu()"
+              ><span>▤</span>Reports</a
+            >
+          }
           @if (canCapture()) {
             <a routerLink="/reports/new" routerLinkActive="active" (click)="closeMenu()"
               ><span>＋</span>New report</a
@@ -78,6 +80,9 @@ export class AppShellComponent {
   readonly auth = inject(AuthService);
   readonly menuOpen = signal(false);
   readonly canCapture = computed(() => this.auth.hasRole('administrator', 'report_capturer'));
+  readonly canViewReports = computed(() =>
+    this.auth.hasRole('administrator', 'report_capturer', 'viewer'),
+  );
   readonly initials = computed(() =>
     (this.auth.user()?.full_name ?? 'User')
       .split(' ')

@@ -12,4 +12,3 @@ class AuditRecord:
     entity_id: str | None
     details: dict
     occurred_at: datetime
-

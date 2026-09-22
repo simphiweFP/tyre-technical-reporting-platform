@@ -11,12 +11,15 @@ from backend.app.modules.identity.infrastructure import User
 def seed() -> None:
     settings = get_settings()
     with SessionLocal() as db:
+        branches = {"PHX": "Phoenix", "DBN": "Durban", "JHB": "Johannesburg"}
+        for code, name in branches.items():
+            if not db.scalar(select(Branch).where(Branch.code == code)):
+                db.add(Branch(code=code, name=name))
+        db.flush()
         branch = db.scalar(select(Branch).where(Branch.code == "PHX"))
-        if not branch:
-            branch = Branch(code="PHX", name="Phoenix")
-            db.add(branch)
-            db.flush()
-        admin = db.scalar(select(User).where(User.email == settings.seed_admin_email.lower()))
+        admin = db.scalar(
+            select(User).where(User.email == settings.seed_admin_email.lower())
+        )
         if not admin:
             db.add(
                 User(

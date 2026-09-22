@@ -4,6 +4,7 @@ from uuid import UUID
 
 
 class Role(StrEnum):
+    PENDING = "pending"
     ADMINISTRATOR = "administrator"
     REPORT_CAPTURER = "report_capturer"
     VIEWER = "viewer"
@@ -18,4 +19,3 @@ class UserIdentity:
     role: Role
     branch_id: UUID | None
     is_active: bool
-

@@ -39,4 +39,5 @@ class DeliveryResponse(BaseModel):
     error_message: str | None
     created_at: datetime
     last_attempt_at: datetime
+    next_attempt_at: datetime
     model_config = ConfigDict(from_attributes=True)

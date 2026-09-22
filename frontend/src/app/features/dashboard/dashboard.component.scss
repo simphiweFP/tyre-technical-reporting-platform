@@ -187,12 +187,53 @@
   font-size: 0.7rem;
   line-height: 1.4;
 }
+.analytics {
+  margin-bottom: 20px;
+  padding: 22px;
+}
+.pending-access {
+  margin-bottom: 20px;
+  padding: 22px;
+  border-left: 4px solid #d59a25;
+}
+.pending-access h2 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+.pending-access p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px;
+}
+.analytics-grid h3 {
+  margin: 0 0 12px;
+  font-size: 0.78rem;
+}
+.analytics-grid p {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 7px 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+.analytics-grid strong {
+  color: var(--ink);
+}
 @media (max-width: 1100px) {
   .content-grid {
     grid-template-columns: 1fr;
   }
   .quick {
     display: none;
+  }
+  .analytics-grid {
+    grid-template-columns: 1fr 1fr;
   }
 }
 @media (max-width: 700px) {
@@ -209,5 +250,8 @@
   .report-row time,
   .report-row .status {
     display: none;
+  }
+  .analytics-grid {
+    grid-template-columns: 1fr;
   }
 }

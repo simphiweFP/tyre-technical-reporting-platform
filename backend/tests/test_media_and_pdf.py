@@ -2,7 +2,9 @@ from io import BytesIO
 
 from PIL import Image
 
-from backend.app.modules.document_generation.infrastructure import ReportLabTechnicalReportGenerator
+from backend.app.modules.document_generation.infrastructure import (
+    ReportLabTechnicalReportGenerator,
+)
 from backend.app.modules.media.infrastructure import TesseractTyreExtractor
 
 
@@ -30,7 +32,8 @@ def test_pdf_generator_creates_pdf_with_image():
             {
                 "category": "dot",
                 "label": "DOT",
-                "previewUrl": "data:image/jpeg;base64," + base64.b64encode(image_buffer.getvalue()).decode(),
+                "previewUrl": "data:image/jpeg;base64,"
+                + base64.b64encode(image_buffer.getvalue()).decode(),
             }
         ],
     }
@@ -45,4 +48,3 @@ def test_pdf_endpoint_requires_authentication(client):
         json={"report": {"claimReference": "TR-2026-0001"}, "filename": "report.pdf"},
     )
     assert response.status_code == 401
-

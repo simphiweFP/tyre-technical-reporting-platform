@@ -8,4 +8,3 @@ class BranchDetails:
     code: str
     name: str
     is_active: bool
-

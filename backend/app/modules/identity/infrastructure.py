@@ -17,8 +17,14 @@ class User(Base):
     job_title: Mapped[str | None] = mapped_column(String(100), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(40), default=Role.VIEWER)
-    branch_id: Mapped[UUID | None] = mapped_column(ForeignKey("branches.id"), nullable=True, index=True)
+    branch_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("branches.id"), nullable=True, index=True
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    external_provider: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    external_subject: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, index=True
+    )
 
 
 class RefreshSession(Base):
@@ -29,5 +35,18 @@ class RefreshSession(Base):
     token_id: Mapped[str] = mapped_column(String(36), unique=True, index=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

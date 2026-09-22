@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { CurrentUser, TokenResponse, UserRole } from '../../shared/models/auth.models';
 const SESSION_KEY = 'royal-tyres.session';
@@ -22,6 +23,40 @@ export class AuthService {
     return this.http
       .post<TokenResponse>(`${environment.apiUrl}/auth/login`, { email, password })
       .pipe(tap((response) => this.storeSession(response)));
+  }
+  register(fullName: string, email: string, password: string): Observable<TokenResponse> {
+    return this.http
+      .post<TokenResponse>(`${environment.apiUrl}/auth/register`, {
+        full_name: fullName,
+        email,
+        password,
+      })
+      .pipe(tap((response) => this.storeSession(response)));
+  }
+  microsoftLoginUrl(): string {
+    return `${environment.apiUrl}/auth/microsoft/login`;
+  }
+  async completeMicrosoft(accessToken: string, refreshToken: string): Promise<void> {
+    const user = await firstValueFrom(
+      this.http.get<CurrentUser>(`${environment.apiUrl}/auth/me`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }),
+    );
+    this.storeSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      token_type: 'bearer',
+      user,
+    });
+  }
+  forgotPassword(email: string): Observable<unknown> {
+    return this.http.post(`${environment.apiUrl}/auth/forgot-password`, { email });
+  }
+  resetPassword(token: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/auth/reset-password`, {
+      token,
+      new_password: newPassword,
+    });
   }
   hasRole(...roles: UserRole[]): boolean {
     const role = this.user()?.role;

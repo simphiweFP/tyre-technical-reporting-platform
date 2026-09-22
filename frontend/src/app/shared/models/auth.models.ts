@@ -1,4 +1,4 @@
-export type UserRole = 'administrator' | 'report_capturer' | 'viewer';
+export type UserRole = 'administrator' | 'report_capturer' | 'viewer' | 'pending';
 export interface CurrentUser {
   id: string;
   email: string;

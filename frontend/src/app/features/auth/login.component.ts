@@ -1,10 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
   template: `
     <main class="login-page">
       <section class="story-panel">
@@ -27,6 +27,10 @@ import { AuthService } from '../../core/auth/auth.service';
           <p class="eyebrow">Staff portal</p>
           <h2>Welcome back</h2>
           <p class="subtext">Sign in with your Royal Tyres account.</p>
+          <a class="button microsoft" [href]="auth.microsoftLoginUrl()"
+            >Continue with Microsoft / Outlook</a
+          >
+          <div class="divider"><span>or use your account</span></div>
           <form [formGroup]="form" (ngSubmit)="submit()">
             <div class="field">
               <label for="email">Email address</label
@@ -39,7 +43,8 @@ import { AuthService } from '../../core/auth/auth.service';
               />
             </div>
             <div class="field">
-              <label for="password">Password</label
+              <label for="password"
+                >Password <a routerLink="/forgot-password">Forgot password?</a></label
               ><input
                 id="password"
                 type="password"
@@ -55,7 +60,7 @@ import { AuthService } from '../../core/auth/auth.service';
               {{ loading() ? 'Signing in…' : 'Sign in securely' }}
             </button>
           </form>
-          <p class="support">Account access is managed by your system administrator.</p>
+          <p class="support">New here? <a routerLink="/register">Create a new account</a></p>
         </div>
       </section>
     </main>
@@ -64,7 +69,7 @@ import { AuthService } from '../../core/auth/auth.service';
 })
 export class LoginComponent {
   private readonly fb = inject(FormBuilder);
-  private readonly auth = inject(AuthService);
+  readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   readonly loading = signal(false);
   readonly error = signal('');

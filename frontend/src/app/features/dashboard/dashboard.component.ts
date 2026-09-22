@@ -1,8 +1,8 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
-import { ReportStore } from '../../core/data/report.store';
+import { ReportAnalytics, ReportStore } from '../../core/data/report.store';
 @Component({
   selector: 'app-dashboard',
   imports: [DatePipe, RouterLink],
@@ -18,20 +18,29 @@ import { ReportStore } from '../../core/data/report.store';
           <a class="button primary" routerLink="/reports/new">＋ New technical report</a>
         }
       </header>
+      @if (auth.hasRole('pending')) {
+        <section class="card pending-access">
+          <h2>Account awaiting access</h2>
+          <p>
+            Your registration is complete. A Royal Tyres administrator must assign your branch and
+            reporting role before you can view or capture reports.
+          </p>
+        </section>
+      }
       <div class="metric-grid">
         <article class="metric card">
           <span class="metric-icon dark">▤</span>
           <div>
             <p>Total reports</p>
-            <strong>{{ store.reports().length }}</strong
-            ><small>Stored on this device</small>
+            <strong>{{ analytics()?.total ?? store.reports().length }}</strong
+            ><small>Stored securely on the server</small>
           </div>
         </article>
         <article class="metric card">
           <span class="metric-icon amber">◷</span>
           <div>
             <p>Drafts in progress</p>
-            <strong>{{ store.drafts().length }}</strong
+            <strong>{{ analytics()?.drafts ?? store.drafts().length }}</strong
             ><small>Ready to continue</small>
           </div>
         </article>
@@ -39,11 +48,62 @@ import { ReportStore } from '../../core/data/report.store';
           <span class="metric-icon green">✓</span>
           <div>
             <p>Completed</p>
-            <strong>{{ completed() }}</strong
+            <strong>{{ analytics()?.completed ?? completed() }}</strong
             ><small>Submitted or emailed</small>
           </div>
         </article>
       </div>
+      @if (analytics(); as summary) {
+        <section class="card analytics">
+          <div class="section-head">
+            <div>
+              <h2>Reporting insights</h2>
+              <p>Live operational totals across branches</p>
+            </div>
+          </div>
+          <div class="analytics-grid">
+            <div>
+              <h3>By branch</h3>
+              @for (item of entries(summary.by_branch); track item[0]) {
+                <p>
+                  <span>{{ item[0] }}</span
+                  ><strong>{{ item[1] }}</strong>
+                </p>
+              }
+            </div>
+            <div>
+              <h3>By tyre brand</h3>
+              @for (item of entries(summary.by_brand); track item[0]) {
+                <p>
+                  <span>{{ item[0] }}</span
+                  ><strong>{{ item[1] }}</strong>
+                </p>
+              }
+            </div>
+            <div>
+              <h3>By category</h3>
+              @for (item of entries(summary.by_category); track item[0]) {
+                <p>
+                  <span>{{ item[0] }}</span
+                  ><strong>{{ item[1] }}</strong>
+                </p>
+              }
+            </div>
+            <div>
+              <h3>Delivery</h3>
+              <p>
+                <span>Email failures</span><strong>{{ summary.email_failed }}</strong>
+              </p>
+              @for (item of entries(summary.by_status); track item[0]) {
+                <p>
+                  <span>{{ item[0] }}</span
+                  ><strong>{{ item[1] }}</strong>
+                </p>
+              }
+            </div>
+          </div>
+        </section>
+      }
       <div class="content-grid">
         <section class="card recent">
           <div class="section-head">
@@ -127,6 +187,20 @@ export class DashboardComponent {
     () =>
       this.store.reports().filter((r) => !['Draft', 'Ready to Submit'].includes(r.status)).length,
   );
+  readonly analytics = signal<ReportAnalytics | null>(null);
+  constructor() {
+    void this.loadAnalytics();
+  }
+  entries(value: Record<string, number>): [string, number][] {
+    return Object.entries(value).slice(0, 6);
+  }
+  private async loadAnalytics(): Promise<void> {
+    try {
+      this.analytics.set(await this.store.analytics());
+    } catch {
+      this.analytics.set(null);
+    }
+  }
   greeting(): string {
     const hour = new Date().getHours();
     return hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';

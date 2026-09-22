@@ -104,6 +104,34 @@
   margin: 9px 0 30px;
   color: var(--muted);
 }
+.microsoft {
+  width: 100%;
+  margin-bottom: 18px;
+  border: 1px solid #cdd3d7;
+  background: #fff;
+  color: var(--ink);
+}
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+.divider:before,
+.divider:after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: var(--border);
+}
+.field label a,
+.support a {
+  float: right;
+  color: var(--red);
+  text-decoration: none;
+}
 form {
   display: grid;
   gap: 19px;

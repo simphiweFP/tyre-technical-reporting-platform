@@ -87,6 +87,7 @@ export interface ReportPhoto {
   mimeType: string;
   byteSize: number;
   sha256: string;
+  storageId?: string;
 }
 export type ExtractableTyreField = 'brand' | 'rimSize' | 'dot' | 'serialNumber' | 'tyreSize';
 export interface ExtractedTyreValue {
@@ -112,7 +113,7 @@ export interface DeliveryAttempt {
   claim_reference: string;
   recipient_email: string;
   cc: string[];
-  status: 'Pending' | 'Sent' | 'Failed';
+  status: 'Pending' | 'Retrying' | 'Sent' | 'Failed';
   attempt_count: number;
   message_id: string | null;
   error_message: string | null;

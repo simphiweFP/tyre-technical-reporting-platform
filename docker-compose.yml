@@ -29,6 +29,20 @@ services:
         condition: service_started
     environment:
       SMTP_HOST: mailpit
+      MEDIA_ROOT: /app/data/report-images
+    volumes:
+      - report_images:/app/data/report-images
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     command:
       [
         "sh",
@@ -44,6 +58,23 @@ services:
     depends_on:
       - api
 
+  delivery-worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: .env
+    environment:
+      SMTP_HOST: mailpit
+      MEDIA_ROOT: /app/data/report-images
+    volumes:
+      - report_images:/app/data/report-images
+    depends_on:
+      database:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    command: ["python", "-m", "backend.app.worker"]
+
   mailpit:
     image: axllent/mailpit:v1.27
     ports:
@@ -52,3 +83,4 @@ services:
 
 volumes:
   postgres_data:
+  report_images:

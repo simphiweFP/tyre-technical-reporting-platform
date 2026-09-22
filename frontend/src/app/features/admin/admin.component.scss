@@ -35,7 +35,7 @@
 .list article {
   min-height: 74px;
   display: grid;
-  grid-template-columns: 40px minmax(180px, 1.3fr) minmax(180px, 1fr) 70px 30px;
+  grid-template-columns: 40px minmax(180px, 1.3fr) minmax(180px, 1fr) 70px minmax(110px, auto);
   align-items: center;
   gap: 14px;
   padding: 10px 20px;
@@ -98,6 +98,37 @@
   background: transparent;
   color: #858b90;
   cursor: pointer;
+}
+.access-fields {
+  display: grid;
+  gap: 4px;
+}
+.access-fields select {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  padding: 4px 6px;
+  font-size: 0.66rem;
+}
+.actions {
+  display: grid;
+  gap: 4px;
+}
+.actions button {
+  border: 0;
+  background: transparent;
+  color: var(--red);
+  text-align: left;
+  font-size: 0.64rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+.notice {
+  margin-bottom: 16px;
+  padding: 13px 16px;
+  border-left: 4px solid var(--success);
+  font-size: 0.75rem;
 }
 .role-guide {
   padding: 22px;
@@ -181,6 +212,9 @@
   }
   .list article > div:nth-child(3),
   .list article .more {
+    display: none;
+  }
+  .list article .actions {
     display: none;
   }
 }

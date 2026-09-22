@@ -1,9 +1,9 @@
+import smtplib
 from datetime import UTC, datetime
 from email.message import EmailMessage as SmtpMessage
-import smtplib
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.core.config import Settings
@@ -20,7 +20,9 @@ class Recipient(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     default_cc: Mapped[str] = mapped_column(String(255), default="")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
 
 
 class DeliveryAttempt(Base):
@@ -28,17 +30,26 @@ class DeliveryAttempt(Base):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     claim_reference: Mapped[str] = mapped_column(String(80), index=True)
-    recipient_id: Mapped[UUID] = mapped_column(ForeignKey("report_recipients.id"), index=True)
+    recipient_id: Mapped[UUID] = mapped_column(
+        ForeignKey("report_recipients.id"), index=True
+    )
     recipient_email: Mapped[str] = mapped_column(String(255))
     cc: Mapped[list] = mapped_column(JSON, default=list)
     report_payload: Mapped[dict] = mapped_column(JSON)
     status: Mapped[str] = mapped_column(String(20), index=True)
-    attempt_count: Mapped[int] = mapped_column(Integer, default=1)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0)
     message_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     requested_by: Mapped[UUID] = mapped_column(ForeignKey("users.id"), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
-    last_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    last_attempt_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    next_attempt_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), index=True
+    )
 
 
 class SmtpEmailGateway:
@@ -53,13 +64,16 @@ class SmtpEmailGateway:
         if message.cc:
             email["Cc"] = ", ".join(message.cc)
         email.set_content(message.body)
-        email.add_attachment(
-            message.attachment,
-            maintype="application",
-            subtype="pdf",
-            filename=message.attachment_name,
-        )
-        with smtplib.SMTP(self.settings.smtp_host, self.settings.smtp_port, timeout=20) as client:
+        if message.attachment is not None:
+            email.add_attachment(
+                message.attachment,
+                maintype="application",
+                subtype="pdf",
+                filename=message.attachment_name,
+            )
+        with smtplib.SMTP(
+            self.settings.smtp_host, self.settings.smtp_port, timeout=20
+        ) as client:
             if self.settings.smtp_use_tls:
                 client.starttls()
             if self.settings.smtp_username:

@@ -1,6 +1,7 @@
 """Create report recipients and delivery history."""
-from alembic import op
+
 import sqlalchemy as sa
+from alembic import op
 
 revision = "20260921_02"
 down_revision = "20260921_01"
@@ -41,10 +42,24 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["requested_by"], ["users.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_report_delivery_attempts_claim_reference", "report_delivery_attempts", ["claim_reference"])
-    op.create_index("ix_report_delivery_attempts_recipient_id", "report_delivery_attempts", ["recipient_id"])
-    op.create_index("ix_report_delivery_attempts_requested_by", "report_delivery_attempts", ["requested_by"])
-    op.create_index("ix_report_delivery_attempts_status", "report_delivery_attempts", ["status"])
+    op.create_index(
+        "ix_report_delivery_attempts_claim_reference",
+        "report_delivery_attempts",
+        ["claim_reference"],
+    )
+    op.create_index(
+        "ix_report_delivery_attempts_recipient_id",
+        "report_delivery_attempts",
+        ["recipient_id"],
+    )
+    op.create_index(
+        "ix_report_delivery_attempts_requested_by",
+        "report_delivery_attempts",
+        ["requested_by"],
+    )
+    op.create_index(
+        "ix_report_delivery_attempts_status", "report_delivery_attempts", ["status"]
+    )
 
 
 def downgrade() -> None:
