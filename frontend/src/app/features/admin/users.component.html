@@ -1,0 +1,13 @@
+<section class="admin-page">
+  <div class="crumb">Administration <b>›</b> User Administration</div>
+  <header class="admin-title"><div><h1>User Administration</h1><p>Manage system users, roles and branch access.</p></div><button class="red-button" (click)="showForm.set(true)">＋ &nbsp; Create User</button></header>
+  @if(notice()){<div class="notice">{{notice()}}</div>}
+  <section class="data-card">
+    <label class="search">Search by name, username or email... <span>⌕</span><input [(ngModel)]="query" aria-label="Search users" /></label>
+    <div class="table-scroll"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Branch access</th><th>Status</th><th>Last login</th><th>Actions</th></tr></thead><tbody>
+      @for(user of filtered();track user.id){<tr><td>{{user.full_name}}</td><td>{{username(user)}}</td><td>{{roleLabel(user.role)}}</td><td>{{branchName(user.branch_id)}}</td><td><span class="state" [class.disabled]="!user.is_active"><i></i>{{user.is_active?'Active':'Disabled'}}</span></td><td>22 Jul 2024 08:14</td><td><button class="mini" (click)="toggle(user)">✎ &nbsp; Edit</button><button class="dots" (click)="reset(user)">•••</button></td></tr>}
+    </tbody></table></div>
+    <footer class="table-footer"><span>Showing 1–{{filtered().length}} of {{users().length}} users</span><div><button>‹</button><button class="current">1</button><button>›</button></div></footer>
+  </section>
+  @if(showForm()){<div class="modal-backdrop" (click)="showForm.set(false)"><form class="modal" (click)="$event.stopPropagation()" (ngSubmit)="addUser()"><header><h2>Create User</h2><button type="button" (click)="showForm.set(false)">×</button></header><label>Full name<input name="name" [(ngModel)]="newUser.full_name" required /></label><label>Email<input name="email" type="email" [(ngModel)]="newUser.email" required /></label><label>Job title<input name="title" [(ngModel)]="newUser.job_title" /></label><label>Role<select name="role" [(ngModel)]="newUser.role"><option value="report_capturer">Report Capturer</option><option value="viewer">Viewer/Auditor</option><option value="administrator">Administrator</option></select></label><button class="red-button" type="submit">Create User</button></form></div>}
+</section>

@@ -73,6 +73,18 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/recipients.component').then((m) => m.RecipientsComponent),
       },
+      {
+        path: 'admin/branches',
+        canActivate: [roleGuard('administrator')],
+        loadComponent: () =>
+          import('./features/admin/branches.component').then((m) => m.BranchesComponent),
+      },
+      {
+        path: 'admin/settings',
+        canActivate: [roleGuard('administrator')],
+        loadComponent: () =>
+          import('./features/admin/settings.component').then((m) => m.SettingsComponent),
+      },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ],
   },

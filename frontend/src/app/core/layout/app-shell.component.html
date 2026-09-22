@@ -1,0 +1,26 @@
+<div class="app-frame">
+  <aside class="sidebar" [class.open]="menuOpen()">
+    <div class="brand"><img src="/royal-tyres-app-logo.png" alt="Royal Tyres" /><button class="close-menu" (click)="menuOpen.set(false)">×</button></div>
+    <nav aria-label="Primary navigation">
+      <a routerLink="/dashboard" routerLinkActive="active"><span>⌂</span>Overview</a>
+      <a routerLink="/reports" routerLinkActive="active"><span>▤</span>Technical Claims</a>
+      <a routerLink="/reports" routerLinkActive="delivery-active"><span>➤</span>Delivery Centre</a>
+      @if (auth.hasRole('administrator')) {
+        <a routerLink="/admin/users" routerLinkActive="active"><span>♟</span>User Administration</a>
+        <a routerLink="/admin/branches" routerLinkActive="active"><span>●</span>Branches</a>
+        <a routerLink="/admin/recipients" routerLinkActive="active"><span>✉</span>Report Recipients</a>
+        <a routerLink="/admin/settings" fragment="audit" routerLinkActive="active"><span>▤</span>Audit Log</a>
+        <a routerLink="/admin/settings" routerLinkActive="active"><span>⚙</span>System Settings</a>
+      }
+    </nav>
+  </aside>
+  @if (menuOpen()) { <button class="scrim" (click)="menuOpen.set(false)"></button> }
+  <main class="main-panel">
+    <header class="topbar">
+      <button class="menu-button" (click)="menuOpen.set(true)">☰</button>
+      <span class="top-icon">⌕</span><span class="top-icon alert">♧<i></i></span>
+      <div class="profile"><b>{{ initials() }}</b><span><strong>{{ auth.user()?.full_name || 'John Doe' }}</strong><small>{{ roleLabel() }}</small></span><em>⌄</em></div>
+    </header>
+    <router-outlet />
+  </main>
+</div>
