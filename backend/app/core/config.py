@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     report_file_root: str = "./data/technical-reports"
     public_app_url: str = "http://localhost:4200"
     royal_tyres_logo_path: str = ""
+    royal_tyres_report_header_path: str = ""
+    royal_tyres_report_footer_path: str = ""
     royal_tyres_company_details: str = "Royal Tyres · Technical Services"
     royal_tyres_pdf_disclaimer: str = (
         "This report records inspection findings at the time of assessment."

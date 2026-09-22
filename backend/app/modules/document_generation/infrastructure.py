@@ -9,6 +9,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
@@ -57,8 +58,8 @@ class ReportLabTechnicalReportGenerator:
             pagesize=LETTER,
             rightMargin=0.7 * 25.4 * mm,
             leftMargin=0.7 * 25.4 * mm,
-            topMargin=0.579861 * 25.4 * mm,
-            bottomMargin=0.55 * 25.4 * mm,
+            topMargin=64 * mm,
+            bottomMargin=40 * mm,
             title=f"Technical Claim Report {report.get('claimReference', '')}",
             author="Royal Tyres",
             subject="Tyre technical inspection claim",
@@ -72,9 +73,9 @@ class ReportLabTechnicalReportGenerator:
         ):
             story.extend(
                 [
-                    Spacer(1, 9 / 72 * 25.4 * mm),
+                    Spacer(1, 6 / 72 * 25.4 * mm),
                     Paragraph(heading, styles["SectionRT"]),
-                    Spacer(1, 4 / 72 * 25.4 * mm),
+                    Spacer(1, 3 / 72 * 25.4 * mm),
                     self._details_table(report, styles, fields),
                 ]
             )
@@ -92,7 +93,9 @@ class ReportLabTechnicalReportGenerator:
                 self._photos(report, styles),
             ]
         )
-        document.build(story, onFirstPage=self._footer, onLaterPages=self._footer)
+        document.build(
+            story, onFirstPage=self._page_branding, onLaterPages=self._page_branding
+        )
         return output.getvalue()
 
     @staticmethod
@@ -230,17 +233,6 @@ class ReportLabTechnicalReportGenerator:
             )
         )
         return [
-            Paragraph("Royal Tyres Technical Claim Report", styles["TitleRT"]),
-            Spacer(1, 4 / 72 * 25.4 * mm),
-            Paragraph("Tyre inspection and supporting evidence", styles["AccentRT"]),
-            Spacer(1, 3 / 72 * 25.4 * mm),
-            Paragraph(
-                "This report records the captured tyre inspection details, vehicle "
-                "information, technical findings and supporting photographs for the "
-                "claim shown below.",
-                styles["BodyRT"],
-            ),
-            Spacer(1, 6 / 72 * 25.4 * mm),
             metadata,
         ]
 
@@ -304,8 +296,8 @@ class ReportLabTechnicalReportGenerator:
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("LEFTPADDING", (0, 0), (-1, -1), 3.5 * mm),
             ("RIGHTPADDING", (0, 0), (-1, -1), 3.5 * mm),
-            ("TOPPADDING", (0, 0), (-1, -1), 1.25 * mm),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.25 * mm),
+            ("TOPPADDING", (0, 0), (-1, -1), 0.75 * mm),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0.75 * mm),
         ]
         for row_index in range(2, len(rows), 2):
             commands.append(("BACKGROUND", (0, row_index), (-1, row_index), PALE_BLUE))
@@ -327,7 +319,7 @@ class ReportLabTechnicalReportGenerator:
                 source.save(image_buffer, "JPEG", quality=86, optimize=True)
                 image_buffer.seek(0)
                 picture = Image(
-                    image_buffer, width=80 * mm, height=38 * mm, kind="proportional"
+                    image_buffer, width=80 * mm, height=26 * mm, kind="proportional"
                 )
                 name = str(photo.get("label") or photo.get("category", "Photo"))
                 card = Table(
@@ -336,7 +328,7 @@ class ReportLabTechnicalReportGenerator:
                         [picture],
                     ],
                     colWidths=[86 * mm],
-                    rowHeights=[8 * mm, 42 * mm],
+                    rowHeights=[7 * mm, 29 * mm],
                 )
                 card.setStyle(
                     TableStyle(
@@ -362,7 +354,7 @@ class ReportLabTechnicalReportGenerator:
         if len(rows[-1]) == 1:
             rows[-1].append("")
         table = Table(
-            rows, colWidths=[90.15 * mm, 90.15 * mm], rowHeights=[52 * mm] * len(rows)
+            rows, colWidths=[90.15 * mm, 90.15 * mm], rowHeights=[38 * mm] * len(rows)
         )
         table.setStyle(
             TableStyle(
@@ -428,19 +420,53 @@ class ReportLabTechnicalReportGenerator:
         ]
 
     @staticmethod
-    def _footer(canvas, document):
+    def _page_branding(canvas, document):
         settings = get_settings()
+        asset_root = Path(__file__).resolve().parents[3] / "assets"
+        header_path = Path(
+            settings.royal_tyres_report_header_path
+            or asset_root / "royal-tyres-report-header.png"
+        )
+        footer_path = Path(
+            settings.royal_tyres_report_footer_path
+            or asset_root / "royal-tyres-report-footer.png"
+        )
         canvas.saveState()
-        canvas.setStrokeColor(BORDER)
-        canvas.setLineWidth(0.45)
         side_margin = 0.7 * 25.4 * mm
-        canvas.line(side_margin, 10 * mm, LETTER[0] - side_margin, 10 * mm)
+        available_width = LETTER[0] - 2 * side_margin
+        if header_path.is_file():
+            with PillowImage.open(header_path) as source:
+                header = source.crop((35, 30, 970, 280)).convert("RGB")
+                header_buffer = BytesIO()
+                header.save(header_buffer, "PNG")
+                header_buffer.seek(0)
+                header_height = available_width * header.height / header.width
+                canvas.drawImage(
+                    ImageReader(header_buffer),
+                    side_margin,
+                    LETTER[1] - 10 * mm - header_height,
+                    width=available_width,
+                    height=header_height,
+                    preserveAspectRatio=True,
+                    mask="auto",
+                )
+        if footer_path.is_file():
+            with PillowImage.open(footer_path) as source:
+                footer = source.crop((43, 155, 935, 270)).convert("RGB")
+                footer_buffer = BytesIO()
+                footer.save(footer_buffer, "PNG")
+                footer_buffer.seek(0)
+                footer_height = available_width * footer.height / footer.width
+                canvas.drawImage(
+                    ImageReader(footer_buffer),
+                    side_margin,
+                    8 * mm,
+                    width=available_width,
+                    height=footer_height,
+                    preserveAspectRatio=True,
+                    mask="auto",
+                )
         canvas.setFont(REGULAR_FONT, 6.8)
         canvas.setFillColor(MUTED)
-        canvas.drawString(
-            side_margin, 6.5 * mm, settings.royal_tyres_pdf_disclaimer[:150]
-        )
-        canvas.drawRightString(
-            LETTER[0] - side_margin, 6.5 * mm, f"Page {document.page}"
-        )
+        canvas.drawRightString(LETTER[0] - side_margin, 4 * mm, f"Page {document.page}")
         canvas.restoreState()

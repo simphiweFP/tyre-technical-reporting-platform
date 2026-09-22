@@ -87,7 +87,7 @@ Delivery requests are stored before returning to the user. The `delivery-worker`
 
 ## PDF branding and OCR acceptance
 
-Set `ROYAL_TYRES_LOGO_PATH`, `ROYAL_TYRES_COMPANY_DETAILS` and `ROYAL_TYRES_PDF_DISCLAIMER` to the approved brand assets and legal wording. The PDF engine uses those values without a code change. Final visual sign-off still requires the official logo file and approved wording from Royal Tyres.
+The supplied Royal Tyres header and footer artwork is repeated on every generated PDF page. `ROYAL_TYRES_REPORT_HEADER_PATH` and `ROYAL_TYRES_REPORT_FOOTER_PATH` can replace the bundled artwork without a code change. Set `ROYAL_TYRES_COMPANY_DETAILS` and `ROYAL_TYRES_PDF_DISCLAIMER` to the approved business and legal wording.
 
 OCR values are always suggestions requiring operator confirmation. Parser fixtures cover common spacing and recognition noise. Before a production release, add consented and de-identified real tyre photographs to the documented OCR sample process, covering curved sidewalls, dirt, shadows, worn markings and supported brands.
 
