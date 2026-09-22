@@ -46,7 +46,8 @@ source .venv/bin/activate
 pip install -e '.[dev]'
 alembic upgrade head
 python -m backend.app.seed
-uvicorn backend.app.main:app --reload
+python -m pip install -r backend/requirements.txt
+python -m uvicorn backend.app.main:app --reload
 pytest
 ```
 
