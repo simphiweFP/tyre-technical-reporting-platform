@@ -44,12 +44,14 @@ For local Python development:
 python -m venv .venv
 source .venv/bin/activate
 pip install -e '.[dev]'
-alembic upgrade head
-python -m backend.app.seed
 python -m pip install -r backend/requirements.txt
 python -m uvicorn backend.app.main:app --reload
 pytest
 ```
+
+Starting the API automatically runs all pending Alembic migrations from
+`backend/migrations` before the server begins accepting requests. If a migration
+fails, API startup fails so the application cannot run against an outdated schema.
 
 The seeded development administrator defaults are defined in `.env.example`. Change them before any shared deployment.
 
@@ -107,7 +109,7 @@ python -m backend.app.maintenance
 ## Production deployment checklist
 
 - Replace the JWT secret and seeded administrator password with managed secrets.
-- Use PostgreSQL with encrypted backups and run `alembic upgrade head` before starting the API.
+- Use PostgreSQL with encrypted backups. API startup applies pending migrations automatically.
 - Back up the database and report-image directory as one recovery set and test restores.
 - Configure an HTTPS reverse proxy and restrict `ALLOWED_ORIGINS` to the deployed Angular URL.
 - Configure authenticated SMTP with TLS and verify the sender domain's SPF, DKIM and DMARC records.
