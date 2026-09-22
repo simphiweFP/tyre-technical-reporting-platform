@@ -18,7 +18,8 @@ import {
 @Component({
   selector: 'app-report-capture',
   imports: [ReactiveFormsModule, RouterLink, DatePipe],
-  template: `
+  templateUrl: './report-capture.component.html',
+  /* Legacy inline markup retained temporarily for migration history.
     <section class="capture-page">
       <header class="capture-header">
         <a routerLink="/reports" class="back">←</a>
@@ -423,7 +424,7 @@ import {
         </footer>
       </form>
     </section>
-  `,
+  */
   styleUrl: './report-capture.component.scss',
 })
 export class ReportCaptureComponent implements OnDestroy {
@@ -446,7 +447,10 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly recipients = signal<ReportRecipient[]>([]);
   readonly selectedRecipient = signal('');
   readonly deliveryHistory = signal<DeliveryAttempt[]>([]);
-  readonly stepLabels = ['Claim', 'Tyre', 'Photos', 'Review'];
+  readonly previewMode = signal(false);
+  readonly savedMode = signal(false);
+  readonly confirmed = signal(false);
+  readonly stepLabels = ['Report details', 'Tyre & vehicle', 'Photos', 'Review'];
   readonly photoCategories = PHOTO_CATEGORIES;
   readonly requiredCount = PHOTO_CATEGORIES.filter((p) => p.required).length;
   readonly report = signal<TechnicalReport>(this.loadReport());
@@ -537,7 +541,14 @@ export class ReportCaptureComponent implements OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   next(): void {
-    if (this.step() < 3) this.goTo(this.step() + 1);
+    if (this.step() < 3) {
+      this.goTo(this.step() + 1);
+      return;
+    }
+    if (!this.confirmed() || !this.readyForReview()) return;
+    this.persist();
+    this.previewMode.set(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   previous(): void {
     if (this.step() > 0) this.goTo(this.step() - 1);
@@ -634,6 +645,32 @@ export class ReportCaptureComponent implements OnDestroy {
   confidence(value: number): string {
     return `${Math.round(value * 100)}%`;
   }
+  photoIcon(category: string): string {
+    if (category.startsWith('tread')) return '▥';
+    if (category === 'vehicle') return '▰';
+    if (category.startsWith('issue')) return '◉';
+    return '◌';
+  }
+  reviewRows(): { label: string; value: string; confidence: string }[] {
+    const values = this.form.getRawValue();
+    const confidence = (field: string) => {
+      const match = this.suggestions().find((item) => item.field === field);
+      return match ? this.confidence(match.confidence) : 'Confirmed';
+    };
+    return [
+      { label: 'Brand', value: values.brand || 'Not captured', confidence: confidence('brand') },
+      { label: 'Rim size', value: values.rimSize || 'Not captured', confidence: confidence('rimSize') },
+      { label: 'DOT', value: values.dot || 'Not captured', confidence: confidence('dot') },
+      {
+        label: 'Serial number',
+        value: values.serialNumber || 'Not captured',
+        confidence: confidence('serialNumber'),
+      },
+    ];
+  }
+  toggleConfirmed(event: Event): void {
+    this.confirmed.set((event.target as HTMLInputElement).checked);
+  }
   async downloadPdf(): Promise<void> {
     if (!this.readyForReview()) return;
     this.persist();
@@ -684,6 +721,16 @@ export class ReportCaptureComponent implements OnDestroy {
       this.deliveryBusy.set(false);
     }
   }
+  async sendFromPreview(): Promise<void> {
+    if (this.selectedRecipient()) await this.sendReport();
+    else await this.downloadPdf();
+    this.previewMode.set(false);
+    this.savedMode.set(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  startAnotherReport(): void {
+    window.location.assign('/reports/new');
+  }
   async retryDelivery(deliveryId: string): Promise<void> {
     this.deliveryBusy.set(true);
     try {
@@ -704,6 +751,9 @@ export class ReportCaptureComponent implements OnDestroy {
     try {
       const [recipients] = await Promise.all([this.delivery.recipients(), this.loadHistory()]);
       this.recipients.set(recipients);
+      if (!this.selectedRecipient() && recipients.length) {
+        this.selectedRecipient.set(recipients[0].id);
+      }
     } catch {
       this.deliveryMessage.set('Delivery contacts are temporarily unavailable.');
     }
