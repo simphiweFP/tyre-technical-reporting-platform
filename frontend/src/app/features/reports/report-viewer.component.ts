@@ -1,0 +1,2 @@
+import { Component } from '@angular/core';
+@Component({selector:'app-report-viewer',templateUrl:'./report-viewer.component.html',styleUrl:'./operations.component.scss'}) export class ReportViewerComponent{readonly photos=[['Full view','/mock-tyre-full.jpg'],['Internal carcass 1','/mock-tyre-carcass.jpg'],['Tread depth 1','/mock-tread-depth.jpg'],['Tread pattern','/mock-tread-pattern.jpg'],['DOT','/mock-dot.jpg'],['Serial number','/mock-serial.jpg']]}

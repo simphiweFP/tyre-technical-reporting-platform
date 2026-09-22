@@ -54,6 +54,24 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'reports/:id',
+        canActivate: [roleGuard('administrator', 'report_capturer', 'viewer')],
+        loadComponent: () =>
+          import('./features/reports/report-detail.component').then((m) => m.ReportDetailComponent),
+      },
+      {
+        path: 'delivery-centre',
+        canActivate: [roleGuard('administrator', 'report_capturer', 'viewer')],
+        loadComponent: () =>
+          import('./features/reports/delivery-centre.component').then((m) => m.DeliveryCentreComponent),
+      },
+      {
+        path: 'audit-viewer',
+        canActivate: [roleGuard('administrator', 'viewer')],
+        loadComponent: () =>
+          import('./features/reports/report-viewer.component').then((m) => m.ReportViewerComponent),
+      },
+      {
         path: 'reports/:id/edit',
         canActivate: [roleGuard('administrator', 'report_capturer', 'viewer')],
         loadComponent: () =>

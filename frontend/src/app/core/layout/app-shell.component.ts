@@ -6,7 +6,7 @@ import { AuthService } from '../auth/auth.service';
   selector: 'app-shell',
   imports: [RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './app-shell.component.html',
-  styleUrl: './app-shell.component.scss',
+  styleUrls: ['./app-shell.component.scss', './app-shell-operations.scss'],
 })
 export class AppShellComponent {
   readonly auth = inject(AuthService);
