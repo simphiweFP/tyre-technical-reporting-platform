@@ -7,9 +7,9 @@ destination="$backup_root/$timestamp"
 mkdir -p "$destination"
 
 pg_dump "${PG_BACKUP_URL:?PG_BACKUP_URL is required (standard postgresql:// URL)}" --format=custom --file="$destination/database.dump"
-media_root="${MEDIA_ROOT:-./data/report-images}"
-if [ -d "$media_root" ]; then
-  tar -czf "$destination/report-images.tar.gz" -C "$media_root" .
+report_file_root="${REPORT_FILE_ROOT:-./data/technical-reports}"
+if [ -d "$report_file_root" ]; then
+  tar -czf "$destination/technical-reports.tar.gz" -C "$report_file_root" .
 fi
 find "$backup_root" -mindepth 1 -maxdepth 1 -type d -mtime +30 -exec rm -rf -- {} +
 echo "Backup created at $destination"

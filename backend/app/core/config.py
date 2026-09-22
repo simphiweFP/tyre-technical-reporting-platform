@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     smtp_use_tls: bool = False
     email_from: str = "technical-reports@royaltyres.co.za"
     email_from_name: str = "Royal Tyres Technical Reports"
-    media_root: str = "./data/report-images"
+    report_file_root: str = "./data/technical-reports"
     public_app_url: str = "http://localhost:4200"
     royal_tyres_logo_path: str = ""
     royal_tyres_company_details: str = "Royal Tyres · Technical Services"

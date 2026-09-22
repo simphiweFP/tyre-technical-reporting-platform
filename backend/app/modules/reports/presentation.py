@@ -11,7 +11,6 @@ from PIL import UnidentifiedImageError
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from backend.app.core.config import get_settings
 from backend.app.core.database import get_db
 from backend.app.modules.auditing.infrastructure import AuditEvent
 from backend.app.modules.document_generation.application import GenerateTechnicalReport
@@ -39,6 +38,7 @@ from backend.app.modules.reports.schemas import (
     ReportResponse,
     ReportUpsertRequest,
 )
+from backend.app.modules.reports.storage import ReportFileStorage
 
 router = APIRouter(prefix="/reports", tags=["Technical reports"])
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
@@ -247,28 +247,34 @@ async def upload_report_image(
         raise HTTPException(
             status_code=409, detail="This image is already used in another category"
         )
+    storage = ReportFileStorage()
     previous = db.scalar(
         select(ReportImage).where(
             ReportImage.report_id == report_id, ReportImage.category == category
         )
     )
+    previous_path = previous.file_path if previous else None
     if previous:
-        Path(previous.file_path).unlink(missing_ok=True)
         db.delete(previous)
         db.flush()
-    root = Path(get_settings().media_root).resolve() / str(report_id)
-    root.mkdir(parents=True, exist_ok=True)
     suffix = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}[
         image.content_type
     ]
-    path = root / f"{category}-{digest[:16]}{suffix}"
-    path.write_bytes(content)
+    record = _required_record(report_id, db)
+    relative_path = storage.store_image(
+        report_id=report_id,
+        claim_reference=record.claim_reference,
+        category=category,
+        digest=digest,
+        suffix=suffix,
+        content=content,
+    )
     stored = ReportImage(
         report_id=report_id,
         category=category,
-        original_name=image.filename or path.name,
+        original_name=image.filename or Path(relative_path).name,
         content_type=image.content_type,
-        file_path=str(path),
+        file_path=relative_path,
         sha256=digest,
         byte_size=len(content),
     )
@@ -282,7 +288,14 @@ async def upload_report_image(
             details={"category": category, "sha256": digest},
         )
     )
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        storage.delete(relative_path)
+        raise
+    if previous_path and previous_path != relative_path:
+        storage.delete(previous_path)
     db.refresh(stored)
     return stored
 
@@ -297,10 +310,16 @@ def download_report_image(
     ),
 ):
     image = db.get(ReportImage, image_id)
-    if not image or image.report_id != report_id or not Path(image.file_path).is_file():
+    if not image or image.report_id != report_id:
+        raise HTTPException(status_code=404, detail="Image not found")
+    try:
+        path = ReportFileStorage().resolve(image.file_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Image not found") from exc
+    if not path.is_file():
         raise HTTPException(status_code=404, detail="Image not found")
     return FileResponse(
-        image.file_path, media_type=image.content_type, filename=image.original_name
+        path, media_type=image.content_type, filename=image.original_name
     )
 
 
@@ -316,7 +335,7 @@ def delete_report_image(
     image = db.get(ReportImage, image_id)
     if not image or image.report_id != report_id:
         raise HTTPException(status_code=404, detail="Image not found")
-    Path(image.file_path).unlink(missing_ok=True)
+    ReportFileStorage().delete(image.file_path)
     db.delete(image)
     db.add(
         AuditEvent(

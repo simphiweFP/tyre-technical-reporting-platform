@@ -1,0 +1,16 @@
+services:
+  api:
+    environment:
+      REPORT_FILE_ROOT: /mnt/royal-tyres/technical-reports
+    volumes:
+      - type: bind
+        source: ${REPORT_FILE_SHARE_HOST_PATH}
+        target: /mnt/royal-tyres/technical-reports
+
+  delivery-worker:
+    environment:
+      REPORT_FILE_ROOT: /mnt/royal-tyres/technical-reports
+    volumes:
+      - type: bind
+        source: ${REPORT_FILE_SHARE_HOST_PATH}
+        target: /mnt/royal-tyres/technical-reports

@@ -29,9 +29,9 @@ services:
         condition: service_started
     environment:
       SMTP_HOST: mailpit
-      MEDIA_ROOT: /app/data/report-images
+      REPORT_FILE_ROOT: /app/data/technical-reports
     volumes:
-      - report_images:/app/data/report-images
+      - report_files:/app/data/technical-reports
     healthcheck:
       test:
         [
@@ -65,9 +65,9 @@ services:
     env_file: .env
     environment:
       SMTP_HOST: mailpit
-      MEDIA_ROOT: /app/data/report-images
+      REPORT_FILE_ROOT: /app/data/technical-reports
     volumes:
-      - report_images:/app/data/report-images
+      - report_files:/app/data/technical-reports
     depends_on:
       database:
         condition: service_healthy
@@ -83,4 +83,4 @@ services:
 
 volumes:
   postgres_data:
-  report_images:
+  report_files:

@@ -9,6 +9,7 @@ from backend.app.core.middleware import RequestProtectionMiddleware
 from backend.app.modules.delivery.presentation import router as delivery_router
 from backend.app.modules.identity.presentation import router as auth_router
 from backend.app.modules.reports.presentation import router as reports_router
+from backend.app.modules.reports.storage import ReportFileStorage
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version="0.1.0")
@@ -40,4 +41,5 @@ def health():
 def readiness():
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
+    ReportFileStorage().ensure_ready()
     return {"status": "ready"}

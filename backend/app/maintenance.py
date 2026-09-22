@@ -1,5 +1,4 @@
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 from sqlalchemy import select
 
@@ -9,11 +8,13 @@ from backend.app.modules.reports.infrastructure import (
     ReportImage,
     TechnicalReportRecord,
 )
+from backend.app.modules.reports.storage import ReportFileStorage
 
 
 def purge_expired_archived_reports() -> int:
     cutoff = datetime.now(UTC) - timedelta(days=get_settings().report_retention_days)
     removed = 0
+    storage = ReportFileStorage()
     with SessionLocal() as db:
         reports = db.scalars(
             select(TechnicalReportRecord).where(
@@ -25,7 +26,7 @@ def purge_expired_archived_reports() -> int:
             for image in db.scalars(
                 select(ReportImage).where(ReportImage.report_id == report.id)
             ):
-                Path(image.file_path).unlink(missing_ok=True)
+                storage.delete(image.file_path)
             db.delete(report)
             removed += 1
         db.commit()

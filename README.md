@@ -93,7 +93,11 @@ OCR values are always suggestions requiring operator confirmation. Parser fixtur
 
 ## Backups and retention
 
-`scripts/backup.sh` creates a PostgreSQL custom-format dump and a matching archive of local report images. Set `PG_BACKUP_URL`, `MEDIA_ROOT` and an encrypted `BACKUP_ROOT`, schedule it outside the application container, and regularly test restores. Archived reports older than `REPORT_RETENTION_DAYS` can be removed with:
+Images and generated report files use the same persistent company file-server pattern as SalesApp ROD documents. PostgreSQL stores relative paths and metadata only. Set `REPORT_FILE_ROOT` to the mounted SMB/NFS share used by both the API and delivery worker—for example `/mnt/royal-tyres/technical-reports`. On Windows infrastructure this mount can be backed by `\\RoyalTyresFileServer\\TechnicalReports`. Do not point production at a container's temporary filesystem.
+
+For container deployment, copy `deploy/docker-compose.file-server.yml.example` to a deployment-specific override and set `REPORT_FILE_SHARE_HOST_PATH` to the share's host mount. The override bind-mounts the same persistent directory into both the API and delivery worker. Share credentials stay in the operating system's SMB/NFS mount configuration and are never stored in this repository.
+
+Files are organised under `year/month/claim-reference/report-id`, and all resolved paths are constrained to the configured share. `scripts/backup.sh` creates a PostgreSQL custom-format dump and a matching archive of the report file share. Set `PG_BACKUP_URL`, `REPORT_FILE_ROOT` and an encrypted `BACKUP_ROOT`, schedule it outside the application container, and regularly test restores. Archived reports older than `REPORT_RETENTION_DAYS` can be removed with:
 
 ```bash
 python -m backend.app.maintenance

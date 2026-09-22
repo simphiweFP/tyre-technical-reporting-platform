@@ -12,6 +12,7 @@ from backend.app.modules.reports.infrastructure import (
     ReportImage,
     TechnicalReportRecord,
 )
+from backend.app.modules.reports.storage import ReportFileStorage
 
 
 class ReportDeliveryService:
@@ -33,6 +34,7 @@ class ReportDeliveryService:
         )
         report = attempt.report_payload
         if report_record:
+            storage = ReportFileStorage()
             images = self.db.scalars(
                 select(ReportImage)
                 .where(ReportImage.report_id == report_record.id)
@@ -44,7 +46,7 @@ class ReportDeliveryService:
                     {
                         "category": image.category,
                         "label": image.category.replace("_", " ").title(),
-                        "filePath": image.file_path,
+                        "filePath": str(storage.resolve(image.file_path)),
                     }
                     for image in images
                 ],
