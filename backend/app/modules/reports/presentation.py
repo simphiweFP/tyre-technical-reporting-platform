@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.core.database import get_db
 from backend.app.modules.auditing.infrastructure import AuditEvent
+from backend.app.modules.branches.infrastructure import Branch
 from backend.app.modules.document_generation.application import GenerateTechnicalReport
 from backend.app.modules.document_generation.infrastructure import (
     ReportLabTechnicalReportGenerator,
@@ -29,14 +30,63 @@ from backend.app.modules.reports.schemas import (
     AnalyticsResponse,
     ImageResponse,
     ReportListResponse,
+    ReportReferenceDataResponse,
     ReportResponse,
     ReportUpsertRequest,
+    ReferenceOption,
 )
 from backend.app.modules.reports.storage import ReportFileStorage
 
 router = APIRouter(prefix="/reports", tags=["Technical reports"])
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+
+@router.get("/reference-data", response_model=ReportReferenceDataResponse)
+def report_reference_data(
+    db: Session = Depends(get_db),
+    _: User = Depends(
+        require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
+    ),
+):
+    branches = db.scalars(
+        select(Branch).where(Branch.is_active.is_(True)).order_by(Branch.name)
+    ).all()
+    users = db.scalars(
+        select(User).where(User.is_active.is_(True)).order_by(User.full_name)
+    ).all()
+    records = db.scalars(
+        select(TechnicalReportRecord).where(TechnicalReportRecord.archived.is_(False))
+    ).all()
+
+    def report_values(field: str) -> list[str]:
+        return sorted(
+            {
+                str(record.report_data.get(field) or "").strip()
+                for record in records
+                if str(record.report_data.get(field) or "").strip()
+            }
+        )
+
+    brands = sorted(
+        set(report_values("brand"))
+        | {"Bridgestone", "Continental", "Dunlop", "Goodyear", "Hankook", "Michelin"}
+    )
+    return ReportReferenceDataResponse(
+        branches=[ReferenceOption(value=branch.code, label=branch.name) for branch in branches],
+        salespeople=[user.full_name for user in users],
+        customers=report_values("customerName"),
+        categories=["Manufacturing", "Road hazard", "Service related"],
+        brands=brands,
+        patterns=report_values("pattern"),
+        tyre_positions=[
+            "Front left",
+            "Front right",
+            "Rear left",
+            "Rear right",
+            "Spare",
+        ],
+    )
 
 
 @router.get("/analytics/summary", response_model=AnalyticsResponse)

@@ -61,7 +61,12 @@
             >
               <span>Salesperson <em>*</em></span>
               <i>♙</i>
-              <input formControlName="salesperson" placeholder="Select salesperson" />
+              <select formControlName="salesperson">
+                <option value="">Select salesperson</option>
+                @for (salesperson of referenceData().salespeople; track salesperson) {
+                  <option [value]="salesperson">{{ salesperson }}</option>
+                }
+              </select>
               <b>›</b>
               @if (form.controls.salesperson.invalid && form.controls.salesperson.touched) {
                 <small class="field-error">Salesperson is required.</small>
@@ -75,8 +80,16 @@
             >
               <span>Customer name <em>*</em></span>
               <i>♙</i>
-              <input formControlName="customerName" placeholder="Search or type customer name" />
-              <b>›</b>
+              <input
+                formControlName="customerName"
+                list="customer-options"
+                placeholder="Search or type customer name"
+              />
+              <datalist id="customer-options">
+                @for (customer of referenceData().customers; track customer) {
+                  <option [value]="customer"></option>
+                }
+              </datalist>
               @if (form.controls.customerName.invalid && form.controls.customerName.touched) {
                 <small class="field-error">Customer name is required.</small>
               }
@@ -102,8 +115,8 @@
               <span>Branch <em>*</em></span>
               <i>●</i>
               <select formControlName="branch">
-                @for (branch of branches(); track branch.id) {
-                  <option [value]="branch.code">{{ branch.name }} ({{ branch.code }})</option>
+                @for (branch of referenceData().branches; track branch.value) {
+                  <option [value]="branch.value">{{ branch.label }} ({{ branch.value }})</option>
                 }
               </select>
               <b>›</b>
@@ -121,7 +134,7 @@
                 <span>Category</span><i>◉</i>
                 <select formControlName="category">
                   <option value="">Select category</option>
-                  @for (category of reportCategories; track category) {
+                  @for (category of referenceData().categories; track category) {
                     <option [value]="category">{{ category }}</option>
                   }</select
                 ><b>›</b>
@@ -131,7 +144,17 @@
                 [class.has-error]="form.controls.brand.invalid && form.controls.brand.touched"
               >
                 <span>Brand <em>*</em></span
-                ><i>▥</i><input formControlName="brand" placeholder="Select brand" /><b>›</b>
+                ><i>▥</i
+                ><input
+                  formControlName="brand"
+                  list="brand-options"
+                  placeholder="Select or type brand"
+                />
+                <datalist id="brand-options">
+                  @for (brand of referenceData().brands; track brand) {
+                    <option [value]="brand"></option>
+                  }
+                </datalist>
                 @if (form.controls.brand.invalid && form.controls.brand.touched) {
                   <small class="field-error">Brand is required.</small>
                 }
@@ -142,7 +165,16 @@
               </label>
               <label class="mock-field compact">
                 <span>Pattern</span><i>▥</i
-                ><input formControlName="pattern" placeholder="Select pattern" /><b>›</b>
+                ><input
+                  formControlName="pattern"
+                  list="pattern-options"
+                  placeholder="Select or type pattern"
+                />
+                <datalist id="pattern-options">
+                  @for (pattern of referenceData().patterns; track pattern) {
+                    <option [value]="pattern"></option>
+                  }
+                </datalist>
               </label>
               <label
                 class="mock-field compact"
@@ -193,11 +225,9 @@
               ><i>⊗</i><span>Tyre position</span
               ><select formControlName="tyrePosition">
                 <option value="">Select position</option>
-                <option>Front left</option>
-                <option>Front right</option>
-                <option>Rear left</option>
-                <option>Rear right</option>
-                <option>Spare</option></select
+                @for (position of referenceData().tyre_positions; track position) {
+                  <option [value]="position">{{ position }}</option>
+                }</select
               ><b>›</b></label
             >
           </section>

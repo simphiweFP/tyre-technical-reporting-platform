@@ -3,13 +3,11 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { debounceTime, Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
-import { Branch, UserAdminService } from '../../core/admin/user-admin.service';
-import { ReportStore } from '../../core/data/report.store';
+import { ReportReferenceData, ReportStore } from '../../core/data/report.store';
 import { ReportDeliveryService } from '../../core/delivery/report-delivery.service';
 import { ReportIntelligenceService } from '../../core/media/report-intelligence.service';
 import {
   PHOTO_CATEGORIES,
-  REPORT_CATEGORIES,
   ReportPhoto,
   ReportRecipient,
   TechnicalReport,
@@ -26,7 +24,6 @@ export class ReportCaptureComponent implements OnDestroy {
   private readonly router = inject(Router);
   readonly store = inject(ReportStore);
   private readonly auth = inject(AuthService);
-  private readonly admin = inject(UserAdminService);
   private readonly intelligence = inject(ReportIntelligenceService);
   private readonly delivery = inject(ReportDeliveryService);
   private readonly destroy$ = new Subject<void>();
@@ -45,10 +42,17 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly photoValidationShown = signal(false);
   readonly stepLabels = ['Report details', 'Take photos', 'Tyre & vehicle', 'Review'];
   readonly photoCategories = PHOTO_CATEGORIES;
-  readonly reportCategories = REPORT_CATEGORIES;
   readonly requiredCount = PHOTO_CATEGORIES.filter((p) => p.required).length;
   readonly report = signal<TechnicalReport>(this.loadReport());
-  readonly branches = signal<Branch[]>([]);
+  readonly referenceData = signal<ReportReferenceData>({
+    branches: [],
+    salespeople: [],
+    customers: [],
+    categories: [],
+    brands: [],
+    patterns: [],
+    tyre_positions: [],
+  });
   readonly form = this.fb.nonNullable.group({
     internalExternal: [this.report().internalExternal],
     branch: [this.report().branch],
@@ -115,7 +119,7 @@ export class ReportCaptureComponent implements OnDestroy {
       .pipe(debounceTime(650), takeUntil(this.destroy$))
       .subscribe(() => this.persist());
     void this.loadDeliveryData();
-    void this.loadBranches();
+    void this.loadReferenceData();
     if (this.route.snapshot.paramMap.get('id')) void this.loadServerReport();
     else this.persist();
   }
@@ -312,20 +316,21 @@ export class ReportCaptureComponent implements OnDestroy {
       this.captureMessage.set('Delivery contacts are temporarily unavailable.');
     }
   }
-  private async loadBranches(): Promise<void> {
+  private async loadReferenceData(): Promise<void> {
     try {
-      const branches = (await this.admin.branches()).filter((branch) => branch.is_active);
-      this.branches.set(branches);
+      const data = await this.store.referenceData();
+      this.referenceData.set(data);
       const current = this.form.controls.branch.value;
-      const matching = branches.find(
-        (branch) => branch.code === current || branch.name.toLowerCase() === current.toLowerCase(),
+      const matching = data.branches.find(
+        (branch) =>
+          branch.value === current || branch.label.toLowerCase() === current.toLowerCase(),
       );
-      if (matching && matching.code !== current) {
-        this.form.controls.branch.setValue(matching.code, { emitEvent: false });
+      if (matching && matching.value !== current) {
+        this.form.controls.branch.setValue(matching.value, { emitEvent: false });
         this.persist();
       }
     } catch {
-      this.captureMessage.set('Branch data is temporarily unavailable.');
+      this.captureMessage.set('Technical report dropdown data is temporarily unavailable.');
     }
   }
   private readyForReview(): boolean {

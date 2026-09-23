@@ -43,3 +43,18 @@ class AnalyticsResponse(BaseModel):
     by_brand: dict[str, int]
     by_category: dict[str, int]
     by_month: dict[str, int]
+
+
+class ReferenceOption(BaseModel):
+    value: str
+    label: str
+
+
+class ReportReferenceDataResponse(BaseModel):
+    branches: list[ReferenceOption]
+    salespeople: list[str]
+    customers: list[str]
+    categories: list[str]
+    brands: list[str]
+    patterns: list[str]
+    tyre_positions: list[str]

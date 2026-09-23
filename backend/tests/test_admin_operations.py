@@ -43,6 +43,22 @@ def test_admin_can_manage_branches_and_settings(client):
     assert client.get("/api/v1/admin/settings", headers=headers).json() == settings
 
 
+def test_report_reference_data_uses_application_records(client):
+    headers = login_headers(client)
+    response = client.get("/api/v1/reports/reference-data", headers=headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert {"value": "PHX", "label": "Phoenix"} in data["branches"]
+    assert "Admin" in data["salespeople"]
+    assert data["categories"] == [
+        "Manufacturing",
+        "Road hazard",
+        "Service related",
+    ]
+    assert "Front left" in data["tyre_positions"]
+
+
 def test_admin_can_manage_recipient_rules(client):
     headers = login_headers(client)
     created = client.post(

@@ -35,6 +35,15 @@ export interface ReportAnalytics {
   by_category: Record<string, number>;
   by_month: Record<string, number>;
 }
+export interface ReportReferenceData {
+  branches: { value: string; label: string }[];
+  salespeople: string[];
+  customers: string[];
+  categories: string[];
+  brands: string[];
+  patterns: string[];
+  tyre_positions: string[];
+}
 
 export interface ReportSearch {
   query?: string;
@@ -182,6 +191,12 @@ export class ReportStore {
   analytics(): Promise<ReportAnalytics> {
     return firstValueFrom(
       this.http.get<ReportAnalytics>(`${environment.apiUrl}/reports/analytics/summary`),
+    );
+  }
+
+  referenceData(): Promise<ReportReferenceData> {
+    return firstValueFrom(
+      this.http.get<ReportReferenceData>(`${environment.apiUrl}/reports/reference-data`),
     );
   }
 
