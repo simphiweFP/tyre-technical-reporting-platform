@@ -69,7 +69,7 @@ class RequestProtectionMiddleware(BaseHTTPMiddleware):
         if request.url.path in {"/docs", "/redoc"}:
             content_security_policy = (
                 "default-src 'none'; "
-                "script-src https://cdn.jsdelivr.net; "
+                "script-src https://cdn.jsdelivr.net 'unsafe-inline'; "
                 "style-src https://cdn.jsdelivr.net 'unsafe-inline'; "
                 "img-src https://fastapi.tiangolo.com data:; "
                 "connect-src 'self'; "

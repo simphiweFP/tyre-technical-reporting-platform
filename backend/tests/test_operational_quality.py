@@ -36,6 +36,6 @@ def test_swagger_security_policy_allows_required_assets(client):
 
     assert response.status_code == 200
     policy = response.headers["Content-Security-Policy"]
-    assert "script-src https://cdn.jsdelivr.net" in policy
+    assert "script-src https://cdn.jsdelivr.net 'unsafe-inline'" in policy
     assert "style-src https://cdn.jsdelivr.net 'unsafe-inline'" in policy
     assert "connect-src 'self'" in policy
