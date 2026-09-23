@@ -54,7 +54,7 @@ export class ReportCaptureComponent implements OnDestroy {
   });
   readonly form = this.fb.nonNullable.group({
     internalExternal: [this.report().internalExternal],
-    branch: [this.report().branch],
+    branch: [this.report().branch, Validators.required],
     salesperson: [this.report().salesperson, Validators.required],
     customerName: [this.report().customerName, Validators.required],
     customerInvoiceNumber: [this.report().customerInvoiceNumber, Validators.required],
@@ -86,7 +86,10 @@ export class ReportCaptureComponent implements OnDestroy {
   );
   readonly claimComplete = computed(
     () =>
-      !!this.form.controls.customerName.value && !!this.form.controls.customerInvoiceNumber.value,
+      !!this.form.controls.salesperson.value &&
+      !!this.form.controls.customerName.value &&
+      !!this.form.controls.customerInvoiceNumber.value &&
+      !!this.form.controls.branch.value,
   );
   readonly tyreComplete = computed(
     () =>
@@ -337,7 +340,7 @@ export class ReportCaptureComponent implements OnDestroy {
     this.persist();
     if (!this.claimComplete()) {
       this.step.set(0);
-      this.captureMessage.set('Complete the required customer and invoice fields.');
+      this.captureMessage.set('Complete all required report detail fields, including branch.');
       return false;
     }
     if (!this.photosComplete()) {
@@ -361,6 +364,7 @@ export class ReportCaptureComponent implements OnDestroy {
         this.form.controls.salesperson,
         this.form.controls.customerName,
         this.form.controls.customerInvoiceNumber,
+        this.form.controls.branch,
       ];
       controls.forEach((control) => control.markAsTouched());
       if (controls.some((control) => control.invalid)) {
