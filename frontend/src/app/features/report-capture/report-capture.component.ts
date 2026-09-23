@@ -430,6 +430,7 @@ import {
 export class ReportCaptureComponent implements OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   readonly store = inject(ReportStore);
   private readonly auth = inject(AuthService);
   private readonly intelligence = inject(ReportIntelligenceService);
@@ -541,15 +542,24 @@ export class ReportCaptureComponent implements OnDestroy {
     if (value === 3) void this.loadDeliveryData();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  next(): void {
+  async next(): Promise<void> {
     if (this.step() < 3) {
       this.goTo(this.step() + 1);
       return;
     }
     if (!this.confirmed() || !this.readyForReview()) return;
-    this.persist();
-    this.previewMode.set(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.captureMessage.set('');
+    try {
+      const submitted = { ...this.currentReport(), status: 'Submitted' as const };
+      this.report.set(submitted);
+      await this.store.saveNow(submitted);
+      if (this.selectedRecipient()) await this.sendReport();
+      await this.router.navigate(['/dashboard']);
+    } catch {
+      this.captureMessage.set(
+        'The report could not be submitted. Check the API connection and try again.',
+      );
+    }
   }
   previous(): void {
     if (this.step() > 0) this.goTo(this.step() - 1);
@@ -662,7 +672,11 @@ export class ReportCaptureComponent implements OnDestroy {
     };
     return [
       { label: 'Brand', value: values.brand || 'Not captured', confidence: confidence('brand') },
-      { label: 'Rim size', value: values.rimSize || 'Not captured', confidence: confidence('rimSize') },
+      {
+        label: 'Rim size',
+        value: values.rimSize || 'Not captured',
+        confidence: confidence('rimSize'),
+      },
       { label: 'DOT', value: values.dot || 'Not captured', confidence: confidence('dot') },
       {
         label: 'Serial number',
