@@ -91,7 +91,7 @@ export interface DeliveryAttempt {
   claim_reference: string;
   recipient_email: string;
   cc: string[];
-  status: 'Pending' | 'Retrying' | 'Sent' | 'Failed';
+  status: 'Pending' | 'Processing' | 'Retrying' | 'Sent' | 'Failed';
   attempt_count: number;
   message_id: string | null;
   error_message: string | null;

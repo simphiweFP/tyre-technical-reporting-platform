@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -26,3 +27,15 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "offline_sync_minutes": 5,
     "smtp_server": "smtp.royaltyres.co.za",
 }
+
+
+class OperationsStatusResponse(BaseModel):
+    status: str
+    database: str
+    file_storage: str
+    delivery_worker: str
+    worker_last_seen_at: datetime | None
+    pending_deliveries: int
+    retrying_deliveries: int
+    failed_deliveries: int
+    oldest_pending_at: datetime | None

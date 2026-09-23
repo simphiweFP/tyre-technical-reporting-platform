@@ -64,6 +64,25 @@ class Settings(BaseSettings):
                     self, value_field, Path(path).read_text(encoding="utf-8").strip()
                 )
 
+    def validate_for_startup(self) -> None:
+        if self.environment != "production":
+            return
+        errors: list[str] = []
+        if self.jwt_secret == "development-secret-change-before-deployment":
+            errors.append("JWT_SECRET must be replaced")
+        if self.seed_admin_password == "ChangeMe123!":
+            errors.append("SEED_ADMIN_PASSWORD must be replaced")
+        if len(self.jwt_secret) < 32:
+            errors.append("JWT_SECRET must contain at least 32 characters")
+        if self.database_url.startswith("sqlite"):
+            errors.append("Production must use PostgreSQL, not SQLite")
+        if any("localhost" in origin for origin in self.cors_origins):
+            errors.append("ALLOWED_ORIGINS must not contain localhost")
+        if self.public_app_url.startswith("http://"):
+            errors.append("PUBLIC_APP_URL must use HTTPS")
+        if errors:
+            raise RuntimeError("Unsafe production configuration: " + "; ".join(errors))
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

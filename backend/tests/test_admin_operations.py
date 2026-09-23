@@ -163,3 +163,18 @@ def test_audit_viewer_reads_real_events(client):
     assert (
         client.get("/api/v1/admin/settings", headers=viewer_headers).status_code == 403
     )
+
+
+def test_operations_health_is_admin_only(client):
+    headers = login_headers(client)
+    response = client.get("/api/v1/admin/operations", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["database"] == "healthy"
+    assert response.json()["file_storage"] == "healthy"
+    assert response.json()["delivery_worker"] == "not_started"
+
+    viewer_headers = login_headers(client, "viewer@example.com")
+    assert (
+        client.get("/api/v1/admin/operations", headers=viewer_headers).status_code
+        == 403
+    )

@@ -22,6 +22,7 @@ class RequestProtectionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         started = time.perf_counter()
         request_id = request.headers.get("x-request-id") or str(uuid4())
+        request.state.request_id = request_id
         client = request.client.host if request.client else "unknown"
         now = datetime.now(UTC)
         window = self.requests[client]
@@ -42,7 +43,28 @@ class RequestProtectionMiddleware(BaseHTTPMiddleware):
                 headers={"Retry-After": "60", "X-Request-ID": request_id},
             )
         window.append(now)
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            logger.exception(
+                json.dumps(
+                    {
+                        "event": "http_request_failed",
+                        "request_id": request_id,
+                        "method": request.method,
+                        "path": request.url.path,
+                        "client": client,
+                    }
+                )
+            )
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "detail": "An unexpected server error occurred",
+                    "request_id": request_id,
+                },
+                headers={"X-Request-ID": request_id},
+            )
         response.headers.update(
             {
                 "X-Request-ID": request_id,
@@ -53,6 +75,10 @@ class RequestProtectionMiddleware(BaseHTTPMiddleware):
                 "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
             }
         )
+        if settings.environment == "production":
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
         logger.info(
             json.dumps(
                 {

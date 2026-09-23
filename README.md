@@ -106,6 +106,8 @@ Files are organised under `year/month/claim-reference/report-id`, and all resolv
 python -m backend.app.maintenance
 ```
 
+Each backup includes a `SHA256SUMS` manifest. Run `sha256sum -c SHA256SUMS` before every restore test. The administration System & Audit screen reports database, file-storage, delivery-worker heartbeat and delivery-queue health; a worker becomes stale after 30 seconds without a heartbeat.
+
 ## Production deployment checklist
 
 - Replace the JWT secret and seeded administrator password with managed secrets.

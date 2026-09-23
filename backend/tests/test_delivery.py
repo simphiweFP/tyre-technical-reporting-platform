@@ -1,5 +1,8 @@
 from uuid import UUID
 
+from sqlalchemy.orm import sessionmaker
+
+from backend.app import worker
 from backend.app.core.database import get_db
 from backend.app.main import app
 from backend.app.modules.delivery.application import ReportDeliveryService
@@ -145,3 +148,42 @@ def test_viewer_cannot_manage_recipients(client):
         json={"company": "Blocked", "email": "blocked@example.co.za"},
     )
     assert response.status_code == 403
+
+
+def test_delivery_worker_claims_and_processes_due_items(client, monkeypatch):
+    headers = auth_headers(client)
+    recipient = create_recipient(client, headers)
+    save_report(client, headers, "TR-WORKER-QUEUE")
+    queued = client.post(
+        "/api/v1/reports/deliver",
+        headers=headers,
+        json={
+            "recipient_id": recipient["id"],
+            "report": {"claimReference": "TR-WORKER-QUEUE"},
+        },
+    ).json()
+
+    session_override = app.dependency_overrides[get_db]()
+    db = next(session_override)
+    testing_session = sessionmaker(bind=db.bind, expire_on_commit=False)
+    session_override.close()
+
+    class Gateway:
+        def __init__(self, _settings):
+            pass
+
+        def send(self, _message):
+            return "worker-queue-message"
+
+    monkeypatch.setattr(worker, "SessionLocal", testing_session)
+    monkeypatch.setattr(worker, "SmtpEmailGateway", Gateway)
+
+    assert worker.process_due_deliveries() == (1, 0)
+    with testing_session() as verification_db:
+        attempt = verification_db.get(DeliveryAttempt, UUID(queued["id"]))
+        assert attempt.status == "Sent"
+        assert attempt.message_id == "worker-queue-message"
+
+    worker.update_heartbeat(processed=1)
+    response = client.get("/api/v1/admin/operations", headers=headers)
+    assert response.json()["delivery_worker"] == "healthy"

@@ -9,6 +9,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U tyre_app -d tyre_reports"]
       interval: 5s
@@ -32,6 +33,7 @@ services:
       REPORT_FILE_ROOT: /app/data/technical-reports
     volumes:
       - report_files:/app/data/technical-reports
+    restart: unless-stopped
     healthcheck:
       test:
         [
@@ -57,6 +59,7 @@ services:
       - "4200:80"
     depends_on:
       - api
+    restart: unless-stopped
 
   delivery-worker:
     build:
@@ -69,10 +72,13 @@ services:
     volumes:
       - report_files:/app/data/technical-reports
     depends_on:
+      api:
+        condition: service_healthy
       database:
         condition: service_healthy
       mailpit:
         condition: service_started
+    restart: unless-stopped
     command: ["python", "-m", "backend.app.worker"]
 
   mailpit:
