@@ -50,36 +50,117 @@
   </section>
   @if (showForm()) {
     <div class="modal-backdrop" (click)="showForm.set(false)">
-      <form class="modal" (click)="$event.stopPropagation()" (ngSubmit)="save()">
+      <form
+        #recipientForm="ngForm"
+        class="modal"
+        (click)="$event.stopPropagation()"
+        (ngSubmit)="save()"
+      >
         <header>
           <h2>{{ editing() ? 'Edit' : 'Add' }} Rule</h2>
           <button type="button" (click)="showForm.set(false)">×</button>
         </header>
-        <label>Company<input name="company" [(ngModel)]="newRecipient.company" required /></label
-        ><label
-          >Branch<select name="branch" [(ngModel)]="newRecipient.branch_code" required>
+        @if (dialogError()) {
+          <div class="dialog-error" role="alert">{{ dialogError() }}</div>
+        }
+        <label
+          >Company
+          <input
+            #company="ngModel"
+            name="company"
+            [(ngModel)]="newRecipient.company"
+            required
+            minlength="2"
+            maxlength="150"
+          />
+          @if (company.invalid && company.touched) {
+            <small class="field-error">
+              {{
+                company.errors?.['required'] ? 'Company is required.' : 'Use 2 to 150 characters.'
+              }}
+            </small>
+          }
+        </label>
+        <label
+          >Branch
+          <select
+            #branchField="ngModel"
+            name="branch"
+            [(ngModel)]="newRecipient.branch_code"
+            required
+          >
             <option value="All Branches">All Branches</option>
             @for (branch of branches(); track branch.id) {
               <option [value]="branch.code">{{ branch.name }} ({{ branch.code }})</option>
             }
-          </select></label
-        ><label
-          >Category<select name="category" [(ngModel)]="newRecipient.category" required>
+          </select>
+          @if (branchField.invalid && branchField.touched) {
+            <small class="field-error">Select a branch.</small>
+          }
+        </label>
+        <label
+          >Category
+          <select
+            #categoryField="ngModel"
+            name="category"
+            [(ngModel)]="newRecipient.category"
+            required
+          >
             <option value="All Categories">All Categories</option>
             @for (category of categories; track category) {
               <option [value]="category">{{ category }}</option>
             }
-          </select></label
-        ><label>Contact<input name="contact" [(ngModel)]="newRecipient.contact" /></label
-        ><label
-          >Email<input name="email" type="email" [(ngModel)]="newRecipient.email" required /></label
-        ><label>Default CC<input name="cc" type="email" [(ngModel)]="newRecipient.cc" /></label
-        ><label
-          >Escalation hours<input
+          </select>
+          @if (categoryField.invalid && categoryField.touched) {
+            <small class="field-error">Select a report category.</small>
+          }
+        </label>
+        <label
+          >Contact
+          <input name="contact" [(ngModel)]="newRecipient.contact" maxlength="150" />
+        </label>
+        <label
+          >Email
+          <input
+            #email="ngModel"
+            name="email"
+            type="email"
+            [(ngModel)]="newRecipient.email"
+            required
+          />
+          @if (email.invalid && email.touched) {
+            <small class="field-error">
+              {{
+                email.errors?.['required']
+                  ? 'Recipient email is required.'
+                  : 'Enter a valid email address.'
+              }}
+            </small>
+          }
+        </label>
+        <label
+          >Default CC
+          <input #cc="ngModel" name="cc" type="email" [(ngModel)]="newRecipient.cc" />
+          @if (cc.invalid && cc.touched) {
+            <small class="field-error">Enter a valid CC email address.</small>
+          }
+        </label>
+        <label
+          >Escalation hours
+          <input
+            #hours="ngModel"
             name="hours"
             type="number"
-            [(ngModel)]="newRecipient.escalation_hours" /></label
-        ><button class="red-button" type="submit" [disabled]="saving()">
+            [(ngModel)]="newRecipient.escalation_hours"
+            required
+            min="1"
+            max="720"
+          />
+          @if (hours.invalid && hours.touched) {
+            <small class="field-error">Enter a value between 1 and 720 hours.</small>
+          }
+        </label>
+        <button class="red-button" type="submit" [disabled]="recipientForm.invalid || saving()">
           {{ saving() ? 'Saving…' : 'Save Rule' }}
         </button>
       </form>

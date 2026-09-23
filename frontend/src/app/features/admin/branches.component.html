@@ -45,16 +45,63 @@
   </section>
   @if (showForm()) {
     <div class="modal-backdrop" (click)="showForm.set(false)">
-      <form class="modal" (click)="$event.stopPropagation()" (ngSubmit)="save()">
+      <form
+        #branchForm="ngForm"
+        class="modal"
+        (click)="$event.stopPropagation()"
+        (ngSubmit)="save()"
+      >
         <header>
           <h2>{{ editing() ? 'Edit' : 'Add' }} Branch</h2>
           <button type="button" (click)="showForm.set(false)">×</button>
         </header>
-        <label>Code<input name="code" [(ngModel)]="form.code" required /></label
-        ><label>Name<input name="name" [(ngModel)]="form.name" required /></label
-        ><label
-          >Routing email<input name="email" type="email" [(ngModel)]="form.routing_email" /></label
-        ><button class="red-button" type="submit" [disabled]="saving()">
+        @if (dialogError()) {
+          <div class="dialog-error" role="alert">{{ dialogError() }}</div>
+        }
+        <label
+          >Code
+          <input
+            #code="ngModel"
+            name="code"
+            [(ngModel)]="form.code"
+            required
+            minlength="2"
+            maxlength="20"
+          />
+          @if (code.invalid && code.touched) {
+            <small class="field-error">
+              {{
+                code.errors?.['required'] ? 'Branch code is required.' : 'Use 2 to 20 characters.'
+              }}
+            </small>
+          }
+        </label>
+        <label
+          >Name
+          <input
+            #name="ngModel"
+            name="name"
+            [(ngModel)]="form.name"
+            required
+            minlength="2"
+            maxlength="120"
+          />
+          @if (name.invalid && name.touched) {
+            <small class="field-error">
+              {{
+                name.errors?.['required'] ? 'Branch name is required.' : 'Use 2 to 120 characters.'
+              }}
+            </small>
+          }
+        </label>
+        <label
+          >Routing email
+          <input #email="ngModel" name="email" type="email" [(ngModel)]="form.routing_email" />
+          @if (email.invalid && email.touched) {
+            <small class="field-error">Enter a valid routing email address.</small>
+          }
+        </label>
+        <button class="red-button" type="submit" [disabled]="branchForm.invalid || saving()">
           {{ saving() ? 'Saving…' : 'Save Branch' }}
         </button>
       </form>

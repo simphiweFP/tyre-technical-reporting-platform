@@ -15,6 +15,7 @@ export class BranchesComponent {
   readonly showForm = signal(false);
   readonly editing = signal<Branch | null>(null);
   readonly notice = signal('');
+  readonly dialogError = signal('');
   readonly saving = signal(false);
   form = { code: '', name: '', routing_email: '' };
   constructor() {
@@ -26,6 +27,7 @@ export class BranchesComponent {
   }
   open(item?: Branch) {
     this.notice.set('');
+    this.dialogError.set('');
     this.editing.set(item ?? null);
     this.form = item
       ? { code: item.code, name: item.name, routing_email: item.routing_email }
@@ -34,7 +36,7 @@ export class BranchesComponent {
   }
   async save() {
     this.saving.set(true);
-    this.notice.set('');
+    this.dialogError.set('');
     try {
       const current = this.editing();
       const input = {
@@ -51,7 +53,7 @@ export class BranchesComponent {
       this.showForm.set(false);
       this.notice.set(`Branch ${saved.code} saved successfully.`);
     } catch (error) {
-      this.notice.set(this.errorMessage(error, 'The branch could not be saved.'));
+      this.dialogError.set(this.errorMessage(error, 'The branch could not be saved.'));
     } finally {
       this.saving.set(false);
     }

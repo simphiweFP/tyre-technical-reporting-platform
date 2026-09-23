@@ -19,6 +19,7 @@ export class RecipientsComponent {
   readonly branches = signal<Branch[]>([]);
   readonly editing = signal<ReportRecipient | null>(null);
   readonly notice = signal('');
+  readonly dialogError = signal('');
   readonly saving = signal(false);
   readonly categories = REPORT_CATEGORIES;
   newRecipient = {
@@ -42,6 +43,7 @@ export class RecipientsComponent {
   }
   open(item?: ReportRecipient) {
     this.notice.set('');
+    this.dialogError.set('');
     this.editing.set(item ?? null);
     this.newRecipient = item
       ? {
@@ -76,7 +78,7 @@ export class RecipientsComponent {
       escalation_hours: x.escalation_hours,
     };
     this.saving.set(true);
-    this.notice.set('');
+    this.dialogError.set('');
     try {
       const current = this.editing();
       const saved = current
@@ -91,7 +93,7 @@ export class RecipientsComponent {
       this.showForm.set(false);
       this.notice.set(`Recipient rule for ${saved.email} saved successfully.`);
     } catch (error) {
-      this.notice.set(this.errorMessage(error, 'The recipient rule could not be saved.'));
+      this.dialogError.set(this.errorMessage(error, 'The recipient rule could not be saved.'));
     } finally {
       this.saving.set(false);
     }
