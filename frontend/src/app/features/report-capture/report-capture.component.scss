@@ -186,6 +186,24 @@ h1 {
   border-color: #be1e2d;
   box-shadow: 0 0 0 2px #be1e2d18;
 }
+.mock-field.has-error input,
+.mock-field.has-error select {
+  border-color: #c7192c;
+  background: #fff7f8;
+}
+.field-error {
+  display: block;
+  margin-top: 5px;
+  color: #b31325;
+  font-size: 9px;
+  font-weight: 700;
+}
+.mock-field.has-error > i {
+  bottom: 32px;
+}
+.mock-field.has-error > b {
+  bottom: 30px;
+}
 .mock-field > i {
   position: absolute;
   left: 13px;
@@ -359,6 +377,17 @@ h1 {
   color: #9ca1a6;
   font-size: 20px;
   font-weight: 400;
+}
+.photo-checklist article.missing {
+  background: #fff7f8;
+  box-shadow: inset 3px 0 #c7192c;
+}
+.photo-error {
+  color: #b31325 !important;
+  font-weight: 800;
+}
+.mock-field.compact.has-error > i {
+  bottom: 30px;
 }
 .ai-review-card,
 .confirm-card,

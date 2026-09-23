@@ -53,22 +53,50 @@
               </div>
             </div>
 
-            <label class="mock-field">
+            <label
+              class="mock-field"
+              [class.has-error]="
+                form.controls.salesperson.invalid && form.controls.salesperson.touched
+              "
+            >
               <span>Salesperson <em>*</em></span>
               <i>♙</i>
               <input formControlName="salesperson" placeholder="Select salesperson" />
               <b>›</b>
+              @if (form.controls.salesperson.invalid && form.controls.salesperson.touched) {
+                <small class="field-error">Salesperson is required.</small>
+              }
             </label>
-            <label class="mock-field">
+            <label
+              class="mock-field"
+              [class.has-error]="
+                form.controls.customerName.invalid && form.controls.customerName.touched
+              "
+            >
               <span>Customer name <em>*</em></span>
               <i>♙</i>
               <input formControlName="customerName" placeholder="Search or type customer name" />
               <b>›</b>
+              @if (form.controls.customerName.invalid && form.controls.customerName.touched) {
+                <small class="field-error">Customer name is required.</small>
+              }
             </label>
-            <label class="mock-field">
-              <span>Customer invoice no.</span>
+            <label
+              class="mock-field"
+              [class.has-error]="
+                form.controls.customerInvoiceNumber.invalid &&
+                form.controls.customerInvoiceNumber.touched
+              "
+            >
+              <span>Customer invoice no. <em>*</em></span>
               <i>▤</i>
               <input formControlName="customerInvoiceNumber" placeholder="Enter invoice number" />
+              @if (
+                form.controls.customerInvoiceNumber.invalid &&
+                form.controls.customerInvoiceNumber.touched
+              ) {
+                <small class="field-error">Customer invoice number is required.</small>
+              }
             </label>
             <label class="mock-field">
               <span>Branch <em>*</em></span>
@@ -98,9 +126,15 @@
                   <option>Service related</option></select
                 ><b>›</b>
               </label>
-              <label class="mock-field compact">
-                <span>Brand</span><i>▥</i
-                ><input formControlName="brand" placeholder="Select brand" /><b>›</b>
+              <label
+                class="mock-field compact"
+                [class.has-error]="form.controls.brand.invalid && form.controls.brand.touched"
+              >
+                <span>Brand <em>*</em></span
+                ><i>▥</i><input formControlName="brand" placeholder="Select brand" /><b>›</b>
+                @if (form.controls.brand.invalid && form.controls.brand.touched) {
+                  <small class="field-error">Brand is required.</small>
+                }
               </label>
               <label class="mock-field compact">
                 <span>Rim size</span><i>⊗</i
@@ -110,12 +144,27 @@
                 <span>Pattern</span><i>▥</i
                 ><input formControlName="pattern" placeholder="Select pattern" /><b>›</b>
               </label>
-              <label class="mock-field compact">
-                <span>DOT</span><i>▣</i><input formControlName="dot" placeholder="e.g. 0124" />
+              <label
+                class="mock-field compact"
+                [class.has-error]="form.controls.dot.invalid && form.controls.dot.touched"
+              >
+                <span>DOT <em>*</em></span
+                ><i>▣</i><input formControlName="dot" placeholder="e.g. 0124" />
+                @if (form.controls.dot.invalid && form.controls.dot.touched) {
+                  <small class="field-error">DOT is required.</small>
+                }
               </label>
-              <label class="mock-field compact">
-                <span>Serial number</span><i>▥</i
-                ><input formControlName="serialNumber" placeholder="Enter serial number" />
+              <label
+                class="mock-field compact"
+                [class.has-error]="
+                  form.controls.serialNumber.invalid && form.controls.serialNumber.touched
+                "
+              >
+                <span>Serial number <em>*</em></span
+                ><i>▥</i><input formControlName="serialNumber" placeholder="Enter serial number" />
+                @if (form.controls.serialNumber.invalid && form.controls.serialNumber.touched) {
+                  <small class="field-error">Serial number is required.</small>
+                }
               </label>
               <label class="mock-field compact">
                 <span>Remaining tread depth (mm)</span><i>◔</i
@@ -169,11 +218,17 @@
             </div>
             <div class="photo-checklist">
               @for (item of photoCategories; track item.key) {
-                <article [class.captured]="photoFor(item.key)">
+                <article
+                  [class.captured]="photoFor(item.key)"
+                  [class.missing]="photoValidationShown() && item.required && !photoFor(item.key)"
+                >
                   <span class="photo-type-icon">{{ photoIcon(item.key) }}</span>
                   <div>
                     <strong>{{ item.label }}</strong
                     ><small>{{ item.hint }}</small>
+                    @if (photoValidationShown() && item.required && !photoFor(item.key)) {
+                      <small class="photo-error">Required photo missing.</small>
+                    }
                   </div>
                   @if (photoFor(item.key); as photo) {
                     <img [src]="photo.previewUrl" [alt]="item.label" />

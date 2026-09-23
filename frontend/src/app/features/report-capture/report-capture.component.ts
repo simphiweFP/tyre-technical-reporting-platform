@@ -448,6 +448,7 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly previewMode = signal(false);
   readonly savedMode = signal(false);
   readonly confirmed = signal(false);
+  readonly photoValidationShown = signal(false);
   readonly stepLabels = ['Report details', 'Take photos', 'Tyre & vehicle', 'Review'];
   readonly photoCategories = PHOTO_CATEGORIES;
   readonly requiredCount = PHOTO_CATEGORIES.filter((p) => p.required).length;
@@ -455,7 +456,7 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly form = this.fb.nonNullable.group({
     internalExternal: [this.report().internalExternal],
     branch: [this.report().branch],
-    salesperson: [this.report().salesperson],
+    salesperson: [this.report().salesperson, Validators.required],
     customerName: [this.report().customerName, Validators.required],
     customerInvoiceNumber: [this.report().customerInvoiceNumber, Validators.required],
     category: [this.report().category],
@@ -534,7 +535,10 @@ export class ReportCaptureComponent implements OnDestroy {
     this.destroy$.complete();
   }
   goTo(value: number): void {
-    if (value === 3 && !this.readyForReview()) return;
+    if (value > this.step()) {
+      if (value > this.step() + 1 || !this.validateStep(this.step())) return;
+      if (value === 3 && !this.readyForReview()) return;
+    }
     this.step.set(value);
     if (value === 3) void this.loadDeliveryData();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -761,6 +765,42 @@ export class ReportCaptureComponent implements OnDestroy {
       this.captureMessage.set('Complete the required brand, DOT and serial number fields.');
       return false;
     }
+    return true;
+  }
+  private validateStep(step: number): boolean {
+    if (step === 0) {
+      const controls = [
+        this.form.controls.salesperson,
+        this.form.controls.customerName,
+        this.form.controls.customerInvoiceNumber,
+      ];
+      controls.forEach((control) => control.markAsTouched());
+      if (controls.some((control) => control.invalid)) {
+        this.captureMessage.set('Complete the highlighted required fields before continuing.');
+        return false;
+      }
+    }
+    if (step === 1 && !this.photosComplete()) {
+      this.photoValidationShown.set(true);
+      const remaining = this.requiredCount - this.photoCount();
+      this.captureMessage.set(
+        `Capture ${remaining} remaining required photograph${remaining === 1 ? '' : 's'} before continuing.`,
+      );
+      return false;
+    }
+    if (step === 2) {
+      const controls = [
+        this.form.controls.brand,
+        this.form.controls.dot,
+        this.form.controls.serialNumber,
+      ];
+      controls.forEach((control) => control.markAsTouched());
+      if (controls.some((control) => control.invalid)) {
+        this.captureMessage.set('Complete the highlighted tyre fields before continuing.');
+        return false;
+      }
+    }
+    this.captureMessage.set('');
     return true;
   }
   private loadReport(): TechnicalReport {
