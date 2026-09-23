@@ -120,6 +120,18 @@ def test_report_search_filters_real_branch_codes_and_dot_data(client):
         "TR-PHX-CODE",
         "TR-PHX-NAME",
     }
+    assert by_branch.json()["matching_total"] == 2
+    assert by_branch.json()["status_counts"] == {"Draft": 2}
+
+    ready_in_phoenix = client.get(
+        "/api/v1/reports/records",
+        headers=headers,
+        params={"branch": "PHX", "report_status": "Ready to Submit"},
+    )
+    assert ready_in_phoenix.status_code == 200
+    assert ready_in_phoenix.json()["items"] == []
+    assert ready_in_phoenix.json()["total"] == 0
+    assert ready_in_phoenix.json()["status_counts"] == {"Draft": 2}
 
     by_dot = client.get(
         "/api/v1/reports/records", headers=headers, params={"query": "name-2"}

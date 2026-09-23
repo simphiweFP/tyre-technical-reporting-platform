@@ -41,6 +41,8 @@ class ReportResponse(BaseModel):
 class ReportListResponse(BaseModel):
     items: list[ReportResponse]
     total: int = Field(ge=0)
+    matching_total: int = Field(ge=0)
+    status_counts: dict[str, int]
 
 
 class AnalyticsResponse(BaseModel):

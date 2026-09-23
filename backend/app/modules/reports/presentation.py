@@ -157,8 +157,6 @@ def list_reports(
         statement = statement.where(TechnicalReportRecord.archived.is_(True))
     elif not include_archived:
         statement = statement.where(TechnicalReportRecord.archived.is_(False))
-    if report_status:
-        statement = statement.where(TechnicalReportRecord.status == report_status)
     if branch:
         matched_branch = db.scalar(
             select(Branch).where(or_(Branch.code == branch, Branch.name == branch))
@@ -196,12 +194,20 @@ def list_reports(
             return any(term in str(value or "").casefold() for value in values)
 
         records = [record for record in records if matches(record)]
+    status_counts: dict[str, int] = {}
+    for record in records:
+        status_counts[record.status] = status_counts.get(record.status, 0) + 1
+    matching_total = len(records)
+    if report_status:
+        records = [record for record in records if record.status == report_status]
     total = len(records)
     return ReportListResponse(
         items=[
             _report_response(record, db) for record in records[offset : offset + limit]
         ],
         total=total,
+        matching_total=matching_total,
+        status_counts=status_counts,
     )
 
 

@@ -23,6 +23,8 @@ interface ServerReport {
 interface ReportListResponse {
   items: ServerReport[];
   total: number;
+  matching_total: number;
+  status_counts: Record<string, number>;
 }
 export interface ReportAnalytics {
   total: number;
@@ -68,6 +70,8 @@ export class ReportStore {
   readonly saving = signal(false);
   readonly saveError = signal('');
   readonly total = signal(0);
+  readonly matchingTotal = signal(0);
+  readonly statusCounts = signal<Record<string, number>>({});
   readonly drafts = computed(() => this.state().filter((report) => report.status === 'Draft'));
   private pendingSaves = 0;
 
@@ -125,9 +129,13 @@ export class ReportStore {
       );
       this.state.set(response.items.map((item) => this.mapReport(item)));
       this.total.set(response.total);
+      this.matchingTotal.set(response.matching_total);
+      this.statusCounts.set(response.status_counts);
     } catch {
       this.state.set([]);
       this.total.set(0);
+      this.matchingTotal.set(0);
+      this.statusCounts.set({});
     } finally {
       this.loading.set(false);
     }
