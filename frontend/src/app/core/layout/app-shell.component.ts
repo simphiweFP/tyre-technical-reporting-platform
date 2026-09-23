@@ -13,6 +13,7 @@ export class AppShellComponent {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   readonly menuOpen = signal(false);
+  readonly profileOpen = signal(false);
   readonly search = signal('');
   readonly canCapture = computed(() => this.auth.hasRole('administrator', 'report_capturer'));
   readonly canViewReports = computed(() =>
@@ -31,6 +32,14 @@ export class AppShellComponent {
   );
   closeMenu(): void {
     this.menuOpen.set(false);
+  }
+  toggleProfile(): void {
+    this.profileOpen.update((open) => !open);
+  }
+  logout(): void {
+    this.profileOpen.set(false);
+    this.menuOpen.set(false);
+    this.auth.logout();
   }
   runSearch(): void {
     void this.router.navigate(['/reports'], { queryParams: { q: this.search().trim() || null } });

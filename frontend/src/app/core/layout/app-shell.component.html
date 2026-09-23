@@ -22,7 +22,17 @@
       <button class="menu-button" (click)="menuOpen.set(true)">☰</button>
       <label class="global-search">⌕ <input [(ngModel)]="search" (keyup.enter)="runSearch()" placeholder="Search claims, customers, DOT or serial..." /></label>
       <span class="top-icon">⌕</span><span class="top-icon alert">♧<i></i></span>
-      <div class="profile"><b>{{ initials() }}</b><span><strong>{{ auth.user()?.full_name || 'John Doe' }}</strong><small>{{ roleLabel() }}</small></span><em>⌄</em></div>
+      <div class="profile-menu">
+        <button class="profile" type="button" aria-label="Open account menu" aria-haspopup="menu" [attr.aria-expanded]="profileOpen()" (click)="toggleProfile()">
+          <b>{{ initials() }}</b><span><strong>{{ auth.user()?.full_name || 'John Doe' }}</strong><small>{{ roleLabel() }}</small></span><em>⌄</em>
+        </button>
+        @if (profileOpen()) {
+          <div class="profile-dropdown" role="menu">
+            <div class="profile-summary"><strong>{{ auth.user()?.full_name || 'John Doe' }}</strong><small>{{ auth.user()?.email }}</small></div>
+            <button type="button" role="menuitem" (click)="logout()"><span>↪</span> Sign out</button>
+          </div>
+        }
+      </div>
     </header>
     <router-outlet />
   </main>
