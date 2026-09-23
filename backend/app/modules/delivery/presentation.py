@@ -8,16 +8,19 @@ from backend.app.core.config import get_settings
 from backend.app.core.database import get_db
 from backend.app.modules.auditing.infrastructure import AuditEvent
 from backend.app.modules.delivery.application import ReportDeliveryService
+from backend.app.modules.delivery.domain import EmailMessage
 from backend.app.modules.delivery.infrastructure import (
     DeliveryAttempt,
     Recipient,
     SmtpEmailGateway,
 )
 from backend.app.modules.delivery.schemas import (
+    DeliveryListResponse,
     DeliveryRequest,
     DeliveryResponse,
     RecipientCreate,
     RecipientResponse,
+    RecipientUpdate,
 )
 from backend.app.modules.document_generation.application import GenerateTechnicalReport
 from backend.app.modules.document_generation.infrastructure import (
@@ -60,6 +63,9 @@ def create_recipient(
         contact_name=request.contact_name.strip(),
         email=str(request.email).lower(),
         default_cc=str(request.default_cc or "").lower(),
+        branch_code=request.branch_code.strip(),
+        category=request.category.strip(),
+        escalation_hours=request.escalation_hours,
     )
     db.add(recipient)
     db.flush()
@@ -75,6 +81,67 @@ def create_recipient(
     db.commit()
     db.refresh(recipient)
     return recipient
+
+
+@router.put("/recipients/{recipient_id}", response_model=RecipientResponse)
+def update_recipient(
+    recipient_id: UUID,
+    request: RecipientUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(Role.ADMINISTRATOR)),
+):
+    recipient = db.get(Recipient, recipient_id)
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Recipient not found")
+    duplicate = db.scalar(
+        select(Recipient).where(
+            Recipient.email == str(request.email).lower(),
+            Recipient.id != recipient.id,
+        )
+    )
+    if duplicate:
+        raise HTTPException(
+            status_code=409, detail="A recipient with this email already exists"
+        )
+    for field, value in request.model_dump().items():
+        if field in {"email", "default_cc"}:
+            value = str(value or "").lower()
+        setattr(recipient, field, value)
+    db.add(
+        AuditEvent(
+            actor_id=user.id,
+            action="recipient.updated",
+            entity_type="recipient",
+            entity_id=str(recipient.id),
+            details={},
+        )
+    )
+    db.commit()
+    db.refresh(recipient)
+    return recipient
+
+
+@router.post("/recipients/{recipient_id}/test")
+def test_recipient(
+    recipient_id: UUID,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_roles(Role.ADMINISTRATOR)),
+):
+    recipient = db.get(Recipient, recipient_id)
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Recipient not found")
+    SmtpEmailGateway(get_settings()).send(
+        EmailMessage(
+            subject="Royal Tyres delivery test",
+            body=(
+                "This confirms that technical-report email delivery is "
+                "configured correctly."
+            ),
+            to=(recipient.email,),
+            cc=(),
+        )
+    )
+    return {"message": f"Test email sent to {recipient.email}"}
 
 
 @router.patch("/recipients/{recipient_id}/status", response_model=RecipientResponse)
@@ -198,6 +265,30 @@ def delivery_history(
         .order_by(DeliveryAttempt.created_at.desc())
     )
     return db.scalars(query).all()
+
+
+@router.get("/deliveries", response_model=DeliveryListResponse)
+def list_deliveries(
+    query: str = "",
+    delivery_status: str = "",
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=250),
+    db: Session = Depends(get_db),
+    _: User = Depends(
+        require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
+    ),
+):
+    statement = select(DeliveryAttempt).order_by(DeliveryAttempt.created_at.desc())
+    if delivery_status:
+        statement = statement.where(DeliveryAttempt.status == delivery_status)
+    if query:
+        term = f"%{query.strip()}%"
+        statement = statement.where(
+            DeliveryAttempt.claim_reference.ilike(term)
+            | DeliveryAttempt.recipient_email.ilike(term)
+        )
+    items = db.scalars(statement).all()
+    return DeliveryListResponse(items=items[offset : offset + limit], total=len(items))
 
 
 def _service(db: Session) -> ReportDeliveryService:

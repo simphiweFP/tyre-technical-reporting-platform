@@ -25,7 +25,9 @@ from backend.app.modules.identity.infrastructure import (
     User,
 )
 from backend.app.modules.identity.schemas import (
+    BranchCreateRequest,
     BranchResponse,
+    BranchUpdateRequest,
     LoginRequest,
     LogoutRequest,
     ManagedUserResponse,
@@ -208,6 +210,74 @@ def branches(
     db: Session = Depends(get_db), _: User = Depends(require_roles(Role.ADMINISTRATOR))
 ):
     return db.scalars(select(Branch).order_by(Branch.name)).all()
+
+
+@router.post(
+    "/branches", response_model=BranchResponse, status_code=status.HTTP_201_CREATED
+)
+def create_branch(
+    request: BranchCreateRequest,
+    db: Session = Depends(get_db),
+    actor: User = Depends(require_roles(Role.ADMINISTRATOR)),
+):
+    code = request.code.strip().upper()
+    if db.scalar(select(Branch).where(Branch.code == code)):
+        raise HTTPException(status_code=409, detail="Branch code already exists")
+    branch = Branch(
+        code=code,
+        name=request.name.strip(),
+        routing_email=str(request.routing_email or "").lower(),
+    )
+    db.add(branch)
+    db.flush()
+    db.add(
+        AuditEvent(
+            actor_id=actor.id,
+            action="branch.created",
+            entity_type="branch",
+            entity_id=str(branch.id),
+            details={"code": code},
+        )
+    )
+    db.commit()
+    db.refresh(branch)
+    return branch
+
+
+@router.patch("/branches/{branch_id}", response_model=BranchResponse)
+def update_branch(
+    branch_id: UUID,
+    request: BranchUpdateRequest,
+    db: Session = Depends(get_db),
+    actor: User = Depends(require_roles(Role.ADMINISTRATOR)),
+):
+    branch = db.get(Branch, branch_id)
+    if not branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    changes = request.model_dump(exclude_unset=True)
+    if "routing_email" in changes:
+        changes["routing_email"] = str(changes["routing_email"] or "").lower()
+    if "code" in changes:
+        changes["code"] = changes["code"].strip().upper()
+        duplicate = db.scalar(
+            select(Branch).where(Branch.code == changes["code"], Branch.id != branch.id)
+        )
+        if duplicate:
+            raise HTTPException(status_code=409, detail="Branch code already exists")
+    for field, value in changes.items():
+        setattr(branch, field, value)
+    db.add(
+        AuditEvent(
+            actor_id=actor.id,
+            action="branch.updated",
+            entity_type="branch",
+            entity_id=str(branch.id),
+            details={"fields": sorted(changes)},
+        )
+    )
+    db.commit()
+    db.refresh(branch)
+    return branch
 
 
 @router.get("/users", response_model=list[ManagedUserResponse])

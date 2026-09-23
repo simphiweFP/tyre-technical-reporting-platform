@@ -19,6 +19,9 @@ class Recipient(Base):
     contact_name: Mapped[str] = mapped_column(String(150), default="")
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     default_cc: Mapped[str] = mapped_column(String(255), default="")
+    branch_code: Mapped[str] = mapped_column(String(20), default="All Branches")
+    category: Mapped[str] = mapped_column(String(100), default="All Categories")
+    escalation_hours: Mapped[int] = mapped_column(Integer, default=24)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)

@@ -70,8 +70,22 @@ class BranchResponse(BaseModel):
     id: UUID
     code: str
     name: str
+    routing_email: str
     is_active: bool
     model_config = ConfigDict(from_attributes=True)
+
+
+class BranchCreateRequest(BaseModel):
+    code: str = Field(min_length=2, max_length=20)
+    name: str = Field(min_length=2, max_length=120)
+    routing_email: EmailStr | None = None
+
+
+class BranchUpdateRequest(BaseModel):
+    code: str | None = Field(default=None, min_length=2, max_length=20)
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    routing_email: EmailStr | None = None
+    is_active: bool | None = None
 
 
 class TokenResponse(BaseModel):

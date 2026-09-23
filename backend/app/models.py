@@ -1,3 +1,4 @@
+from backend.app.modules.administration.infrastructure import SystemSetting
 from backend.app.modules.auditing.infrastructure import AuditEvent
 from backend.app.modules.branches.infrastructure import Branch
 from backend.app.modules.delivery.infrastructure import DeliveryAttempt, Recipient
@@ -13,6 +14,7 @@ from backend.app.modules.reports.infrastructure import (
 
 __all__ = [
     "AuditEvent",
+    "SystemSetting",
     "Branch",
     "DeliveryAttempt",
     "PasswordResetToken",

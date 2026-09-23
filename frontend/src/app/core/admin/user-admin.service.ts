@@ -17,6 +17,7 @@ export interface Branch {
   id: string;
   code: string;
   name: string;
+  routing_email: string;
   is_active: boolean;
 }
 export interface UserInput {
@@ -35,6 +36,12 @@ export class UserAdminService {
   }
   branches(): Promise<Branch[]> {
     return firstValueFrom(this.http.get<Branch[]>(`${environment.apiUrl}/auth/branches`));
+  }
+  createBranch(input: Pick<Branch, 'code' | 'name' | 'routing_email'>): Promise<Branch> {
+    return firstValueFrom(this.http.post<Branch>(`${environment.apiUrl}/auth/branches`, input));
+  }
+  updateBranch(id: string, changes: Partial<Branch>): Promise<Branch> {
+    return firstValueFrom(this.http.patch<Branch>(`${environment.apiUrl}/auth/branches/${id}`, changes));
   }
   create(input: UserInput): Promise<ManagedUser & { temporary_password: string }> {
     return firstValueFrom(

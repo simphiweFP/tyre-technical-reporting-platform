@@ -82,6 +82,9 @@ export interface ReportRecipient {
   email: string;
   default_cc: string;
   is_active: boolean;
+  branch_code: string;
+  category: string;
+  escalation_hours: number;
 }
 export interface DeliveryAttempt {
   id: string;
@@ -94,6 +97,7 @@ export interface DeliveryAttempt {
   error_message: string | null;
   created_at: string;
   last_attempt_at: string;
+  next_attempt_at: string;
 }
 export interface TechnicalReport {
   id: string;

@@ -13,6 +13,9 @@ export interface RecipientInput {
   contact_name: string;
   email: string;
   default_cc: string | null;
+  branch_code: string;
+  category: string;
+  escalation_hours: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -39,6 +42,15 @@ export class ReportDeliveryService {
         params,
       }),
     );
+  }
+  updateRecipient(id: string, input: RecipientInput & { is_active: boolean }): Promise<ReportRecipient> {
+    return firstValueFrom(this.http.put<ReportRecipient>(`${environment.apiUrl}/recipients/${id}`, input));
+  }
+  testRecipient(id: string): Promise<{ message: string }> {
+    return firstValueFrom(this.http.post<{ message: string }>(`${environment.apiUrl}/recipients/${id}/test`, null));
+  }
+  deliveries(query = '', status = ''): Promise<{ items: DeliveryAttempt[]; total: number }> {
+    return firstValueFrom(this.http.get<{ items: DeliveryAttempt[]; total: number }>(`${environment.apiUrl}/deliveries`, { params: { query, delivery_status: status } }));
   }
 
   deliver(report: TechnicalReport, recipientId: string): Promise<DeliveryAttempt> {
