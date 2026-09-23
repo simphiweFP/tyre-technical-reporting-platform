@@ -86,8 +86,50 @@ When all required fields and photographs are complete, the review screen generat
 
 Administrators maintain approved third-party recipients. Technicians and salespeople select a recipient on the report review screen and send the generated PDF directly; there is no approval or rejection workflow. Every successful or failed attempt is recorded, failed attempts can be retried, and recipient changes and deliveries create audit events.
 
-Delivery requests are stored before returning to the user. The `delivery-worker` service processes the durable queue, uses row locking to prevent two workers taking the same item and schedules automatic retries before marking a delivery failed. Docker Compose includes Mailpit for safe local email testing at `http://localhost:8025`. For deployment, configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_USE_TLS`, `EMAIL_FROM` and `EMAIL_FROM_NAME` with the organisation's SMTP provider.
+Delivery requests are stored before returning to the user. The `delivery-worker` service processes the durable queue, uses row locking to prevent two workers taking the same item and schedules automatic retries before marking a delivery failed. Docker Compose includes Mailpit for safe local email testing at `http://localhost:8025`.
 
+For local Docker development, leave:
+
+```env
+SMTP_HOST=localhost
+SMTP_DOCKER_HOST=mailpit
+SMTP_PORT=1025
+SMTP_USERNAME=
+SMTP_PASSWORD=
+SMTP_USE_TLS=false
+EMAIL_FROM=technical-reports@royaltyres.co.za
+EMAIL_FROM_NAME=Royal Tyres Technical Reports
+```
+
+For a real SMTP server, configure the credentials in the deployment `.env`. When the API and delivery worker run in Docker, `SMTP_DOCKER_HOST` is the hostname used inside the containers.
+
+Microsoft 365 / Outlook example:
+
+```env
+SMTP_HOST=smtp.office365.com
+SMTP_DOCKER_HOST=smtp.office365.com
+SMTP_PORT=587
+SMTP_USERNAME=your-mailbox@yourdomain.co.za
+SMTP_PASSWORD=your-app-or-smtp-password
+SMTP_USE_TLS=true
+EMAIL_FROM=your-mailbox@yourdomain.co.za
+EMAIL_FROM_NAME=Royal Tyres Technical Reports
+```
+
+Gmail / Google Workspace example:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_DOCKER_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-mailbox@yourdomain.co.za
+SMTP_PASSWORD=your-app-password
+SMTP_USE_TLS=true
+EMAIL_FROM=your-mailbox@yourdomain.co.za
+EMAIL_FROM_NAME=Royal Tyres Technical Reports
+```
+
+Do not commit the real `.env` file or SMTP password. After restarting the API and `delivery-worker`, an administrator can use the existing recipient **Test** action (`POST /api/v1/recipients/{recipient_id}/test`) to verify SMTP before sending a technical report. For production, also verify the sender domain's SPF, DKIM and DMARC records.
 ## PDF branding and OCR acceptance
 
 The supplied Royal Tyres header and footer artwork is repeated on every generated PDF page. `ROYAL_TYRES_REPORT_HEADER_PATH` and `ROYAL_TYRES_REPORT_FOOTER_PATH` can replace the bundled artwork without a code change. Set `ROYAL_TYRES_COMPANY_DETAILS` and `ROYAL_TYRES_PDF_DISCLAIMER` to the approved business and legal wording.
