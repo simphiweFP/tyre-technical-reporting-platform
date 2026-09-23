@@ -65,6 +65,17 @@ class RequestProtectionMiddleware(BaseHTTPMiddleware):
                 },
                 headers={"X-Request-ID": request_id},
             )
+        content_security_policy = "default-src 'none'; frame-ancestors 'none'"
+        if request.url.path in {"/docs", "/redoc"}:
+            content_security_policy = (
+                "default-src 'none'; "
+                "script-src https://cdn.jsdelivr.net; "
+                "style-src https://cdn.jsdelivr.net 'unsafe-inline'; "
+                "img-src https://fastapi.tiangolo.com data:; "
+                "connect-src 'self'; "
+                "frame-ancestors 'none'"
+            )
+
         response.headers.update(
             {
                 "X-Request-ID": request_id,
@@ -72,7 +83,7 @@ class RequestProtectionMiddleware(BaseHTTPMiddleware):
                 "X-Frame-Options": "DENY",
                 "Referrer-Policy": "no-referrer",
                 "Permissions-Policy": "camera=(self)",
-                "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+                "Content-Security-Policy": content_security_policy,
             }
         )
         if settings.environment == "production":
