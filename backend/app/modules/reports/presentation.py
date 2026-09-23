@@ -1,5 +1,5 @@
 import hashlib
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, time
 from io import BytesIO
 from pathlib import Path
 from uuid import UUID
@@ -87,7 +87,10 @@ def list_reports(
     query: str = "",
     report_status: str = "",
     branch: str = "",
+    date_from: date | None = None,
+    date_to: date | None = None,
     include_archived: bool = False,
+    archived_only: bool = False,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=250),
     db: Session = Depends(get_db),
@@ -98,12 +101,22 @@ def list_reports(
     statement = select(TechnicalReportRecord).order_by(
         TechnicalReportRecord.updated_at.desc()
     )
-    if not include_archived:
+    if archived_only:
+        statement = statement.where(TechnicalReportRecord.archived.is_(True))
+    elif not include_archived:
         statement = statement.where(TechnicalReportRecord.archived.is_(False))
     if report_status:
         statement = statement.where(TechnicalReportRecord.status == report_status)
     if branch:
         statement = statement.where(TechnicalReportRecord.branch_name == branch)
+    if date_from:
+        statement = statement.where(
+            TechnicalReportRecord.created_at >= datetime.combine(date_from, time.min)
+        )
+    if date_to:
+        statement = statement.where(
+            TechnicalReportRecord.created_at <= datetime.combine(date_to, time.max)
+        )
     if query:
         term = f"%{query.strip()}%"
         statement = statement.where(

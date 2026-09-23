@@ -82,6 +82,55 @@ def test_admin_can_manage_recipient_rules(client):
     assert updated.json()["is_active"] is False
 
 
+def test_recipient_rules_are_applied_to_claim_delivery(client):
+    headers = login_headers(client)
+    recipient = client.post(
+        "/api/v1/recipients",
+        headers=headers,
+        json={
+            "company": "Manufacturing Partner",
+            "contact_name": "Claims",
+            "email": "routing@example.com",
+            "branch_code": "Phoenix",
+            "category": "Manufacturing",
+            "escalation_hours": 24,
+        },
+    ).json()
+    report_id = "d09e7d92-d5df-487b-a9b6-9996925866de"
+    report = {
+        "id": report_id,
+        "claimReference": "TR-ROUTING-001",
+        "status": "Ready to Submit",
+        "branch": "Cape Town",
+        "category": "Manufacturing",
+        "photos": [],
+    }
+    assert (
+        client.put(
+            f"/api/v1/reports/records/{report_id}",
+            headers=headers,
+            json={"report": report},
+        ).status_code
+        == 200
+    )
+
+    filtered = client.get(
+        "/api/v1/recipients",
+        headers=headers,
+        params={"branch": "Cape Town", "category": "Manufacturing"},
+    )
+    assert filtered.status_code == 200
+    assert filtered.json() == []
+
+    rejected = client.post(
+        "/api/v1/reports/deliver",
+        headers=headers,
+        json={"recipient_id": recipient["id"], "report": report, "cc": []},
+    )
+    assert rejected.status_code == 422
+    assert "branch" in rejected.json()["detail"].lower()
+
+
 def test_audit_viewer_reads_real_events(client):
     headers = login_headers(client)
     client.put(

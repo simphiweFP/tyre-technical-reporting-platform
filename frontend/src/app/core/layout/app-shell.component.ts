@@ -1,16 +1,19 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [FormsModule, RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './app-shell.component.html',
   styleUrls: ['./app-shell.component.scss', './app-shell-operations.scss'],
 })
 export class AppShellComponent {
   readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   readonly menuOpen = signal(false);
+  readonly search = signal('');
   readonly canCapture = computed(() => this.auth.hasRole('administrator', 'report_capturer'));
   readonly canViewReports = computed(() =>
     this.auth.hasRole('administrator', 'report_capturer', 'viewer'),
@@ -28,5 +31,8 @@ export class AppShellComponent {
   );
   closeMenu(): void {
     this.menuOpen.set(false);
+  }
+  runSearch(): void {
+    void this.router.navigate(['/reports'], { queryParams: { q: this.search().trim() || null } });
   }
 }

@@ -99,3 +99,10 @@ def test_report_crud_search_image_analytics_and_archive(client):
         == 204
     )
     assert client.get("/api/v1/reports/records", headers=headers).json()["total"] == 0
+    archived = client.get(
+        "/api/v1/reports/records",
+        headers=headers,
+        params={"archived_only": True},
+    ).json()
+    assert archived["total"] == 1
+    assert archived["items"][0]["id"] == report_id

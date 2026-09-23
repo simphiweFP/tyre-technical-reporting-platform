@@ -207,7 +207,10 @@ def admin_check(user: User = Depends(require_roles(Role.ADMINISTRATOR))):
 
 @router.get("/branches", response_model=list[BranchResponse])
 def branches(
-    db: Session = Depends(get_db), _: User = Depends(require_roles(Role.ADMINISTRATOR))
+    db: Session = Depends(get_db),
+    _: User = Depends(
+        require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
+    ),
 ):
     return db.scalars(select(Branch).order_by(Branch.name)).all()
 

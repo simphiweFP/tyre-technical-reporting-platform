@@ -37,12 +37,18 @@ router = APIRouter(tags=["Report delivery"])
 @router.get("/recipients", response_model=list[RecipientResponse])
 def recipients(
     active_only: bool = Query(default=True),
+    branch: str = "",
+    category: str = "",
     db: Session = Depends(get_db),
     _: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
 ):
     query = select(Recipient).order_by(Recipient.company)
     if active_only:
         query = query.where(Recipient.is_active.is_(True))
+    if branch:
+        query = query.where(Recipient.branch_code.in_(("All Branches", branch)))
+    if category:
+        query = query.where(Recipient.category.in_(("All Categories", category)))
     return db.scalars(query).all()
 
 
@@ -190,6 +196,17 @@ def deliver_report(
     if not recipient or not recipient.is_active:
         raise HTTPException(
             status_code=422, detail="The selected recipient is not active"
+        )
+    report_branch = str(request.report.get("branch") or "")
+    report_category = str(request.report.get("category") or "")
+    if recipient.branch_code not in {"All Branches", report_branch}:
+        raise HTTPException(
+            status_code=422, detail="Recipient is not configured for this branch"
+        )
+    if recipient.category not in {"All Categories", report_category}:
+        raise HTTPException(
+            status_code=422,
+            detail="Recipient is not configured for this claim category",
         )
     cc = [str(address).lower() for address in request.cc]
     if recipient.default_cc and recipient.default_cc not in cc:

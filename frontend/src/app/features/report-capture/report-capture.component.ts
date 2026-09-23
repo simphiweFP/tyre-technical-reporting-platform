@@ -538,6 +538,7 @@ export class ReportCaptureComponent implements OnDestroy {
   goTo(value: number): void {
     if (value === 3 && !this.readyForReview()) return;
     this.step.set(value);
+    if (value === 3) void this.loadDeliveryData();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   next(): void {
@@ -553,8 +554,10 @@ export class ReportCaptureComponent implements OnDestroy {
   previous(): void {
     if (this.step() > 0) this.goTo(this.step() - 1);
   }
-  saveDraft(): void {
-    this.persist();
+  async saveDraft(): Promise<void> {
+    const updated = this.currentReport();
+    this.report.set(updated);
+    await this.store.saveNow(updated);
   }
   photoFor(category: string): ReportPhoto | undefined {
     return this.report().photos.find((p) => p.category === category);
@@ -673,13 +676,15 @@ export class ReportCaptureComponent implements OnDestroy {
   }
   async downloadPdf(): Promise<void> {
     if (!this.readyForReview()) return;
-    this.persist();
+    const current = this.currentReport();
+    this.report.set(current);
+    await this.store.saveNow(current);
     this.pdfBusy.set(true);
     try {
       await this.intelligence.downloadPdf(this.report());
       const updated = { ...this.report(), status: 'Ready to Submit' as const };
       this.report.set(updated);
-      this.store.save(updated);
+      await this.store.saveNow(updated);
     } catch {
       this.captureMessage.set('PDF generation failed. Check the API connection and try again.');
     } finally {
@@ -693,8 +698,10 @@ export class ReportCaptureComponent implements OnDestroy {
     if (!this.readyForReview() || !this.selectedRecipient()) return;
     this.deliveryBusy.set(true);
     this.deliveryMessage.set('');
-    this.persist();
     try {
+      const current = this.currentReport();
+      this.report.set(current);
+      await this.store.saveNow(current);
       const result = await this.delivery.deliver(this.report(), this.selectedRecipient());
       this.deliveryMessage.set(
         result.status === 'Pending' || result.status === 'Retrying'
@@ -713,7 +720,7 @@ export class ReportCaptureComponent implements OnDestroy {
               : ('Submitted' as const),
       };
       this.report.set(updated);
-      this.store.save(updated);
+      await this.store.saveNow(updated);
       await this.loadHistory();
     } catch {
       this.deliveryMessage.set('The delivery request could not be completed. Try again.');
@@ -749,7 +756,11 @@ export class ReportCaptureComponent implements OnDestroy {
   }
   private async loadDeliveryData(): Promise<void> {
     try {
-      const [recipients] = await Promise.all([this.delivery.recipients(), this.loadHistory()]);
+      const current = this.currentReport();
+      const [recipients] = await Promise.all([
+        this.delivery.recipients(true, current.branch, current.category),
+        this.loadHistory(),
+      ]);
       this.recipients.set(recipients);
       if (!this.selectedRecipient() && recipients.length) {
         this.selectedRecipient.set(recipients[0].id);
@@ -810,5 +821,12 @@ export class ReportCaptureComponent implements OnDestroy {
     } catch {
       this.saved.set(false);
     }
+  }
+  private currentReport(): TechnicalReport {
+    return {
+      ...this.report(),
+      ...this.form.getRawValue(),
+      updatedAt: new Date().toISOString(),
+    };
   }
 }

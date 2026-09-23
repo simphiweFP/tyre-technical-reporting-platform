@@ -73,7 +73,7 @@ export const routes: Routes = [
       },
       {
         path: 'reports/:id/edit',
-        canActivate: [roleGuard('administrator', 'report_capturer', 'viewer')],
+        canActivate: [roleGuard('administrator', 'report_capturer')],
         loadComponent: () =>
           import('./features/report-capture/report-capture.component').then(
             (m) => m.ReportCaptureComponent,

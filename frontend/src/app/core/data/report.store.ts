@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -36,6 +36,17 @@ export interface ReportAnalytics {
   by_month: Record<string, number>;
 }
 
+export interface ReportSearch {
+  query?: string;
+  status?: string;
+  branch?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  archived?: boolean;
+  offset?: number;
+  limit?: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ReportStore {
   private readonly http = inject(HttpClient);
@@ -44,6 +55,7 @@ export class ReportStore {
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly saveError = signal('');
+  readonly total = signal(0);
   readonly drafts = computed(() => this.state().filter((report) => report.status === 'Draft'));
   private pendingSaves = 0;
 
@@ -81,17 +93,29 @@ export class ReportStore {
     }
   }
 
-  async refresh(query = '', status = ''): Promise<void> {
+  async refresh(search: ReportSearch = {}): Promise<void> {
     this.loading.set(true);
     try {
+      let params = new HttpParams()
+        .set('query', search.query ?? '')
+        .set('report_status', search.status ?? '')
+        .set('branch', search.branch ?? '')
+        .set('include_archived', false)
+        .set('archived_only', search.archived ?? false)
+        .set('offset', search.offset ?? 0)
+        .set('limit', search.limit ?? 20);
+      if (search.dateFrom) params = params.set('date_from', search.dateFrom);
+      if (search.dateTo) params = params.set('date_to', search.dateTo);
       const response = await firstValueFrom(
         this.http.get<ReportListResponse>(`${environment.apiUrl}/reports/records`, {
-          params: { query, report_status: status },
+          params,
         }),
       );
       this.state.set(response.items.map((item) => this.mapReport(item)));
+      this.total.set(response.total);
     } catch {
       this.state.set([]);
+      this.total.set(0);
     } finally {
       this.loading.set(false);
     }

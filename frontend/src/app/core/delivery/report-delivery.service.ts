@@ -22,8 +22,11 @@ export interface RecipientInput {
 export class ReportDeliveryService {
   private readonly http = inject(HttpClient);
 
-  recipients(activeOnly = true): Promise<ReportRecipient[]> {
-    const params = new HttpParams().set('active_only', activeOnly);
+  recipients(activeOnly = true, branch = '', category = ''): Promise<ReportRecipient[]> {
+    const params = new HttpParams()
+      .set('active_only', activeOnly)
+      .set('branch', branch)
+      .set('category', category);
     return firstValueFrom(
       this.http.get<ReportRecipient[]>(`${environment.apiUrl}/recipients`, { params }),
     );

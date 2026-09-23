@@ -1,6 +1,26 @@
-<section class="claims-page"><header class="claims-title"><div><h1>Technical Claims</h1><p>Manage, view and send tyre technical claims</p></div>@if(canCapture()){<a routerLink="/reports/new" class="new-claim">＋ &nbsp; New Claim</a>}</header>
-<section class="filter-card"><label class="wide-search">⌕<input [(ngModel)]="query" placeholder="Search by claim ref, customer, DOT or serial..." /></label><div class="filter-grid"><label>Branch<select><option>RTCPHX</option></select></label><label>Status<select [(ngModel)]="status"><option value="">All</option><option>Draft</option><option>Ready to Submit</option><option>Email Sent</option><option>Email Failed</option></select></label><label>Date from<input type="text" value="01/01/2026" /></label><label>Date to<input type="text" value="31/12/2026" /></label><button>Clear filters</button></div></section>
-<nav class="status-tabs"><button class="active">All <b>42</b></button><button><i class="draft"></i>Draft <b>8</b></button><button><i class="ready"></i>Ready <b>12</b></button><button><i class="sent"></i>Sent <b>16</b></button><button><i class="failed"></i>Failed <b>4</b></button><button><i></i>Archived <b>3</b></button></nav>
-<section class="claims-table"><div class="table-scroll"><table><thead><tr><th>Claim Ref</th><th>Customer</th><th>Vehicle</th><th>Tyre (Brand / Pattern)</th><th>DOT</th><th>Serial No.</th><th>Status</th><th>Date</th><th></th></tr></thead><tbody>
-@for(report of filtered();track report.id){<tr><td><a [routerLink]="['/reports',report.id]">{{report.claimReference}}</a></td><td>{{report.customerName||'ABC Logistics'}}</td><td>{{report.vehicleMakeModel||'Volvo FH'}}</td><td>{{report.brand||'Royal'}} / {{report.pattern||'RT800'}}</td><td>{{report.dot||'1326'}}</td><td>{{report.serialNumber||'RY12345678'}}</td><td><span class="claim-state" [class]="statusClass(report.status)"><i></i>{{statusLabel(report.status)}}</span></td><td>{{report.updatedAt|date:'dd/MM/yyyy'}}</td><td>•••</td></tr>}
-</tbody></table></div><footer><span>Showing 1–{{filtered().length}} of 42 claims</span><div><button>‹</button><button class="current">1</button><button>2</button><button>3</button><button>4</button><button>5</button><button>›</button></div></footer></section></section>
+<section class="claims-page">
+  <header class="claims-title"><div><h1>Technical Claims</h1><p>Manage, view and send tyre technical claims</p></div>@if(canCapture()){<a routerLink="/reports/new" class="new-claim">＋ &nbsp; New Claim</a>}</header>
+  <section class="filter-card">
+    <label class="wide-search">⌕<input [(ngModel)]="query" (keyup.enter)="load(true)" placeholder="Search by claim ref, customer, DOT or serial..." /></label>
+    <div class="filter-grid">
+      <label>Branch<select [(ngModel)]="branch" (change)="load(true)"><option value="">All branches</option>@for(item of branches();track item.id){<option [value]="item.name">{{item.code}} · {{item.name}}</option>}</select></label>
+      <label>Status<select [(ngModel)]="status" (change)="load(true)"><option value="">All</option><option>Draft</option><option>Ready to Submit</option><option>Submitted</option><option>Email Sent</option><option>Email Failed</option></select></label>
+      <label>Date from<input type="date" [(ngModel)]="dateFrom" (change)="load(true)" /></label>
+      <label>Date to<input type="date" [(ngModel)]="dateTo" (change)="load(true)" /></label>
+      <button (click)="clear()">Clear filters</button>
+    </div>
+  </section>
+  <nav class="status-tabs">
+    <button [class.active]="!status()&&!archived()" (click)="selectStatus('')">All <b>{{count()}}</b></button>
+    <button [class.active]="status()==='Draft'&&!archived()" (click)="selectStatus('Draft')"><i class="draft"></i>Draft <b>{{count('Draft')}}</b></button>
+    <button [class.active]="status()==='Ready to Submit'&&!archived()" (click)="selectStatus('Ready to Submit')"><i class="ready"></i>Ready <b>{{count('Ready to Submit')}}</b></button>
+    <button [class.active]="status()==='Email Sent'&&!archived()" (click)="selectStatus('Email Sent')"><i class="sent"></i>Sent <b>{{count('Email Sent')}}</b></button>
+    <button [class.active]="status()==='Email Failed'&&!archived()" (click)="selectStatus('Email Failed')"><i class="failed"></i>Failed <b>{{count('Email Failed')}}</b></button>
+    <button [class.active]="archived()" (click)="selectStatus('',true)"><i></i>Archived</button>
+  </nav>
+  @if(message()){<p class="operation-message">{{message()}}</p>}
+  <section class="claims-table"><div class="table-scroll"><table><thead><tr><th>Claim Ref</th><th>Customer</th><th>Vehicle</th><th>Tyre (Brand / Pattern)</th><th>DOT</th><th>Serial No.</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>
+    @for(report of store.reports();track report.id){<tr><td><a [routerLink]="['/reports',report.id]">{{report.claimReference}}</a></td><td>{{report.customerName||'—'}}</td><td>{{report.vehicleMakeModel||'—'}}</td><td>{{report.brand||'—'}} / {{report.pattern||'—'}}</td><td>{{report.dot||'—'}}</td><td>{{report.serialNumber||'—'}}</td><td><span class="claim-state" [class]="statusClass(report.status)"><i></i>{{statusLabel(report.status)}}</span></td><td>{{report.updatedAt|date:'dd/MM/yyyy'}}</td><td><a [routerLink]="['/reports',report.id]">View</a>@if(canCapture()&&!archived()){ · <a [routerLink]="['/reports',report.id,'edit']">Edit</a>}@if(canArchive()&&!archived()){ · <button (click)="archiveReport(report.id)">Archive</button>}</td></tr>}
+    @empty{<tr><td colspan="9">No claims match these filters.</td></tr>}
+  </tbody></table></div><footer><span>Showing {{store.reports().length}} of {{store.total()}} claims</span><div><button (click)="previous()" [disabled]="page()===0">‹</button><button class="current">{{page()+1}}</button><button (click)="next()" [disabled]="page()+1>=pageCount()">›</button></div></footer></section>
+</section>
