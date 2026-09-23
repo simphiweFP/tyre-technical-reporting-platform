@@ -102,9 +102,9 @@
               <span>Branch <em>*</em></span>
               <i>●</i>
               <select formControlName="branch">
-                <option value="Phoenix">RTCPHX</option>
-                <option value="Durban">RTCDUR</option>
-                <option value="Johannesburg">RTCJHB</option>
+                @for (branch of branches(); track branch.id) {
+                  <option [value]="branch.code">{{ branch.name }} ({{ branch.code }})</option>
+                }
               </select>
               <b>›</b>
             </label>
@@ -121,9 +121,9 @@
                 <span>Category</span><i>◉</i>
                 <select formControlName="category">
                   <option value="">Select category</option>
-                  <option>Manufacturing</option>
-                  <option>Road hazard</option>
-                  <option>Service related</option></select
+                  @for (category of reportCategories; track category) {
+                    <option [value]="category">{{ category }}</option>
+                  }</select
                 ><b>›</b>
               </label>
               <label

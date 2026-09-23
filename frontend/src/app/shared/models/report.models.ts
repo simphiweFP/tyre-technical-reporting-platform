@@ -53,6 +53,7 @@ export const PHOTO_CATEGORIES = [
     required: true,
   },
 ] as const;
+export const REPORT_CATEGORIES = ['Manufacturing', 'Road hazard', 'Service related'] as const;
 export interface ReportPhoto {
   category: string;
   name: string;

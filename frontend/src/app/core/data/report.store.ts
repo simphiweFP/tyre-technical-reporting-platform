@@ -193,7 +193,7 @@ export class ReportStore {
       createdAt: now,
       updatedAt: now,
       status: 'Draft',
-      branch: 'Phoenix',
+      branch: 'PHX',
       internalExternal: 'Internal',
       salesperson: '',
       customerName: '',
