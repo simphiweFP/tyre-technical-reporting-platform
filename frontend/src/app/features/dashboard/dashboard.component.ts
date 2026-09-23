@@ -160,14 +160,14 @@ import { ReportAnalytics, ReportStore } from '../../core/data/report.store';
             <li>
               <span>2</span>
               <div>
-                <strong>Tyre information</strong><small>DOT, serial, size and condition</small>
+                <strong>Guided photographs</strong
+                ><small>Every required angle, clearly captured</small>
               </div>
             </li>
             <li>
               <span>3</span>
               <div>
-                <strong>Guided photographs</strong
-                ><small>Every required angle, clearly captured</small>
+                <strong>Tyre information</strong><small>DOT, serial, size and condition</small>
               </div>
             </li>
           </ul>

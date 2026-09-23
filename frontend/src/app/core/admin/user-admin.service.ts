@@ -41,7 +41,9 @@ export class UserAdminService {
     return firstValueFrom(this.http.post<Branch>(`${environment.apiUrl}/auth/branches`, input));
   }
   updateBranch(id: string, changes: Partial<Branch>): Promise<Branch> {
-    return firstValueFrom(this.http.patch<Branch>(`${environment.apiUrl}/auth/branches/${id}`, changes));
+    return firstValueFrom(
+      this.http.patch<Branch>(`${environment.apiUrl}/auth/branches/${id}`, changes),
+    );
   }
   create(input: UserInput): Promise<ManagedUser & { temporary_password: string }> {
     return firstValueFrom(

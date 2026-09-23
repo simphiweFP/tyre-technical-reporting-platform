@@ -31,7 +31,7 @@ def test_protected_route_requires_access_token(client):
 def test_role_permission_is_enforced_by_api(client):
     access_token = login(client, email="viewer@example.com").json()["access_token"]
     response = client.get(
-        "/api/v1/auth/admin-check", headers={"Authorization": f"Bearer {access_token}"}
+        "/api/v1/auth/users", headers={"Authorization": f"Bearer {access_token}"}
     )
     assert response.status_code == 403
 

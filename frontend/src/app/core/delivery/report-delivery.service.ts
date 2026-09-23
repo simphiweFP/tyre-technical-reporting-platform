@@ -46,14 +46,26 @@ export class ReportDeliveryService {
       }),
     );
   }
-  updateRecipient(id: string, input: RecipientInput & { is_active: boolean }): Promise<ReportRecipient> {
-    return firstValueFrom(this.http.put<ReportRecipient>(`${environment.apiUrl}/recipients/${id}`, input));
+  updateRecipient(
+    id: string,
+    input: RecipientInput & { is_active: boolean },
+  ): Promise<ReportRecipient> {
+    return firstValueFrom(
+      this.http.put<ReportRecipient>(`${environment.apiUrl}/recipients/${id}`, input),
+    );
   }
   testRecipient(id: string): Promise<{ message: string }> {
-    return firstValueFrom(this.http.post<{ message: string }>(`${environment.apiUrl}/recipients/${id}/test`, null));
+    return firstValueFrom(
+      this.http.post<{ message: string }>(`${environment.apiUrl}/recipients/${id}/test`, null),
+    );
   }
   deliveries(query = '', status = ''): Promise<{ items: DeliveryAttempt[]; total: number }> {
-    return firstValueFrom(this.http.get<{ items: DeliveryAttempt[]; total: number }>(`${environment.apiUrl}/deliveries`, { params: { query, delivery_status: status } }));
+    return firstValueFrom(
+      this.http.get<{ items: DeliveryAttempt[]; total: number }>(
+        `${environment.apiUrl}/deliveries`,
+        { params: { query, delivery_status: status } },
+      ),
+    );
   }
 
   deliver(report: TechnicalReport, recipientId: string): Promise<DeliveryAttempt> {

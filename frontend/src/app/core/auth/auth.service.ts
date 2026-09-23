@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { finalize, Observable, shareReplay, tap } from 'rxjs';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { CurrentUser, TokenResponse, UserRole } from '../../shared/models/auth.models';
@@ -16,9 +16,11 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly session = signal<SessionState | null>(this.readSession());
+  private refreshInFlight: Observable<TokenResponse> | null = null;
   readonly user = computed(() => this.session()?.user ?? null);
   readonly isAuthenticated = computed(() => !!this.session()?.accessToken);
   readonly accessToken = computed(() => this.session()?.accessToken ?? null);
+  readonly refreshToken = computed(() => this.session()?.refreshToken ?? null);
   login(email: string, password: string): Observable<TokenResponse> {
     return this.http
       .post<TokenResponse>(`${environment.apiUrl}/auth/login`, { email, password })
@@ -58,6 +60,19 @@ export class AuthService {
       new_password: newPassword,
     });
   }
+  refreshSession(): Observable<TokenResponse> {
+    if (this.refreshInFlight) return this.refreshInFlight;
+    this.refreshInFlight = this.http
+      .post<TokenResponse>(`${environment.apiUrl}/auth/refresh`, {
+        refresh_token: this.refreshToken(),
+      })
+      .pipe(
+        tap((response) => this.storeSession(response)),
+        finalize(() => (this.refreshInFlight = null)),
+        shareReplay(1),
+      );
+    return this.refreshInFlight;
+  }
   hasRole(...roles: UserRole[]): boolean {
     const role = this.user()?.role;
     return !!role && roles.includes(role);
@@ -68,6 +83,9 @@ export class AuthService {
       this.http
         .post(`${environment.apiUrl}/auth/logout`, { refresh_token: refreshToken })
         .subscribe({ error: () => undefined });
+    this.expireSession();
+  }
+  expireSession(): void {
     localStorage.removeItem(SESSION_KEY);
     this.session.set(null);
     void this.router.navigate(['/login']);

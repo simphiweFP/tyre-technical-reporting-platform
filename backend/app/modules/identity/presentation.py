@@ -200,11 +200,6 @@ def me(user: User = Depends(current_user)):
     return user
 
 
-@router.get("/admin-check", response_model=UserResponse)
-def admin_check(user: User = Depends(require_roles(Role.ADMINISTRATOR))):
-    return user
-
-
 @router.get("/branches", response_model=list[BranchResponse])
 def branches(
     db: Session = Depends(get_db),

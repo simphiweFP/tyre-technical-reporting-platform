@@ -3,21 +3,114 @@ import { FormsModule } from '@angular/forms';
 import { Branch, ManagedUser, UserAdminService } from '../../core/admin/user-admin.service';
 import { UserRole } from '../../shared/models/auth.models';
 
-@Component({selector:'app-users',imports:[FormsModule],templateUrl:'./users.component.html',styleUrl:'./admin.component.scss'})
+interface UserForm {
+  email: string;
+  full_name: string;
+  job_title: string;
+  role: UserRole;
+  branch_id: string | null;
+}
+const emptyUser = (): UserForm => ({
+  email: '',
+  full_name: '',
+  job_title: '',
+  role: 'report_capturer',
+  branch_id: null,
+});
+
+@Component({
+  selector: 'app-users',
+  imports: [FormsModule],
+  templateUrl: './users.component.html',
+  styleUrl: './admin.component.scss',
+})
 export class UsersComponent {
-  private readonly admin=inject(UserAdminService);
-  readonly showForm=signal(false); readonly query=signal(''); readonly users=signal<ManagedUser[]>([]); readonly branches=signal<Branch[]>([]); readonly notice=signal('');
-  newUser:{email:string;full_name:string;job_title:string;role:UserRole;branch_id:string|null}={email:'',full_name:'',job_title:'',role:'report_capturer',branch_id:null};
-  constructor(){void this.load()}
-  filtered(){const q=this.query().toLowerCase();return this.users().filter(u=>!q||`${u.full_name} ${u.email} ${u.role}`.toLowerCase().includes(q))}
-  username(user:ManagedUser){return user.email.split('@')[0]}
-  roleLabel(role:string){return role.replace('_',' ').replace(/\b\w/g,v=>v.toUpperCase())}
-  branchName(id:string|null){return this.branches().find(b=>b.id===id)?.name??'All Branches'}
-  async addUser(){if(!this.newUser.full_name||!this.newUser.email)return;const created=await this.admin.create({...this.newUser,job_title:this.newUser.job_title||null});this.users.update(x=>[...x,created]);this.notice.set(`User created. Temporary password: ${created.temporary_password}`);this.showForm.set(false)}
-  async toggle(user:ManagedUser){const updated=await this.admin.update(user.id,{is_active:!user.is_active});this.replace(updated)}
-  async changeRole(user:ManagedUser,role:UserRole){this.replace(await this.admin.update(user.id,{role}))}
-  async changeBranch(user:ManagedUser,branch_id:string|null){this.replace(await this.admin.update(user.id,{branch_id}))}
-  async reset(user:ManagedUser){const r=await this.admin.resetPassword(user.id);this.notice.set(`Temporary password for ${user.full_name}: ${r.temporary_password}`)}
-  private async load(){const [u,b]=await Promise.all([this.admin.users(),this.admin.branches()]);this.users.set(u);this.branches.set(b)}
-  private replace(user:ManagedUser){this.users.update(x=>x.map(i=>i.id===user.id?user:i))}
+  private readonly admin = inject(UserAdminService);
+  readonly showForm = signal(false);
+  readonly editing = signal<ManagedUser | null>(null);
+  readonly query = signal('');
+  readonly users = signal<ManagedUser[]>([]);
+  readonly branches = signal<Branch[]>([]);
+  readonly notice = signal('');
+  readonly error = signal('');
+  form = emptyUser();
+  constructor() {
+    void this.load();
+  }
+  filtered(): ManagedUser[] {
+    const query = this.query().toLowerCase();
+    return this.users().filter(
+      (user) =>
+        !query || `${user.full_name} ${user.email} ${user.role}`.toLowerCase().includes(query),
+    );
+  }
+  username(user: ManagedUser): string {
+    return user.email.split('@')[0];
+  }
+  roleLabel(role: string): string {
+    return role.replace('_', ' ').replace(/\b\w/g, (value) => value.toUpperCase());
+  }
+  branchName(id: string | null): string {
+    return this.branches().find((branch) => branch.id === id)?.name ?? 'All Branches';
+  }
+  open(user?: ManagedUser): void {
+    this.error.set('');
+    this.editing.set(user ?? null);
+    this.form = user
+      ? {
+          email: user.email,
+          full_name: user.full_name,
+          job_title: user.job_title ?? '',
+          role: user.role,
+          branch_id: user.branch_id,
+        }
+      : emptyUser();
+    this.showForm.set(true);
+  }
+  async save(): Promise<void> {
+    if (!this.form.full_name || !this.form.email) return;
+    this.error.set('');
+    try {
+      const current = this.editing();
+      if (current) {
+        const updated = await this.admin.update(current.id, {
+          full_name: this.form.full_name,
+          job_title: this.form.job_title || null,
+          role: this.form.role,
+          branch_id: this.form.branch_id,
+        });
+        this.replace(updated);
+        this.notice.set(`${updated.full_name} was updated.`);
+      } else {
+        const created = await this.admin.create({
+          ...this.form,
+          job_title: this.form.job_title || null,
+        });
+        this.users.update((users) => [...users, created]);
+        this.notice.set(`User created. Temporary password: ${created.temporary_password}`);
+      }
+      this.showForm.set(false);
+    } catch (error: any) {
+      this.error.set(error?.error?.detail ?? 'The user could not be saved.');
+    }
+  }
+  async toggle(user: ManagedUser): Promise<void> {
+    this.replace(await this.admin.update(user.id, { is_active: !user.is_active }));
+  }
+  async reset(user: ManagedUser): Promise<void> {
+    const result = await this.admin.resetPassword(user.id);
+    this.notice.set(`Temporary password for ${user.full_name}: ${result.temporary_password}`);
+  }
+  private async load(): Promise<void> {
+    try {
+      const [users, branches] = await Promise.all([this.admin.users(), this.admin.branches()]);
+      this.users.set(users);
+      this.branches.set(branches);
+    } catch {
+      this.error.set('Users and branches could not be loaded.');
+    }
+  }
+  private replace(user: ManagedUser): void {
+    this.users.update((users) => users.map((item) => (item.id === user.id ? user : item)));
+  }
 }
