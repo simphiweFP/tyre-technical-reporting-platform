@@ -88,6 +88,48 @@ def test_report_validation_is_server_side_and_invoice_is_optional(client):
     assert invalid.json()["errors"]["branch"] == "Branch selection is required."
 
 
+def test_report_search_filters_real_branch_codes_and_dot_data(client):
+    headers = login_headers(client)
+    reports = [
+        ("11111111-1111-4111-8111-111111111111", "TR-PHX-CODE", "PHX", "DOT-CODE-1"),
+        ("22222222-2222-4222-8222-222222222222", "TR-PHX-NAME", "Phoenix", "DOT-NAME-2"),
+        ("33333333-3333-4333-8333-333333333333", "TR-OTHER", "DBN", "DOT-OTHER-3"),
+    ]
+    for report_id, claim, branch, dot in reports:
+        response = client.put(
+            f"/api/v1/reports/records/{report_id}",
+            headers=headers,
+            json={
+                "report": {
+                    "id": report_id,
+                    "claimReference": claim,
+                    "status": "Draft",
+                    "branch": branch,
+                    "dot": dot,
+                    "photos": [],
+                }
+            },
+        )
+        assert response.status_code == 200
+
+    by_branch = client.get(
+        "/api/v1/reports/records", headers=headers, params={"branch": "PHX"}
+    )
+    assert by_branch.status_code == 200
+    assert {item["report"]["claimReference"] for item in by_branch.json()["items"]} == {
+        "TR-PHX-CODE",
+        "TR-PHX-NAME",
+    }
+
+    by_dot = client.get(
+        "/api/v1/reports/records", headers=headers, params={"query": "name-2"}
+    )
+    assert by_dot.status_code == 200
+    assert [item["report"]["claimReference"] for item in by_dot.json()["items"]] == [
+        "TR-PHX-NAME"
+    ]
+
+
 def test_admin_can_manage_recipient_rules(client):
     headers = login_headers(client)
     created = client.post(

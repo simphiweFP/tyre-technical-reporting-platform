@@ -160,7 +160,15 @@ def list_reports(
     if report_status:
         statement = statement.where(TechnicalReportRecord.status == report_status)
     if branch:
-        statement = statement.where(TechnicalReportRecord.branch_name == branch)
+        matched_branch = db.scalar(
+            select(Branch).where(or_(Branch.code == branch, Branch.name == branch))
+        )
+        branch_values = {branch}
+        if matched_branch:
+            branch_values.update({matched_branch.code, matched_branch.name})
+        statement = statement.where(
+            TechnicalReportRecord.branch_name.in_(branch_values)
+        )
     if date_from:
         statement = statement.where(
             TechnicalReportRecord.created_at >= datetime.combine(date_from, time.min)
@@ -169,18 +177,25 @@ def list_reports(
         statement = statement.where(
             TechnicalReportRecord.created_at <= datetime.combine(date_to, time.max)
         )
-    if query:
-        term = f"%{query.strip()}%"
-        statement = statement.where(
-            or_(
-                TechnicalReportRecord.claim_reference.ilike(term),
-                TechnicalReportRecord.customer_name.ilike(term),
-                TechnicalReportRecord.invoice_number.ilike(term),
-                TechnicalReportRecord.serial_number.ilike(term),
-                TechnicalReportRecord.tyre_brand.ilike(term),
-            )
-        )
     records = db.scalars(statement).all()
+    if query.strip():
+        term = query.strip().casefold()
+
+        def matches(record: TechnicalReportRecord) -> bool:
+            data = record.report_data or {}
+            values = (
+                record.claim_reference,
+                record.customer_name,
+                record.invoice_number,
+                record.serial_number,
+                record.tyre_brand,
+                data.get("dot"),
+                data.get("pattern"),
+                data.get("vehicleMakeModel"),
+            )
+            return any(term in str(value or "").casefold() for value in values)
+
+        records = [record for record in records if matches(record)]
     total = len(records)
     return ReportListResponse(
         items=[
