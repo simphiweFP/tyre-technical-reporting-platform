@@ -13,6 +13,7 @@ from backend.app.modules.document_generation.application import GenerateTechnica
 from backend.app.modules.document_generation.infrastructure import (
     ReportLabTechnicalReportGenerator,
 )
+from backend.app.modules.reports.validation import REQUIRED_PHOTOS
 
 
 def auth_headers(client):
@@ -40,18 +41,6 @@ def create_recipient(client, headers):
 
 def save_report(client, headers, claim_reference):
     report_id = "1ab85e4a-ff6c-487c-a39f-30a0bded412c"
-    required_photos = [
-        "dot",
-        "serialNumber",
-        "entireTyreDot",
-        "entireTyreOpposite",
-        "issue1",
-        "bead1",
-        "internalCarcass1",
-        "treadDepth1",
-        "treadPattern",
-        "vehicle",
-    ]
     response = client.put(
         f"/api/v1/reports/records/{report_id}",
         headers=headers,
@@ -65,7 +54,7 @@ def save_report(client, headers, claim_reference):
                 "brand": "Dunlop",
                 "dot": "0124",
                 "serialNumber": "SERIAL-1",
-                "photos": [{"category": category} for category in required_photos],
+                "photos": [{"category": category} for category in REQUIRED_PHOTOS],
             }
         },
     )

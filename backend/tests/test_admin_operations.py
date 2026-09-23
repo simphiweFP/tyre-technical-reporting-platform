@@ -1,3 +1,6 @@
+from backend.app.modules.reports.validation import REQUIRED_PHOTOS
+
+
 def login_headers(client, email="admin@example.com"):
     response = client.post(
         "/api/v1/auth/login",
@@ -150,21 +153,7 @@ def test_recipient_rules_are_applied_to_claim_delivery(client):
         "brand": "Dunlop",
         "dot": "0124",
         "serialNumber": "SERIAL-1",
-        "photos": [
-            {"category": category}
-            for category in [
-                "dot",
-                "serialNumber",
-                "entireTyreDot",
-                "entireTyreOpposite",
-                "issue1",
-                "bead1",
-                "internalCarcass1",
-                "treadDepth1",
-                "treadPattern",
-                "vehicle",
-            ]
-        ],
+        "photos": [{"category": category} for category in REQUIRED_PHOTOS],
     }
     assert (
         client.put(

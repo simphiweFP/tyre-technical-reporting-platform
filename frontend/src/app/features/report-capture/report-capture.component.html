@@ -87,7 +87,7 @@
               <span>Branch <em>*</em></span>
               <i>●</i>
               <select formControlName="branch">
-                <option value="" disabled>Select branch</option>
+                <option value="" disabled hidden>Select branch</option>
                 @for (branch of referenceData().branches; track branch.value) {
                   <option [value]="branch.value">{{ branch.label }} ({{ branch.value }})</option>
                 }
