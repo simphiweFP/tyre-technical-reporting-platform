@@ -46,7 +46,6 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly report = signal<TechnicalReport>(this.loadReport());
   readonly referenceData = signal<ReportReferenceData>({
     branches: [],
-    salespeople: [],
     customers: [],
     categories: [],
     brands: [],
@@ -113,8 +112,9 @@ export class ReportCaptureComponent implements OnDestroy {
   });
   constructor() {
     if (this.readonlyView()) this.form.disable({ emitEvent: false });
-    if (!this.form.controls.salesperson.value)
-      this.form.controls.salesperson.setValue(this.auth.user()?.full_name ?? '');
+    this.form.controls.salesperson.setValue(this.auth.user()?.full_name ?? '', {
+      emitEvent: false,
+    });
     this.form.valueChanges
       .pipe(debounceTime(650), takeUntil(this.destroy$))
       .subscribe(() => this.persist());
@@ -401,6 +401,9 @@ export class ReportCaptureComponent implements OnDestroy {
       const loaded = await this.store.loadOne(this.report().id);
       this.report.set(loaded);
       this.form.patchValue(loaded, { emitEvent: false });
+      this.form.controls.salesperson.setValue(this.auth.user()?.full_name ?? '', {
+        emitEvent: false,
+      });
     } catch {
       this.captureMessage.set('This report could not be loaded from the server.');
     }

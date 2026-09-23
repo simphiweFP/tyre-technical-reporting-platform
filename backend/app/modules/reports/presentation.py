@@ -52,9 +52,6 @@ def report_reference_data(
     branches = db.scalars(
         select(Branch).where(Branch.is_active.is_(True)).order_by(Branch.name)
     ).all()
-    users = db.scalars(
-        select(User).where(User.is_active.is_(True)).order_by(User.full_name)
-    ).all()
     records = db.scalars(
         select(TechnicalReportRecord).where(TechnicalReportRecord.archived.is_(False))
     ).all()
@@ -74,7 +71,6 @@ def report_reference_data(
     )
     return ReportReferenceDataResponse(
         branches=[ReferenceOption(value=branch.code, label=branch.name) for branch in branches],
-        salespeople=[user.full_name for user in users],
         customers=report_values("customerName"),
         categories=["Manufacturing", "Road hazard", "Service related"],
         brands=brands,

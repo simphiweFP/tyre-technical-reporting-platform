@@ -50,7 +50,6 @@ def test_report_reference_data_uses_application_records(client):
     assert response.status_code == 200
     data = response.json()
     assert {"value": "PHX", "label": "Phoenix"} in data["branches"]
-    assert "Admin" in data["salespeople"]
     assert data["categories"] == [
         "Manufacturing",
         "Road hazard",

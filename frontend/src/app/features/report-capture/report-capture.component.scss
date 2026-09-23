@@ -186,6 +186,11 @@ h1 {
   border-color: #be1e2d;
   box-shadow: 0 0 0 2px #be1e2d18;
 }
+.mock-field input[readonly] {
+  color: #5d6670;
+  background: #f5f6f7;
+  cursor: not-allowed;
+}
 .mock-field.has-error input,
 .mock-field.has-error select {
   border-color: #c7192c;

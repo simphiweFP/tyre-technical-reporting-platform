@@ -61,13 +61,7 @@
             >
               <span>Salesperson <em>*</em></span>
               <i>♙</i>
-              <select formControlName="salesperson">
-                <option value="">Select salesperson</option>
-                @for (salesperson of referenceData().salespeople; track salesperson) {
-                  <option [value]="salesperson">{{ salesperson }}</option>
-                }
-              </select>
-              <b>›</b>
+              <input formControlName="salesperson" readonly aria-readonly="true" />
               @if (form.controls.salesperson.invalid && form.controls.salesperson.touched) {
                 <small class="field-error">Salesperson is required.</small>
               }

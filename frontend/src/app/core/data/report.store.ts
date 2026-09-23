@@ -37,7 +37,6 @@ export interface ReportAnalytics {
 }
 export interface ReportReferenceData {
   branches: { value: string; label: string }[];
-  salespeople: string[];
   customers: string[];
   categories: string[];
   brands: string[];

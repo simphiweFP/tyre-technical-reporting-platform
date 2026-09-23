@@ -52,7 +52,6 @@ class ReferenceOption(BaseModel):
 
 class ReportReferenceDataResponse(BaseModel):
     branches: list[ReferenceOption]
-    salespeople: list[str]
     customers: list[str]
     categories: list[str]
     brands: list[str]
