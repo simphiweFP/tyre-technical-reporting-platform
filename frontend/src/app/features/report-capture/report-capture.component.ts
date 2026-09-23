@@ -6,7 +6,12 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ReportStore } from '../../core/data/report.store';
 import { ReportDeliveryService } from '../../core/delivery/report-delivery.service';
 import { ReportIntelligenceService } from '../../core/media/report-intelligence.service';
-import { PHOTO_CATEGORIES, ReportPhoto, TechnicalReport } from '../../shared/models/report.models';
+import {
+  PHOTO_CATEGORIES,
+  ReportPhoto,
+  ReportRecipient,
+  TechnicalReport,
+} from '../../shared/models/report.models';
 @Component({
   selector: 'app-report-capture',
   imports: [ReactiveFormsModule, RouterLink],
@@ -25,9 +30,15 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly step = signal(0);
   readonly captureMessage = signal('');
   readonly readonlyView = computed(() => this.auth.hasRole('viewer'));
+  readonly recipients = signal<ReportRecipient[]>([]);
   readonly selectedRecipient = signal('');
   readonly confirmed = signal(false);
   readonly submitting = signal(false);
+  readonly pdfBusy = signal(false);
+  readonly previewMode = signal(false);
+  readonly successMode = signal(false);
+  readonly deliveryStatus = signal('Pending');
+  readonly deliveryEmail = signal('');
   readonly photoValidationShown = signal(false);
   readonly stepLabels = ['Report details', 'Take photos', 'Tyre & vehicle', 'Review'];
   readonly photoCategories = PHOTO_CATEGORIES;
@@ -122,25 +133,17 @@ export class ReportCaptureComponent implements OnDestroy {
       return;
     }
     if (!this.confirmed() || !this.readyForReview()) return;
-    if (!this.selectedRecipient()) await this.loadDeliveryData();
-    if (!this.selectedRecipient()) {
-      this.captureMessage.set(
-        'No active report recipient is configured for this branch and category. Contact an administrator.',
-      );
-      return;
-    }
     this.captureMessage.set('');
     this.submitting.set(true);
     try {
-      const submitted = { ...this.currentReport(), status: 'Submitted' as const };
-      this.report.set(submitted);
-      await this.store.saveNow(submitted);
-      await this.sendReport();
-      await this.router.navigate(['/dashboard']);
+      const ready = { ...this.currentReport(), status: 'Ready to Submit' as const };
+      this.report.set(ready);
+      await this.store.saveNow(ready);
+      await this.loadDeliveryData();
+      this.previewMode.set(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
-      this.captureMessage.set(
-        'The report could not be submitted. Check the API connection and try again.',
-      );
+      this.captureMessage.set('The report could not be saved to the API. Check the connection.');
     } finally {
       this.submitting.set(false);
     }
@@ -242,15 +245,64 @@ export class ReportCaptureComponent implements OnDestroy {
     };
     this.report.set(updated);
     await this.store.saveNow(updated);
+    this.deliveryStatus.set(result.status);
+    this.deliveryEmail.set(result.recipient_email);
+  }
+  async downloadPdf(): Promise<void> {
+    if (!this.readyForReview()) return;
+    this.pdfBusy.set(true);
+    this.captureMessage.set('');
+    try {
+      const current = this.currentReport();
+      this.report.set(current);
+      await this.store.saveNow(current);
+      await this.intelligence.downloadPdf(current);
+    } catch {
+      this.captureMessage.set('PDF generation failed. Check the API connection and try again.');
+    } finally {
+      this.pdfBusy.set(false);
+    }
+  }
+  editReport(): void {
+    this.previewMode.set(false);
+    this.step.set(3);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  async sendFromPreview(): Promise<void> {
+    if (!this.selectedRecipient()) {
+      this.captureMessage.set(
+        'No active report recipient is configured for this branch and category. Contact an administrator.',
+      );
+      return;
+    }
+    this.submitting.set(true);
+    this.captureMessage.set('');
+    try {
+      await this.sendReport();
+      this.previewMode.set(false);
+      this.successMode.set(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      this.captureMessage.set(
+        'The report could not be sent. Check the API connection and try again.',
+      );
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+  startAnotherReport(): void {
+    void this.router.navigate(['/reports/new']).then(() => window.location.reload());
   }
   private async loadDeliveryData(): Promise<void> {
     try {
       const current = this.currentReport();
       const recipients = await this.delivery.recipients(true, current.branch, current.category);
+      this.recipients.set(recipients);
       if (!this.selectedRecipient() && recipients.length) {
         this.selectedRecipient.set(recipients[0].id);
       }
     } catch {
+      this.recipients.set([]);
       this.captureMessage.set('Delivery contacts are temporarily unavailable.');
     }
   }

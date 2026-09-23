@@ -261,16 +261,6 @@ h1 {
   margin: 0 0 15px;
   font-size: 14px;
 }
-.ai-banner {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 15px;
-  padding: 10px 12px;
-  border-radius: 7px;
-  color: #19526f;
-  background: #eaf6fb;
-  font-size: 10px;
-}
 .photo-heading {
   display: flex;
   align-items: start;
@@ -490,6 +480,33 @@ h1 {
   margin: 14px 0;
   padding: 15px;
 }
+.preview-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.preview-kicker {
+  display: inline-block;
+  margin-bottom: 7px;
+  color: #c7192c;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.text-action {
+  flex: 0 0 auto;
+  border: 0;
+  color: #c7192c;
+  background: transparent;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.preview-message {
+  margin: 0 0 16px;
+}
 .summary-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -550,6 +567,33 @@ h1 {
   font-size: 7px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.preview-recipient {
+  display: grid;
+  gap: 7px;
+  margin-top: 20px;
+  padding: 14px;
+  border: 1px solid #dde1e4;
+  border-radius: 9px;
+  background: #fafbfc;
+}
+.preview-recipient > span {
+  font-size: 10px;
+  font-weight: 800;
+}
+.preview-recipient select {
+  width: 100%;
+  height: 42px;
+  border: 1px solid #cdd2d7;
+  border-radius: 6px;
+  padding: 0 10px;
+  color: #25303c;
+  background: #fff;
+  font-size: 10px;
+}
+.preview-recipient small {
+  color: #7c848c;
+  font-size: 8px;
 }
 .success-screen {
   padding-top: 75px;
@@ -626,9 +670,22 @@ h1 {
     padding: 0;
   }
   .phone-shell {
+    width: 100%;
     min-height: 100vh;
     border-radius: 0;
     box-shadow: none;
+  }
+  .mobile-brand-bar {
+    padding-inline: 14px;
+  }
+  .mobile-brand-bar img {
+    width: min(44vw, 190px);
+  }
+  .offline-pill {
+    padding: 7px 9px;
+  }
+  .evidence-preview > div {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 @media (max-width: 360px) {

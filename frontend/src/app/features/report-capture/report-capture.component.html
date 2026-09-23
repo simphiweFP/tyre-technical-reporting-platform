@@ -8,312 +8,453 @@
       <span class="offline-pill"><b>☁</b> Offline</span>
     </header>
 
-    <nav class="wizard-progress" aria-label="Report progress">
-      @for (label of stepLabels; track label; let index = $index) {
-        <button
-          type="button"
-          [class.active]="step() === index"
-          [class.complete]="step() > index"
-          (click)="goTo(index)"
-        >
-          <span>{{ step() > index ? '✓' : index + 1 }}</span>
-          <small>{{ label }}</small>
-        </button>
-      }
-    </nav>
+    @if (!previewMode() && !successMode()) {
+      <nav class="wizard-progress" aria-label="Report progress">
+        @for (label of stepLabels; track label; let index = $index) {
+          <button
+            type="button"
+            [class.active]="step() === index"
+            [class.complete]="step() > index"
+            (click)="goTo(index)"
+          >
+            <span>{{ step() > index ? '✓' : index + 1 }}</span>
+            <small>{{ label }}</small>
+          </button>
+        }
+      </nav>
 
-    <form [formGroup]="form" (ngSubmit)="next()" class="wizard-form">
-      @if (captureMessage()) {
-        <div class="form-message" role="status">{{ captureMessage() }}</div>
-      }
+      <form [formGroup]="form" (ngSubmit)="next()" class="wizard-form">
+        @if (captureMessage()) {
+          <div class="form-message" role="status">{{ captureMessage() }}</div>
+        }
 
-      @if (step() === 0) {
-        <section class="wizard-screen">
-          <h1>Report details</h1>
-          <p class="screen-copy">Start with the basic information.</p>
+        @if (step() === 0) {
+          <section class="wizard-screen">
+            <h1>Report details</h1>
+            <p class="screen-copy">Start with the basic information.</p>
 
-          <div class="mock-field segment-field">
-            <label>Internal / External <em>*</em></label>
-            <div class="segment-control">
-              <button
-                type="button"
-                [class.selected]="form.controls.internalExternal.value === 'Internal'"
-                (click)="form.controls.internalExternal.setValue('Internal')"
-              >
-                Internal
-              </button>
-              <button
-                type="button"
-                [class.selected]="form.controls.internalExternal.value === 'External'"
-                (click)="form.controls.internalExternal.setValue('External')"
-              >
-                External
-              </button>
+            <div class="mock-field segment-field">
+              <label>Internal / External <em>*</em></label>
+              <div class="segment-control">
+                <button
+                  type="button"
+                  [class.selected]="form.controls.internalExternal.value === 'Internal'"
+                  (click)="form.controls.internalExternal.setValue('Internal')"
+                >
+                  Internal
+                </button>
+                <button
+                  type="button"
+                  [class.selected]="form.controls.internalExternal.value === 'External'"
+                  (click)="form.controls.internalExternal.setValue('External')"
+                >
+                  External
+                </button>
+              </div>
             </div>
-          </div>
 
-          <label
-            class="mock-field"
-            [class.has-error]="
-              form.controls.salesperson.invalid && form.controls.salesperson.touched
-            "
-          >
-            <span>Salesperson <em>*</em></span>
-            <i>♙</i>
-            <input formControlName="salesperson" placeholder="Select salesperson" />
-            <b>›</b>
-            @if (form.controls.salesperson.invalid && form.controls.salesperson.touched) {
-              <small class="field-error">Salesperson is required.</small>
-            }
-          </label>
-          <label
-            class="mock-field"
-            [class.has-error]="
-              form.controls.customerName.invalid && form.controls.customerName.touched
-            "
-          >
-            <span>Customer name <em>*</em></span>
-            <i>♙</i>
-            <input formControlName="customerName" placeholder="Search or type customer name" />
-            <b>›</b>
-            @if (form.controls.customerName.invalid && form.controls.customerName.touched) {
-              <small class="field-error">Customer name is required.</small>
-            }
-          </label>
-          <label
-            class="mock-field"
-            [class.has-error]="
-              form.controls.customerInvoiceNumber.invalid &&
-              form.controls.customerInvoiceNumber.touched
-            "
-          >
-            <span>Customer invoice no. <em>*</em></span>
-            <i>▤</i>
-            <input formControlName="customerInvoiceNumber" placeholder="Enter invoice number" />
-            @if (
-              form.controls.customerInvoiceNumber.invalid &&
-              form.controls.customerInvoiceNumber.touched
-            ) {
-              <small class="field-error">Customer invoice number is required.</small>
-            }
-          </label>
-          <label class="mock-field">
-            <span>Branch <em>*</em></span>
-            <i>●</i>
-            <select formControlName="branch">
-              <option value="Phoenix">RTCPHX</option>
-              <option value="Durban">RTCDUR</option>
-              <option value="Johannesburg">RTCJHB</option>
-            </select>
-            <b>›</b>
-          </label>
-        </section>
-      }
-
-      @if (step() === 2) {
-        <section class="wizard-screen tyre-screen">
-          <h1>Tyre &amp; vehicle</h1>
-          <p class="screen-copy">Enter the tyre and vehicle details.</p>
-
-          <div class="two-column-fields">
-            <label class="mock-field compact">
-              <span>Category</span><i>◉</i>
-              <select formControlName="category">
-                <option value="">Select category</option>
-                <option>Manufacturing</option>
-                <option>Road hazard</option>
-                <option>Service related</option></select
-              ><b>›</b>
-            </label>
             <label
-              class="mock-field compact"
-              [class.has-error]="form.controls.brand.invalid && form.controls.brand.touched"
-            >
-              <span>Brand <em>*</em></span
-              ><i>▥</i><input formControlName="brand" placeholder="Select brand" /><b>›</b>
-              @if (form.controls.brand.invalid && form.controls.brand.touched) {
-                <small class="field-error">Brand is required.</small>
-              }
-            </label>
-            <label class="mock-field compact">
-              <span>Rim size</span><i>⊗</i
-              ><input formControlName="rimSize" placeholder="e.g. 22.5" />
-            </label>
-            <label class="mock-field compact">
-              <span>Pattern</span><i>▥</i
-              ><input formControlName="pattern" placeholder="Select pattern" /><b>›</b>
-            </label>
-            <label
-              class="mock-field compact"
-              [class.has-error]="form.controls.dot.invalid && form.controls.dot.touched"
-            >
-              <span>DOT <em>*</em></span
-              ><i>▣</i><input formControlName="dot" placeholder="e.g. 0124" />
-              @if (form.controls.dot.invalid && form.controls.dot.touched) {
-                <small class="field-error">DOT is required.</small>
-              }
-            </label>
-            <label
-              class="mock-field compact"
+              class="mock-field"
               [class.has-error]="
-                form.controls.serialNumber.invalid && form.controls.serialNumber.touched
+                form.controls.salesperson.invalid && form.controls.salesperson.touched
               "
             >
-              <span>Serial number <em>*</em></span
-              ><i>▥</i><input formControlName="serialNumber" placeholder="Enter serial number" />
-              @if (form.controls.serialNumber.invalid && form.controls.serialNumber.touched) {
-                <small class="field-error">Serial number is required.</small>
+              <span>Salesperson <em>*</em></span>
+              <i>♙</i>
+              <input formControlName="salesperson" placeholder="Select salesperson" />
+              <b>›</b>
+              @if (form.controls.salesperson.invalid && form.controls.salesperson.touched) {
+                <small class="field-error">Salesperson is required.</small>
               }
             </label>
-            <label class="mock-field compact">
-              <span>Remaining tread depth (mm)</span><i>◔</i
-              ><input formControlName="remainingTreadDepth" placeholder="e.g. 12" />
-            </label>
-            <label class="mock-field compact">
-              <span>Inspected pressure (psi)</span><i>◔</i
-              ><input formControlName="inspectedPressure" placeholder="e.g. 100" />
-            </label>
-          </div>
-
-          <div class="vehicle-block">
-            <h2>Vehicle details</h2>
-            <div class="two-column-fields">
-              <label class="mock-field compact"
-                ><span>Vehicle (make/model)</span><i>▰</i
-                ><input formControlName="vehicleMakeModel" placeholder="Enter make / model"
-              /></label>
-              <label class="mock-field compact"
-                ><span>Vehicle mileage</span><i>◔</i
-                ><input formControlName="vehicleMileage" placeholder="e.g. 120000"
-              /></label>
-            </div>
-          </div>
-          <label class="mock-field tyre-position"
-            ><i>⊗</i><span>Tyre position</span
-            ><select formControlName="tyrePosition">
-              <option value="">Select position</option>
-              <option>Front left</option>
-              <option>Front right</option>
-              <option>Rear left</option>
-              <option>Rear right</option>
-              <option>Spare</option></select
-            ><b>›</b></label
-          >
-        </section>
-      }
-
-      @if (step() === 1) {
-        <section class="wizard-screen photo-screen">
-          <div class="photo-heading">
-            <div>
-              <h1>Take photos</h1>
-              <p class="screen-copy">
-                Follow the checklist. Clear, well-lit photos help speed up the claim.
-              </p>
-            </div>
-            <strong
-              >{{ photoCount() }} <small>of {{ requiredCount }}<br />required</small></strong
+            <label
+              class="mock-field"
+              [class.has-error]="
+                form.controls.customerName.invalid && form.controls.customerName.touched
+              "
             >
-          </div>
-          <div class="photo-checklist">
-            @for (item of photoCategories; track item.key) {
-              <article
-                [class.captured]="photoFor(item.key)"
-                [class.missing]="photoValidationShown() && item.required && !photoFor(item.key)"
-              >
-                <span class="photo-type-icon">{{ photoIcon(item.key) }}</span>
-                <div>
-                  <strong>{{ item.label }}</strong
-                  ><small>{{ item.hint }}</small>
-                  @if (photoValidationShown() && item.required && !photoFor(item.key)) {
-                    <small class="photo-error">Required photo missing.</small>
-                  }
-                </div>
-                @if (photoFor(item.key); as photo) {
-                  <img [src]="photo.previewUrl" [alt]="item.label" />
-                  <button type="button" class="remove-photo" (click)="removePhoto(item.key)">
-                    ×
-                  </button>
-                } @else {
-                  <div class="photo-actions">
-                    <label
-                      class="camera-button"
-                      title="Take photo"
-                      [attr.aria-label]="'Take ' + item.label + ' photo'"
-                      ><input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        (change)="capture($event, item.key)"
-                      />▣</label
-                    >
-                    <label
-                      class="upload-button"
-                      title="Upload photo"
-                      [attr.aria-label]="'Upload ' + item.label + ' photo'"
-                      ><input
-                        type="file"
-                        accept="image/*"
-                        (change)="capture($event, item.key)"
-                      />⇧</label
-                    >
-                  </div>
-                }
-                <span class="photo-total">{{ photoFor(item.key) ? 1 : 0 }}/1</span>
-                <b>›</b>
-              </article>
-            }
-          </div>
-        </section>
-      }
-
-      @if (step() === 3) {
-        <section class="wizard-screen review-screen">
-          <h1>Review &amp; confirm</h1>
-          <p class="screen-copy">Check the tyre information and photos before submitting.</p>
-
-          <section class="ai-review-card">
-            <header><strong>Tyre details</strong><span>● Ready to review</span></header>
-            @for (row of reviewRows(); track row.label) {
-              <div>
-                <strong>{{ row.label }}</strong
-                ><span>{{ row.value }}</span
-                ><button type="button" (click)="goTo(2)">✎</button>
-              </div>
-            }
+              <span>Customer name <em>*</em></span>
+              <i>♙</i>
+              <input formControlName="customerName" placeholder="Search or type customer name" />
+              <b>›</b>
+              @if (form.controls.customerName.invalid && form.controls.customerName.touched) {
+                <small class="field-error">Customer name is required.</small>
+              }
+            </label>
+            <label
+              class="mock-field"
+              [class.has-error]="
+                form.controls.customerInvoiceNumber.invalid &&
+                form.controls.customerInvoiceNumber.touched
+              "
+            >
+              <span>Customer invoice no. <em>*</em></span>
+              <i>▤</i>
+              <input formControlName="customerInvoiceNumber" placeholder="Enter invoice number" />
+              @if (
+                form.controls.customerInvoiceNumber.invalid &&
+                form.controls.customerInvoiceNumber.touched
+              ) {
+                <small class="field-error">Customer invoice number is required.</small>
+              }
+            </label>
+            <label class="mock-field">
+              <span>Branch <em>*</em></span>
+              <i>●</i>
+              <select formControlName="branch">
+                <option value="Phoenix">RTCPHX</option>
+                <option value="Durban">RTCDUR</option>
+                <option value="Johannesburg">RTCJHB</option>
+              </select>
+              <b>›</b>
+            </label>
           </section>
-
-          @if (duplicateWarning()) {
-            <div class="form-message" role="alert">{{ duplicateWarning() }}</div>
-          }
-
-          <label class="confirm-card">
-            <strong>Please confirm</strong>
-            <span
-              ><input type="checkbox" [checked]="confirmed()" (change)="toggleConfirmed($event)" />
-              I confirm the information is correct and the photos clearly show the tyre and
-              issues.</span
-            >
-          </label>
-        </section>
-      }
-
-      <footer class="wizard-actions">
-        @if (step() === 0) {
-          <button type="button" class="outline-action" (click)="saveDraft()">
-            ▣ &nbsp; Save draft
-          </button>
-        } @else {
-          <button type="button" class="outline-action" (click)="previous()">‹ &nbsp; Back</button>
         }
-        <button
-          type="submit"
-          class="primary-action"
-          [disabled]="step() === 3 && (!confirmed() || submitting())"
+
+        @if (step() === 2) {
+          <section class="wizard-screen tyre-screen">
+            <h1>Tyre &amp; vehicle</h1>
+            <p class="screen-copy">Enter the tyre and vehicle details.</p>
+
+            <div class="two-column-fields">
+              <label class="mock-field compact">
+                <span>Category</span><i>◉</i>
+                <select formControlName="category">
+                  <option value="">Select category</option>
+                  <option>Manufacturing</option>
+                  <option>Road hazard</option>
+                  <option>Service related</option></select
+                ><b>›</b>
+              </label>
+              <label
+                class="mock-field compact"
+                [class.has-error]="form.controls.brand.invalid && form.controls.brand.touched"
+              >
+                <span>Brand <em>*</em></span
+                ><i>▥</i><input formControlName="brand" placeholder="Select brand" /><b>›</b>
+                @if (form.controls.brand.invalid && form.controls.brand.touched) {
+                  <small class="field-error">Brand is required.</small>
+                }
+              </label>
+              <label class="mock-field compact">
+                <span>Rim size</span><i>⊗</i
+                ><input formControlName="rimSize" placeholder="e.g. 22.5" />
+              </label>
+              <label class="mock-field compact">
+                <span>Pattern</span><i>▥</i
+                ><input formControlName="pattern" placeholder="Select pattern" /><b>›</b>
+              </label>
+              <label
+                class="mock-field compact"
+                [class.has-error]="form.controls.dot.invalid && form.controls.dot.touched"
+              >
+                <span>DOT <em>*</em></span
+                ><i>▣</i><input formControlName="dot" placeholder="e.g. 0124" />
+                @if (form.controls.dot.invalid && form.controls.dot.touched) {
+                  <small class="field-error">DOT is required.</small>
+                }
+              </label>
+              <label
+                class="mock-field compact"
+                [class.has-error]="
+                  form.controls.serialNumber.invalid && form.controls.serialNumber.touched
+                "
+              >
+                <span>Serial number <em>*</em></span
+                ><i>▥</i><input formControlName="serialNumber" placeholder="Enter serial number" />
+                @if (form.controls.serialNumber.invalid && form.controls.serialNumber.touched) {
+                  <small class="field-error">Serial number is required.</small>
+                }
+              </label>
+              <label class="mock-field compact">
+                <span>Remaining tread depth (mm)</span><i>◔</i
+                ><input formControlName="remainingTreadDepth" placeholder="e.g. 12" />
+              </label>
+              <label class="mock-field compact">
+                <span>Inspected pressure (psi)</span><i>◔</i
+                ><input formControlName="inspectedPressure" placeholder="e.g. 100" />
+              </label>
+            </div>
+
+            <div class="vehicle-block">
+              <h2>Vehicle details</h2>
+              <div class="two-column-fields">
+                <label class="mock-field compact"
+                  ><span>Vehicle (make/model)</span><i>▰</i
+                  ><input formControlName="vehicleMakeModel" placeholder="Enter make / model"
+                /></label>
+                <label class="mock-field compact"
+                  ><span>Vehicle mileage</span><i>◔</i
+                  ><input formControlName="vehicleMileage" placeholder="e.g. 120000"
+                /></label>
+              </div>
+            </div>
+            <label class="mock-field tyre-position"
+              ><i>⊗</i><span>Tyre position</span
+              ><select formControlName="tyrePosition">
+                <option value="">Select position</option>
+                <option>Front left</option>
+                <option>Front right</option>
+                <option>Rear left</option>
+                <option>Rear right</option>
+                <option>Spare</option></select
+              ><b>›</b></label
+            >
+          </section>
+        }
+
+        @if (step() === 1) {
+          <section class="wizard-screen photo-screen">
+            <div class="photo-heading">
+              <div>
+                <h1>Take photos</h1>
+                <p class="screen-copy">
+                  Follow the checklist. Clear, well-lit photos help speed up the claim.
+                </p>
+              </div>
+              <strong
+                >{{ photoCount() }} <small>of {{ requiredCount }}<br />required</small></strong
+              >
+            </div>
+            <div class="photo-checklist">
+              @for (item of photoCategories; track item.key) {
+                <article
+                  [class.captured]="photoFor(item.key)"
+                  [class.missing]="photoValidationShown() && item.required && !photoFor(item.key)"
+                >
+                  <span class="photo-type-icon">{{ photoIcon(item.key) }}</span>
+                  <div>
+                    <strong>{{ item.label }}</strong
+                    ><small>{{ item.hint }}</small>
+                    @if (photoValidationShown() && item.required && !photoFor(item.key)) {
+                      <small class="photo-error">Required photo missing.</small>
+                    }
+                  </div>
+                  @if (photoFor(item.key); as photo) {
+                    <img [src]="photo.previewUrl" [alt]="item.label" />
+                    <button type="button" class="remove-photo" (click)="removePhoto(item.key)">
+                      ×
+                    </button>
+                  } @else {
+                    <div class="photo-actions">
+                      <label
+                        class="camera-button"
+                        title="Take photo"
+                        [attr.aria-label]="'Take ' + item.label + ' photo'"
+                        ><input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          (change)="capture($event, item.key)"
+                        />▣</label
+                      >
+                      <label
+                        class="upload-button"
+                        title="Upload photo"
+                        [attr.aria-label]="'Upload ' + item.label + ' photo'"
+                        ><input
+                          type="file"
+                          accept="image/*"
+                          (change)="capture($event, item.key)"
+                        />⇧</label
+                      >
+                    </div>
+                  }
+                  <span class="photo-total">{{ photoFor(item.key) ? 1 : 0 }}/1</span>
+                  <b>›</b>
+                </article>
+              }
+            </div>
+          </section>
+        }
+
+        @if (step() === 3) {
+          <section class="wizard-screen review-screen">
+            <h1>Review &amp; confirm</h1>
+            <p class="screen-copy">Check the tyre information and photos before submitting.</p>
+
+            <section class="ai-review-card">
+              <header><strong>Tyre details</strong><span>● Ready to review</span></header>
+              @for (row of reviewRows(); track row.label) {
+                <div>
+                  <strong>{{ row.label }}</strong
+                  ><span>{{ row.value }}</span
+                  ><button type="button" (click)="goTo(2)">✎</button>
+                </div>
+              }
+            </section>
+
+            @if (duplicateWarning()) {
+              <div class="form-message" role="alert">{{ duplicateWarning() }}</div>
+            }
+
+            <label class="confirm-card">
+              <strong>Please confirm</strong>
+              <span
+                ><input
+                  type="checkbox"
+                  [checked]="confirmed()"
+                  (change)="toggleConfirmed($event)"
+                />
+                I confirm the information is correct and the photos clearly show the tyre and
+                issues.</span
+              >
+            </label>
+          </section>
+        }
+
+        <footer class="wizard-actions">
+          @if (step() === 0) {
+            <button type="button" class="outline-action" (click)="saveDraft()">
+              ▣ &nbsp; Save draft
+            </button>
+          } @else {
+            <button type="button" class="outline-action" (click)="previous()">‹ &nbsp; Back</button>
+          }
+          <button
+            type="submit"
+            class="primary-action"
+            [disabled]="step() === 3 && (!confirmed() || submitting())"
+          >
+            {{ step() === 3 ? (submitting() ? 'Saving…' : 'Preview report') : 'Next' }} &nbsp; ›
+          </button>
+        </footer>
+      </form>
+    }
+
+    @if (previewMode()) {
+      <section class="preview-screen">
+        @if (captureMessage()) {
+          <div class="form-message preview-message" role="alert">{{ captureMessage() }}</div>
+        }
+        <div class="preview-heading">
+          <div>
+            <span class="preview-kicker">Ready to submit</span>
+            <h1>Technical report preview</h1>
+            <p class="screen-copy">Confirm the saved API record before sending the PDF.</p>
+          </div>
+          <button type="button" class="text-action" (click)="editReport()">✎ Edit</button>
+        </div>
+
+        <div class="summary-card summary-grid">
+          <div>
+            <small>Claim reference</small><strong>{{ report().claimReference }}</strong>
+          </div>
+          <div>
+            <small>Updated</small><strong>{{ report().updatedAt }}</strong>
+          </div>
+          <div>
+            <small>Customer</small><strong>{{ form.value.customerName }}</strong>
+          </div>
+          <div>
+            <small>Branch</small><strong>{{ form.value.branch }}</strong>
+          </div>
+        </div>
+
+        <section class="summary-card tyre-preview">
+          <h2>Tyre details</h2>
+          <div>
+            <small>Brand</small><strong>{{ form.value.brand || '—' }}</strong>
+            <small>Rim size</small><strong>{{ form.value.rimSize || '—' }}</strong>
+            <small>DOT</small><strong>{{ form.value.dot || '—' }}</strong>
+            <small>Serial number</small><strong>{{ form.value.serialNumber || '—' }}</strong>
+          </div>
+          @if (report().photos[0]; as firstPhoto) {
+            <img [src]="firstPhoto.previewUrl" alt="Tyre evidence" />
+          }
+        </section>
+
+        <section class="evidence-preview">
+          <header>
+            <h2>Evidence photos ({{ report().photos.length }})</h2>
+            <button type="button" (click)="editReport(); goTo(1)">View all</button>
+          </header>
+          <div>
+            @for (photo of report().photos.slice(0, 5); track photo.category) {
+              <figure>
+                <img [src]="photo.previewUrl" [alt]="photo.label" />
+                <figcaption>{{ photo.label }}</figcaption>
+              </figure>
+            }
+          </div>
+        </section>
+
+        <label class="preview-recipient">
+          <span>Send PDF to</span>
+          <select
+            [value]="selectedRecipient()"
+            (change)="selectedRecipient.set($any($event.target).value)"
+          >
+            <option value="">No configured recipient</option>
+            @for (recipient of recipients(); track recipient.id) {
+              <option [value]="recipient.id">
+                {{ recipient.company }} · {{ recipient.email }}
+              </option>
+            }
+          </select>
+          <small>The configured branch recipient will receive the generated PDF.</small>
+        </label>
+
+        <footer class="wizard-actions preview-actions">
+          <button
+            type="button"
+            class="outline-action"
+            [disabled]="pdfBusy()"
+            (click)="downloadPdf()"
+          >
+            ▤ &nbsp; {{ pdfBusy() ? 'Generating…' : 'Download PDF' }}
+          </button>
+          <button
+            type="button"
+            class="primary-action"
+            [disabled]="submitting()"
+            (click)="sendFromPreview()"
+          >
+            ✉ &nbsp; {{ submitting() ? 'Sending…' : 'Send report' }}
+          </button>
+        </footer>
+      </section>
+    }
+
+    @if (successMode()) {
+      <section class="success-screen">
+        <div class="success-check">✓</div>
+        <span class="preview-kicker">Submission complete</span>
+        <h1>Report submitted</h1>
+        <h2>{{ report().claimReference }}</h2>
+        <p>The report is stored by the API and queued for third-party email delivery.</p>
+        <div class="success-statuses">
+          <article>
+            <i>☁</i>
+            <div>
+              <strong>Saved to server</strong><small>Available across authorised devices</small>
+            </div>
+            <span class="ready">● Ready</span>
+          </article>
+          <article>
+            <i>✉</i>
+            <div>
+              <strong>Email {{ deliveryStatus() }}</strong
+              ><small>{{ deliveryEmail() }}</small>
+            </div>
+            <span [class.ready]="deliveryStatus() === 'Sent'">{{ deliveryStatus() }}</span>
+          </article>
+          <article>
+            <i>▤</i>
+            <div>
+              <strong>PDF handled by API</strong><small>Attached by the delivery worker</small>
+            </div>
+            <span class="ready">● Ready</span>
+          </article>
+        </div>
+        <a routerLink="/dashboard" class="primary-action full-action">⌂ &nbsp; Back to dashboard</a>
+        <a [routerLink]="['/reports', report().id]" class="outline-action full-action"
+          >▤ &nbsp; View report</a
         >
-          {{ step() === 3 ? (submitting() ? 'Submitting…' : 'Submit report') : 'Next' }} &nbsp; ›
+        <button type="button" class="outline-action full-action" (click)="startAnotherReport()">
+          ＋ &nbsp; Start another report
         </button>
-      </footer>
-    </form>
+      </section>
+    }
   </section>
 </main>
