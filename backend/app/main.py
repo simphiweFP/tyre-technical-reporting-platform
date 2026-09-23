@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from sqlalchemy import text
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -46,6 +47,11 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(reports_router, prefix="/api/v1")
 app.include_router(delivery_router, prefix="/api/v1")
 app.include_router(administration_router, prefix="/api/v1")
+
+
+@app.get("/", include_in_schema=False)
+def swagger_redirect():
+    return RedirectResponse(url="/docs")
 
 
 @app.get("/health", tags=["Operations"])

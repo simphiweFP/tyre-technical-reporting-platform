@@ -22,3 +22,10 @@ def test_request_responses_include_correlation_and_security_headers(client):
     assert response.headers["X-Request-ID"] == "quality-test-123"
     assert response.headers["X-Content-Type-Options"] == "nosniff"
     assert response.headers["X-Frame-Options"] == "DENY"
+
+
+def test_root_redirects_to_swagger(client):
+    response = client.get("/", follow_redirects=False)
+
+    assert response.status_code == 307
+    assert response.headers["location"] == "/docs"
