@@ -64,17 +64,6 @@ export interface ReportPhoto {
   sha256: string;
   storageId?: string;
 }
-export type ExtractableTyreField = 'brand' | 'rimSize' | 'dot' | 'serialNumber' | 'tyreSize';
-export interface ExtractedTyreValue {
-  field: ExtractableTyreField;
-  value: string;
-  confidence: number;
-}
-export interface ImageAnalysisResponse {
-  values: ExtractedTyreValue[];
-  raw_text: string;
-  quality_score: number;
-}
 export interface ReportRecipient {
   id: string;
   company: string;

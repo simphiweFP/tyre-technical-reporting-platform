@@ -9,7 +9,6 @@ import { ReportDeliveryService } from '../../core/delivery/report-delivery.servi
 import { ReportIntelligenceService } from '../../core/media/report-intelligence.service';
 import {
   DeliveryAttempt,
-  ExtractedTyreValue,
   PHOTO_CATEGORIES,
   ReportPhoto,
   ReportRecipient,
@@ -438,9 +437,7 @@ export class ReportCaptureComponent implements OnDestroy {
   private readonly destroy$ = new Subject<void>();
   readonly step = signal(0);
   readonly saved = signal(true);
-  readonly analysingCategory = signal('');
   readonly captureMessage = signal('');
-  readonly suggestions = signal<ExtractedTyreValue[]>([]);
   readonly pdfBusy = signal(false);
   readonly readonlyView = computed(() => this.auth.hasRole('viewer'));
   readonly deliveryBusy = signal(false);
@@ -451,7 +448,7 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly previewMode = signal(false);
   readonly savedMode = signal(false);
   readonly confirmed = signal(false);
-  readonly stepLabels = ['Report details', 'Tyre & vehicle', 'Photos', 'Review'];
+  readonly stepLabels = ['Report details', 'Take photos', 'Tyre & vehicle', 'Review'];
   readonly photoCategories = PHOTO_CATEGORIES;
   readonly requiredCount = PHOTO_CATEGORIES.filter((p) => p.required).length;
   readonly report = signal<TechnicalReport>(this.loadReport());
@@ -618,23 +615,8 @@ export class ReportCaptureComponent implements OnDestroy {
         ),
       }));
       this.persist();
-      if (['dot', 'serialNumber', 'entireTyreDot'].includes(category)) {
-        this.analysingCategory.set(category);
-        try {
-          const analysis = await this.intelligence.analyse(optimized.blob, file.name);
-          this.suggestions.set(analysis.values);
-          if (analysis.values.length) {
-            this.captureMessage.set(
-              'Tyre markings found. Review the suggestions in the Tyre step before applying them.',
-            );
-          }
-        } finally {
-          this.analysingCategory.set('');
-        }
-      }
     } catch {
       this.captureMessage.set('The image could not be processed. Try another photo.');
-      this.analysingCategory.set('');
     }
   }
   async removePhoto(category: string): Promise<void> {
@@ -643,46 +625,19 @@ export class ReportCaptureComponent implements OnDestroy {
     this.report.update((r) => ({ ...r, photos: r.photos.filter((p) => p.category !== category) }));
     this.persist();
   }
-  acceptSuggestion(suggestion: ExtractedTyreValue): void {
-    if (suggestion.field === 'tyreSize') return;
-    this.form.controls[suggestion.field].setValue(suggestion.value);
-    this.suggestions.update((items) => items.filter((item) => item.field !== suggestion.field));
-    this.persist();
-  }
-  fieldLabel(field: string): string {
-    return (
-      { rimSize: 'Rim size', serialNumber: 'Serial number', tyreSize: 'Tyre size' }[field] ??
-      field.toUpperCase()
-    );
-  }
-  confidence(value: number): string {
-    return `${Math.round(value * 100)}%`;
-  }
   photoIcon(category: string): string {
     if (category.startsWith('tread')) return '▥';
     if (category === 'vehicle') return '▰';
     if (category.startsWith('issue')) return '◉';
     return '◌';
   }
-  reviewRows(): { label: string; value: string; confidence: string }[] {
+  reviewRows(): { label: string; value: string }[] {
     const values = this.form.getRawValue();
-    const confidence = (field: string) => {
-      const match = this.suggestions().find((item) => item.field === field);
-      return match ? this.confidence(match.confidence) : 'Confirmed';
-    };
     return [
-      { label: 'Brand', value: values.brand || 'Not captured', confidence: confidence('brand') },
-      {
-        label: 'Rim size',
-        value: values.rimSize || 'Not captured',
-        confidence: confidence('rimSize'),
-      },
-      { label: 'DOT', value: values.dot || 'Not captured', confidence: confidence('dot') },
-      {
-        label: 'Serial number',
-        value: values.serialNumber || 'Not captured',
-        confidence: confidence('serialNumber'),
-      },
+      { label: 'Brand', value: values.brand || 'Not captured' },
+      { label: 'Rim size', value: values.rimSize || 'Not captured' },
+      { label: 'DOT', value: values.dot || 'Not captured' },
+      { label: 'Serial number', value: values.serialNumber || 'Not captured' },
     ];
   }
   toggleConfirmed(event: Event): void {
@@ -793,17 +748,17 @@ export class ReportCaptureComponent implements OnDestroy {
       this.captureMessage.set('Complete the required customer and invoice fields.');
       return false;
     }
-    if (!this.tyreComplete()) {
-      this.step.set(1);
-      this.captureMessage.set('Complete the required brand, DOT and serial number fields.');
-      return false;
-    }
     if (!this.photosComplete()) {
-      this.step.set(2);
+      this.step.set(1);
       const remaining = this.requiredCount - this.photoCount();
       this.captureMessage.set(
         `Capture ${remaining} remaining required photograph${remaining === 1 ? '' : 's'}.`,
       );
+      return false;
+    }
+    if (!this.tyreComplete()) {
+      this.step.set(2);
+      this.captureMessage.set('Complete the required brand, DOT and serial number fields.');
       return false;
     }
     return true;

@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ImageAnalysisResponse, TechnicalReport } from '../../shared/models/report.models';
+import { TechnicalReport } from '../../shared/models/report.models';
 
 export interface OptimizedImage {
   blob: Blob;
@@ -36,14 +36,6 @@ export class ReportIntelligenceService {
       .join('');
     const previewUrl = await this.asDataUrl(blob);
     return { blob, previewUrl, sha256 };
-  }
-
-  analyse(blob: Blob, filename: string): Promise<ImageAnalysisResponse> {
-    const body = new FormData();
-    body.append('image', blob, filename);
-    return firstValueFrom(
-      this.http.post<ImageAnalysisResponse>(`${environment.apiUrl}/reports/analyse-image`, body),
-    );
   }
 
   async downloadPdf(report: TechnicalReport): Promise<void> {

@@ -83,17 +83,10 @@
           </section>
         }
 
-        @if (step() === 1) {
+        @if (step() === 2) {
           <section class="wizard-screen tyre-screen">
             <h1>Tyre &amp; vehicle</h1>
             <p class="screen-copy">Enter the tyre and vehicle details.</p>
-
-            @if (suggestions().length) {
-              <div class="ai-banner">
-                <strong>AI read from photo</strong>
-                <span>Review before applying</span>
-              </div>
-            }
 
             <div class="two-column-fields">
               <label class="mock-field compact">
@@ -161,7 +154,7 @@
           </section>
         }
 
-        @if (step() === 2) {
+        @if (step() === 1) {
           <section class="wizard-screen photo-screen">
             <div class="photo-heading">
               <div>
@@ -223,18 +216,15 @@
         @if (step() === 3) {
           <section class="wizard-screen review-screen">
             <h1>Review &amp; confirm</h1>
-            <p class="screen-copy">
-              We've read some details from your photos. Please check and edit if needed.
-            </p>
+            <p class="screen-copy">Check the tyre information and photos before submitting.</p>
 
             <section class="ai-review-card">
-              <header><strong>AI Read from Photos ⓘ</strong><span>● Looks good</span></header>
+              <header><strong>Tyre details</strong><span>● Ready to review</span></header>
               @for (row of reviewRows(); track row.label) {
                 <div>
                   <strong>{{ row.label }}</strong
                   ><span>{{ row.value }}</span
-                  ><em>{{ row.confidence }}</em
-                  ><button type="button" (click)="goTo(1)">✎</button>
+                  ><button type="button" (click)="goTo(2)">✎</button>
                 </div>
               }
             </section>
@@ -304,7 +294,7 @@
         <section class="evidence-preview">
           <header>
             <h2>Evidence photos ({{ report().photos.length }})</h2>
-            <button type="button" (click)="goTo(2); previewMode.set(false)">View all</button>
+            <button type="button" (click)="goTo(1); previewMode.set(false)">View all</button>
           </header>
           <div>
             @for (photo of report().photos.slice(0, 5); track photo.category) {
