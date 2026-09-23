@@ -53,25 +53,15 @@
               </div>
             </div>
 
-            <label
-              class="mock-field"
-              [class.has-error]="
-                form.controls.salesperson.invalid && form.controls.salesperson.touched
-              "
-            >
+            <label class="mock-field" [class.has-error]="validationErrors()['salesperson']">
               <span>Salesperson <em>*</em></span>
               <i>♙</i>
               <input formControlName="salesperson" readonly aria-readonly="true" />
-              @if (form.controls.salesperson.invalid && form.controls.salesperson.touched) {
-                <small class="field-error">Salesperson is required.</small>
+              @if (validationErrors()['salesperson']) {
+                <small class="field-error">{{ validationErrors()['salesperson'] }}</small>
               }
             </label>
-            <label
-              class="mock-field"
-              [class.has-error]="
-                form.controls.customerName.invalid && form.controls.customerName.touched
-              "
-            >
+            <label class="mock-field" [class.has-error]="validationErrors()['customerName']">
               <span>Customer name <em>*</em></span>
               <i>♙</i>
               <input
@@ -84,31 +74,16 @@
                   <option [value]="customer"></option>
                 }
               </datalist>
-              @if (form.controls.customerName.invalid && form.controls.customerName.touched) {
-                <small class="field-error">Customer name is required.</small>
+              @if (validationErrors()['customerName']) {
+                <small class="field-error">{{ validationErrors()['customerName'] }}</small>
               }
             </label>
-            <label
-              class="mock-field"
-              [class.has-error]="
-                form.controls.customerInvoiceNumber.invalid &&
-                form.controls.customerInvoiceNumber.touched
-              "
-            >
-              <span>Customer invoice no. <em>*</em></span>
+            <label class="mock-field">
+              <span>Customer invoice no. <small>(optional)</small></span>
               <i>▤</i>
               <input formControlName="customerInvoiceNumber" placeholder="Enter invoice number" />
-              @if (
-                form.controls.customerInvoiceNumber.invalid &&
-                form.controls.customerInvoiceNumber.touched
-              ) {
-                <small class="field-error">Customer invoice number is required.</small>
-              }
             </label>
-            <label
-              class="mock-field"
-              [class.has-error]="form.controls.branch.invalid && form.controls.branch.touched"
-            >
+            <label class="mock-field" [class.has-error]="validationErrors()['branch']">
               <span>Branch <em>*</em></span>
               <i>●</i>
               <select formControlName="branch">
@@ -118,8 +93,8 @@
                 }
               </select>
               <b>›</b>
-              @if (form.controls.branch.invalid && form.controls.branch.touched) {
-                <small class="field-error">Branch selection is required.</small>
+              @if (validationErrors()['branch']) {
+                <small class="field-error">{{ validationErrors()['branch'] }}</small>
               }
             </label>
           </section>
@@ -140,10 +115,7 @@
                   }</select
                 ><b>›</b>
               </label>
-              <label
-                class="mock-field compact"
-                [class.has-error]="form.controls.brand.invalid && form.controls.brand.touched"
-              >
+              <label class="mock-field compact" [class.has-error]="validationErrors()['brand']">
                 <span>Brand <em>*</em></span
                 ><i>▥</i
                 ><input
@@ -156,8 +128,8 @@
                     <option [value]="brand"></option>
                   }
                 </datalist>
-                @if (form.controls.brand.invalid && form.controls.brand.touched) {
-                  <small class="field-error">Brand is required.</small>
+                @if (validationErrors()['brand']) {
+                  <small class="field-error">{{ validationErrors()['brand'] }}</small>
                 }
               </label>
               <label class="mock-field compact">
@@ -177,26 +149,21 @@
                   }
                 </datalist>
               </label>
-              <label
-                class="mock-field compact"
-                [class.has-error]="form.controls.dot.invalid && form.controls.dot.touched"
-              >
+              <label class="mock-field compact" [class.has-error]="validationErrors()['dot']">
                 <span>DOT <em>*</em></span
                 ><i>▣</i><input formControlName="dot" placeholder="e.g. 0124" />
-                @if (form.controls.dot.invalid && form.controls.dot.touched) {
-                  <small class="field-error">DOT is required.</small>
+                @if (validationErrors()['dot']) {
+                  <small class="field-error">{{ validationErrors()['dot'] }}</small>
                 }
               </label>
               <label
                 class="mock-field compact"
-                [class.has-error]="
-                  form.controls.serialNumber.invalid && form.controls.serialNumber.touched
-                "
+                [class.has-error]="validationErrors()['serialNumber']"
               >
                 <span>Serial number <em>*</em></span
                 ><i>▥</i><input formControlName="serialNumber" placeholder="Enter serial number" />
-                @if (form.controls.serialNumber.invalid && form.controls.serialNumber.touched) {
-                  <small class="field-error">Serial number is required.</small>
+                @if (validationErrors()['serialNumber']) {
+                  <small class="field-error">{{ validationErrors()['serialNumber'] }}</small>
                 }
               </label>
               <label class="mock-field compact">
@@ -251,14 +218,16 @@
               @for (item of photoCategories; track item.key) {
                 <article
                   [class.captured]="photoFor(item.key)"
-                  [class.missing]="photoValidationShown() && item.required && !photoFor(item.key)"
+                  [class.missing]="validationErrors()['photos.' + item.key]"
                 >
                   <span class="photo-type-icon">{{ photoIcon(item.key) }}</span>
                   <div>
                     <strong>{{ item.label }}</strong
                     ><small>{{ item.hint }}</small>
-                    @if (photoValidationShown() && item.required && !photoFor(item.key)) {
-                      <small class="photo-error">Required photo missing.</small>
+                    @if (validationErrors()['photos.' + item.key]) {
+                      <small class="photo-error">{{
+                        validationErrors()['photos.' + item.key]
+                      }}</small>
                     }
                   </div>
                   @if (photoFor(item.key); as photo) {

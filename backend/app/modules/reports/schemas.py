@@ -9,6 +9,16 @@ class ReportUpsertRequest(BaseModel):
     report: dict[str, Any]
 
 
+class ReportValidationRequest(BaseModel):
+    report: dict[str, Any]
+    step: int = Field(ge=0, le=3)
+
+
+class ReportValidationResponse(BaseModel):
+    valid: bool
+    errors: dict[str, str]
+
+
 class ImageResponse(BaseModel):
     id: UUID
     category: str

@@ -58,6 +58,33 @@ def test_report_reference_data_uses_application_records(client):
     assert "Front left" in data["tyre_positions"]
 
 
+def test_report_validation_is_server_side_and_invoice_is_optional(client):
+    headers = login_headers(client)
+    valid = client.post(
+        "/api/v1/reports/validate",
+        headers=headers,
+        json={
+            "step": 0,
+            "report": {
+                "salesperson": "Admin",
+                "customerName": "Fleet Customer",
+                "branch": "PHX",
+                "customerInvoiceNumber": "",
+            },
+        },
+    )
+    assert valid.status_code == 200
+    assert valid.json() == {"valid": True, "errors": {}}
+
+    invalid = client.post(
+        "/api/v1/reports/validate",
+        headers=headers,
+        json={"step": 0, "report": {"salesperson": "Admin", "customerName": "Fleet"}},
+    )
+    assert invalid.status_code == 200
+    assert invalid.json()["errors"]["branch"] == "Branch selection is required."
+
+
 def test_admin_can_manage_recipient_rules(client):
     headers = login_headers(client)
     created = client.post(
@@ -118,7 +145,26 @@ def test_recipient_rules_are_applied_to_claim_delivery(client):
         "status": "Ready to Submit",
         "branch": "Cape Town",
         "category": "Manufacturing",
-        "photos": [],
+        "salesperson": "Admin",
+        "customerName": "Fleet Customer",
+        "brand": "Dunlop",
+        "dot": "0124",
+        "serialNumber": "SERIAL-1",
+        "photos": [
+            {"category": category}
+            for category in [
+                "dot",
+                "serialNumber",
+                "entireTyreDot",
+                "entireTyreOpposite",
+                "issue1",
+                "bead1",
+                "internalCarcass1",
+                "treadDepth1",
+                "treadPattern",
+                "vehicle",
+            ]
+        ],
     }
     assert (
         client.put(

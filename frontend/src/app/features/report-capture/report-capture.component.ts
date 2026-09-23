@@ -1,5 +1,5 @@
 import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { debounceTime, Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -39,7 +39,7 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly successMode = signal(false);
   readonly deliveryStatus = signal('Pending');
   readonly deliveryEmail = signal('');
-  readonly photoValidationShown = signal(false);
+  readonly validationErrors = signal<Record<string, string>>({});
   readonly stepLabels = ['Report details', 'Take photos', 'Tyre & vehicle', 'Review'];
   readonly photoCategories = PHOTO_CATEGORIES;
   readonly requiredCount = PHOTO_CATEGORIES.filter((p) => p.required).length;
@@ -54,19 +54,19 @@ export class ReportCaptureComponent implements OnDestroy {
   });
   readonly form = this.fb.nonNullable.group({
     internalExternal: [this.report().internalExternal],
-    branch: [this.report().branch, Validators.required],
-    salesperson: [this.report().salesperson, Validators.required],
-    customerName: [this.report().customerName, Validators.required],
-    customerInvoiceNumber: [this.report().customerInvoiceNumber, Validators.required],
+    branch: [this.report().branch],
+    salesperson: [this.report().salesperson],
+    customerName: [this.report().customerName],
+    customerInvoiceNumber: [this.report().customerInvoiceNumber],
     category: [this.report().category],
     inspectedLocation: [this.report().inspectedLocation],
     returnedWithRim: [this.report().returnedWithRim],
     fittedLoose: [this.report().fittedLoose],
-    brand: [this.report().brand, Validators.required],
+    brand: [this.report().brand],
     rimSize: [this.report().rimSize],
     pattern: [this.report().pattern],
-    dot: [this.report().dot, Validators.required],
-    serialNumber: [this.report().serialNumber, Validators.required],
+    dot: [this.report().dot],
+    serialNumber: [this.report().serialNumber],
     claimCode: [this.report().claimCode],
     remainingTreadDepth: [this.report().remainingTreadDepth],
     inspectedPressure: [this.report().inspectedPressure],
@@ -84,20 +84,6 @@ export class ReportCaptureComponent implements OnDestroy {
         (photo) => PHOTO_CATEGORIES.find((p) => p.key === photo.category)?.required,
       ).length,
   );
-  readonly claimComplete = computed(
-    () =>
-      !!this.form.controls.salesperson.value &&
-      !!this.form.controls.customerName.value &&
-      !!this.form.controls.customerInvoiceNumber.value &&
-      !!this.form.controls.branch.value,
-  );
-  readonly tyreComplete = computed(
-    () =>
-      !!this.form.controls.brand.value &&
-      !!this.form.controls.dot.value &&
-      !!this.form.controls.serialNumber.value,
-  );
-  readonly photosComplete = computed(() => this.photoCount() === this.requiredCount);
   readonly duplicateWarning = computed(() => {
     const current = this.form.getRawValue();
     const duplicate = this.store
@@ -131,10 +117,9 @@ export class ReportCaptureComponent implements OnDestroy {
     this.destroy$.next();
     this.destroy$.complete();
   }
-  goTo(value: number): void {
+  async goTo(value: number): Promise<void> {
     if (value > this.step()) {
-      if (value > this.step() + 1 || !this.validateStep(this.step())) return;
-      if (value === 3 && !this.readyForReview()) return;
+      if (value > this.step() + 1 || !(await this.validateStep(this.step()))) return;
     }
     this.step.set(value);
     if (value === 3) void this.loadDeliveryData();
@@ -142,10 +127,10 @@ export class ReportCaptureComponent implements OnDestroy {
   }
   async next(): Promise<void> {
     if (this.step() < 3) {
-      this.goTo(this.step() + 1);
+      await this.goTo(this.step() + 1);
       return;
     }
-    if (!this.confirmed() || !this.readyForReview()) return;
+    if (!this.confirmed() || !(await this.validateStep(3))) return;
     this.captureMessage.set('');
     this.submitting.set(true);
     try {
@@ -247,7 +232,7 @@ export class ReportCaptureComponent implements OnDestroy {
     this.confirmed.set((event.target as HTMLInputElement).checked);
   }
   async sendReport(): Promise<void> {
-    if (!this.readyForReview() || !this.selectedRecipient()) return;
+    if (!(await this.validateStep(3)) || !this.selectedRecipient()) return;
     const current = this.currentReport();
     this.report.set(current);
     await this.store.saveNow(current);
@@ -262,7 +247,7 @@ export class ReportCaptureComponent implements OnDestroy {
     this.deliveryEmail.set(result.recipient_email);
   }
   async downloadPdf(): Promise<void> {
-    if (!this.readyForReview()) return;
+    if (!(await this.validateStep(3))) return;
     this.pdfBusy.set(true);
     this.captureMessage.set('');
     try {
@@ -336,64 +321,32 @@ export class ReportCaptureComponent implements OnDestroy {
       this.captureMessage.set('Technical report dropdown data is temporarily unavailable.');
     }
   }
-  private readyForReview(): boolean {
+  private async validateStep(step: number): Promise<boolean> {
     this.persist();
-    if (!this.claimComplete()) {
-      this.step.set(0);
-      this.captureMessage.set('Complete all required report detail fields, including branch.');
-      return false;
-    }
-    if (!this.photosComplete()) {
-      this.step.set(1);
-      const remaining = this.requiredCount - this.photoCount();
-      this.captureMessage.set(
-        `Capture ${remaining} remaining required photograph${remaining === 1 ? '' : 's'}.`,
-      );
-      return false;
-    }
-    if (!this.tyreComplete()) {
-      this.step.set(2);
-      this.captureMessage.set('Complete the required brand, DOT and serial number fields.');
-      return false;
-    }
-    return true;
-  }
-  private validateStep(step: number): boolean {
-    if (step === 0) {
-      const controls = [
-        this.form.controls.salesperson,
-        this.form.controls.customerName,
-        this.form.controls.customerInvoiceNumber,
-        this.form.controls.branch,
-      ];
-      controls.forEach((control) => control.markAsTouched());
-      if (controls.some((control) => control.invalid)) {
-        this.captureMessage.set('Complete the highlighted required fields before continuing.');
-        return false;
+    try {
+      const result = await this.store.validate(this.currentReport(), step);
+      this.validationErrors.set(result.errors);
+      if (result.valid) {
+        this.captureMessage.set('');
+        return true;
       }
-    }
-    if (step === 1 && !this.photosComplete()) {
-      this.photoValidationShown.set(true);
-      const remaining = this.requiredCount - this.photoCount();
-      this.captureMessage.set(
-        `Capture ${remaining} remaining required photograph${remaining === 1 ? '' : 's'} before continuing.`,
-      );
+      this.captureMessage.set('Correct the highlighted fields before continuing.');
+      if (step === 3) {
+        const keys = Object.keys(result.errors);
+        if (keys.some((key) => ['salesperson', 'customerName', 'branch'].includes(key))) {
+          this.step.set(0);
+        } else if (keys.some((key) => key.startsWith('photos.'))) {
+          this.step.set(1);
+        } else {
+          this.step.set(2);
+        }
+        this.previewMode.set(false);
+      }
+      return false;
+    } catch {
+      this.captureMessage.set('The API could not validate this report. Try again.');
       return false;
     }
-    if (step === 2) {
-      const controls = [
-        this.form.controls.brand,
-        this.form.controls.dot,
-        this.form.controls.serialNumber,
-      ];
-      controls.forEach((control) => control.markAsTouched());
-      if (controls.some((control) => control.invalid)) {
-        this.captureMessage.set('Complete the highlighted tyre fields before continuing.');
-        return false;
-      }
-    }
-    this.captureMessage.set('');
-    return true;
   }
   private loadReport(): TechnicalReport {
     const id = this.route.snapshot.paramMap.get('id');

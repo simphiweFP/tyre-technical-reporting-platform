@@ -43,6 +43,10 @@ export interface ReportReferenceData {
   patterns: string[];
   tyre_positions: string[];
 }
+export interface ReportValidationResult {
+  valid: boolean;
+  errors: Record<string, string>;
+}
 
 export interface ReportSearch {
   query?: string;
@@ -196,6 +200,15 @@ export class ReportStore {
   referenceData(): Promise<ReportReferenceData> {
     return firstValueFrom(
       this.http.get<ReportReferenceData>(`${environment.apiUrl}/reports/reference-data`),
+    );
+  }
+
+  validate(report: TechnicalReport, step: number): Promise<ReportValidationResult> {
+    return firstValueFrom(
+      this.http.post<ReportValidationResult>(`${environment.apiUrl}/reports/validate`, {
+        report,
+        step,
+      }),
     );
   }
 

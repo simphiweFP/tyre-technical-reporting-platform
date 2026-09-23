@@ -184,21 +184,27 @@ def deliver_report(
     claim = str(request.report.get("claimReference") or "").strip()
     if not claim:
         raise HTTPException(status_code=422, detail="A claim reference is required")
-    if not db.scalar(
+    record = db.scalar(
         select(TechnicalReportRecord).where(
             TechnicalReportRecord.claim_reference == claim
         )
-    ):
+    )
+    if not record:
         raise HTTPException(
             status_code=422, detail="Save the report before scheduling delivery"
+        )
+    if record.status == "Draft":
+        raise HTTPException(
+            status_code=422,
+            detail="The report must pass API validation before delivery",
         )
     recipient = db.get(Recipient, request.recipient_id)
     if not recipient or not recipient.is_active:
         raise HTTPException(
             status_code=422, detail="The selected recipient is not active"
         )
-    report_branch = str(request.report.get("branch") or "")
-    report_category = str(request.report.get("category") or "")
+    report_branch = str(record.report_data.get("branch") or "")
+    report_category = str(record.report_data.get("category") or "")
     if recipient.branch_code not in {"All Branches", report_branch}:
         raise HTTPException(
             status_code=422, detail="Recipient is not configured for this branch"

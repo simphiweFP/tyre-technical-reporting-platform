@@ -33,13 +33,25 @@ from backend.app.modules.reports.schemas import (
     ReportReferenceDataResponse,
     ReportResponse,
     ReportUpsertRequest,
+    ReportValidationRequest,
+    ReportValidationResponse,
     ReferenceOption,
 )
 from backend.app.modules.reports.storage import ReportFileStorage
+from backend.app.modules.reports.validation import validate_report
 
 router = APIRouter(prefix="/reports", tags=["Technical reports"])
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+
+@router.post("/validate", response_model=ReportValidationResponse)
+def validate_technical_report(
+    request: ReportValidationRequest,
+    _: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
+):
+    errors = validate_report(request.report, request.step)
+    return ReportValidationResponse(valid=not errors, errors=errors)
 
 
 @router.get("/reference-data", response_model=ReportReferenceDataResponse)
@@ -197,6 +209,10 @@ def upsert_report(
     user: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
 ):
     data = request.report
+    if data.get("status") != "Draft":
+        errors = validate_report(data, 3)
+        if errors:
+            raise HTTPException(status_code=422, detail={"fields": errors})
     record = db.get(TechnicalReportRecord, report_id)
     created = record is None
     if created:

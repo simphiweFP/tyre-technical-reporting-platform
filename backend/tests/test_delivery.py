@@ -40,14 +40,32 @@ def create_recipient(client, headers):
 
 def save_report(client, headers, claim_reference):
     report_id = "1ab85e4a-ff6c-487c-a39f-30a0bded412c"
+    required_photos = [
+        "dot",
+        "serialNumber",
+        "entireTyreDot",
+        "entireTyreOpposite",
+        "issue1",
+        "bead1",
+        "internalCarcass1",
+        "treadDepth1",
+        "treadPattern",
+        "vehicle",
+    ]
     response = client.put(
         f"/api/v1/reports/records/{report_id}",
         headers=headers,
         json={
             "report": {
                 "claimReference": claim_reference,
-                "status": "Draft",
-                "photos": [],
+                "status": "Ready to Submit",
+                "salesperson": "Admin",
+                "customerName": "Test Fleet",
+                "branch": "All Branches",
+                "brand": "Dunlop",
+                "dot": "0124",
+                "serialNumber": "SERIAL-1",
+                "photos": [{"category": category} for category in required_photos],
             }
         },
     )
