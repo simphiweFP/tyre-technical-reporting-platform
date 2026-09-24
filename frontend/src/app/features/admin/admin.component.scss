@@ -392,6 +392,63 @@ td:last-child {
 .audit .table-footer {
   height: 48px;
 }
+
+/* Recipient list and shared admin table empty states */
+.data-card {
+  box-shadow: 0 3px 10px #163a680d;
+}
+.data-card .table-scroll {
+  min-height: 80px;
+}
+.data-card tbody tr:hover:not(.empty-row) {
+  background: #f8fbff;
+}
+.data-card .empty-row td {
+  height: 250px;
+  border-right: 0;
+  text-align: center;
+}
+.data-card .empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  color: #63758f;
+  white-space: normal;
+}
+.data-card .empty-state > span {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #1769b7;
+  background: #edf5fe;
+  font-size: 19px;
+}
+.data-card .empty-state strong {
+  color: #14345e;
+  font-size: 13px;
+}
+.data-card .empty-state small {
+  font-size: 10px;
+}
+.empty-action {
+  height: 32px;
+  margin-top: 5px;
+  border: 1px solid #e6001b;
+  border-radius: 4px;
+  padding: 0 13px;
+  color: #d8001a;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.data-card .table-footer {
+  height: 54px;
+  border-top: 1px solid #e1e8f0;
+  background: #fbfcfe;
+}
 @media (max-width: 900px) {
   .admin-page {
     padding: 18px 14px;

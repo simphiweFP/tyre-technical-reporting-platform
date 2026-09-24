@@ -38,10 +38,23 @@
               <td>{{ branch.routing_email || 'Not configured' }}</td>
               <td><button class="mini" (click)="open(branch)">✎ &nbsp; Edit</button></td>
             </tr>
+          } @empty {
+            <tr class="empty-row">
+              <td colspan="5">
+                <div class="empty-state">
+                  <span>●</span><strong>No branches found</strong>
+                  <small>Add a branch or change the current search.</small>
+                  <button class="empty-action" type="button" (click)="open()">＋ Add Branch</button>
+                </div>
+              </td>
+            </tr>
           }
         </tbody>
       </table>
     </div>
+    <footer class="table-footer">
+      <span>Showing {{ filtered().length }} branches</span>
+    </footer>
   </section>
   @if (showForm()) {
     <div class="modal-backdrop" (click)="showForm.set(false)">

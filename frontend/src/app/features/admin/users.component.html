@@ -49,12 +49,24 @@
                 ><button class="dots" title="Reset password" (click)="reset(user)">•••</button>
               </td>
             </tr>
+          } @empty {
+            <tr class="empty-row">
+              <td colspan="6">
+                <div class="empty-state">
+                  <span>♟</span><strong>No users found</strong>
+                  <small>Create a user or change the current search.</small>
+                  <button class="empty-action" type="button" (click)="open()">
+                    ＋ Create User
+                  </button>
+                </div>
+              </td>
+            </tr>
           }
         </tbody>
       </table>
     </div>
     <footer class="table-footer">
-      <span>Showing 1–{{ filtered().length }} of {{ users().length }} users</span>
+      <span>Showing {{ filtered().length }} of {{ users().length }} users</span>
     </footer>
   </section>
   @if (showForm()) {

@@ -1,1 +1,115 @@
-<section class="operation-page"><header class="operation-title"><div><h1>Delivery Centre</h1><p>Track delivery status for technical claims</p></div></header><div class="delivery-layout"><main><section class="filter-panel"><label class="wide-search">⌕<input [(ngModel)]="query" (keyup.enter)="load()" placeholder="Search by claim ref or recipient email..."/></label><div><label>Status<select [(ngModel)]="status" (change)="load()"><option value="">All</option><option>Pending</option><option>Retrying</option><option>Sent</option><option>Failed</option></select></label><button (click)="clear()">Clear filters</button></div></section>@if(message()){<p class="operation-message">{{message()}}</p>}<section class="delivery-table"><table><thead><tr><th>Date / Time</th><th>Claim Ref</th><th>Recipient(s)</th><th>Status</th><th>Details</th><th>Actions</th></tr></thead><tbody>@for(row of items();track row.id){<tr><td>{{row.created_at}}</td><td>{{row.claim_reference}}</td><td>{{row.recipient_email}}</td><td><span class="delivered">● {{row.status}}</span></td><td>{{row.error_message||('Attempt '+row.attempt_count)}}</td><td>@if(row.status==='Failed'||row.status==='Retrying'){<button (click)="retry(row.id)">Retry</button>}@else{•••}</td></tr>}@empty{<tr><td colspan="6">No delivery records found.</td></tr>}</tbody></table><footer class="table-footer"><span>Showing {{items().length}} of {{total()}} emails</span></footer></section></main><aside class="panel delivery-status"><h2>Delivery Status</h2><article>♧<div><strong>Queued</strong><small>Waiting for background delivery</small></div><span>{{items().filter(x=>x.status==='Pending').length}}</span></article><article>✉<div><strong>Sent</strong><small>Successfully delivered</small></div><span class="good">{{items().filter(x=>x.status==='Sent').length}}</span></article><article>▤<div><strong>Failed</strong><small>Needs attention</small></div><span>{{items().filter(x=>x.status==='Failed').length}}</span></article></aside></div></section>
+<section class="operation-page">
+  <header class="operation-title">
+    <div>
+      <h1>Delivery Centre</h1>
+      <p>Track delivery status for technical claims</p>
+    </div>
+  </header>
+
+  <div class="delivery-layout">
+    <main>
+      <section class="filter-panel delivery-filters">
+        <label class="wide-search"
+          >⌕<input
+            [(ngModel)]="query"
+            (keyup.enter)="load()"
+            placeholder="Search by claim ref or recipient email..."
+        /></label>
+        <div class="filter-actions">
+          <label
+            >Status<select [(ngModel)]="status" (change)="load()">
+              <option value="">All statuses</option>
+              <option>Pending</option>
+              <option>Retrying</option>
+              <option>Sent</option>
+              <option>Failed</option>
+            </select></label
+          >
+          <button type="button" (click)="clear()">Clear filters</button>
+        </div>
+      </section>
+
+      @if (message()) {
+        <p class="operation-message">{{ message() }}</p>
+      }
+
+      <section class="delivery-table">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Date / Time</th>
+                <th>Claim Ref</th>
+                <th>Recipient(s)</th>
+                <th>Status</th>
+                <th>Details</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of items(); track row.id) {
+                <tr>
+                  <td>{{ row.created_at }}</td>
+                  <td class="reference">{{ row.claim_reference }}</td>
+                  <td>{{ row.recipient_email }}</td>
+                  <td>
+                    <span
+                      class="delivery-state"
+                      [class.sent]="row.status === 'Sent'"
+                      [class.failed]="row.status === 'Failed'"
+                      [class.retrying]="row.status === 'Retrying'"
+                      >● {{ row.status }}</span
+                    >
+                  </td>
+                  <td>{{ row.error_message || 'Attempt ' + row.attempt_count }}</td>
+                  <td>
+                    @if (row.status === 'Failed' || row.status === 'Retrying') {
+                      <button class="retry-button" type="button" (click)="retry(row.id)">
+                        Retry
+                      </button>
+                    } @else {
+                      <span class="no-action">—</span>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr class="empty-row">
+                  <td colspan="6">
+                    <div class="empty-state">
+                      <span>✉</span><strong>No delivery records found</strong
+                      ><small
+                        >Submitted report emails and their delivery status will appear here.</small
+                      >
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <footer class="table-footer">
+          <span>Showing {{ items().length }} of {{ total() }} emails</span>
+        </footer>
+      </section>
+    </main>
+
+    <aside class="panel delivery-status">
+      <h2>Delivery Status</h2>
+      <article>
+        <b class="status-icon queued">♧</b>
+        <div><strong>Queued</strong><small>Waiting for background delivery</small></div>
+        <span>{{ items().filter((x) => x.status === 'Pending').length }}</span>
+      </article>
+      <article>
+        <b class="status-icon sent">✉</b>
+        <div><strong>Sent</strong><small>Successfully delivered</small></div>
+        <span class="good">{{ items().filter((x) => x.status === 'Sent').length }}</span>
+      </article>
+      <article>
+        <b class="status-icon failed">!</b>
+        <div><strong>Failed</strong><small>Needs attention</small></div>
+        <span>{{ items().filter((x) => x.status === 'Failed').length }}</span>
+      </article>
+    </aside>
+  </div>
+</section>

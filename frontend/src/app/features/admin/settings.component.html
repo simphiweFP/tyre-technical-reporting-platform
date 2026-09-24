@@ -1,36 +1,138 @@
 <section class="admin-page">
   <div class="crumb">Administration <b>›</b> System Settings</div>
-  <header class="admin-title"><div><h1>System &amp; Audit</h1><p>Configure preferences and monitor operational health.</p></div></header>
-  @if(message()){<div class="notice">{{message()}}</div>}
-  @if(operations();as health){
+  <header class="admin-title">
+    <div>
+      <h1>System &amp; Audit</h1>
+      <p>Configure preferences and monitor operational health.</p>
+    </div>
+  </header>
+  @if (message()) {
+    <div class="notice">{{ message() }}</div>
+  }
+  @if (operations(); as health) {
     <section class="settings-card">
-      <header><div><h2>Operational Health</h2><p>Live API dependencies and delivery queue.</p></div><button class="save-button" (click)="refreshOperations()">↻ &nbsp; Refresh</button></header>
+      <header>
+        <div>
+          <h2>Operational Health</h2>
+          <p>Live API dependencies and delivery queue.</p>
+        </div>
+        <button class="save-button" (click)="refreshOperations()">↻ &nbsp; Refresh</button>
+      </header>
       <div class="settings-grid">
-        <label><b>Overall status</b><span class="healthy"><i></i>{{health.status}}</span></label>
-        <label><b>Database</b><span class="healthy"><i></i>{{health.database}}</span></label>
-        <label><b>Report file storage</b><span class="healthy"><i></i>{{health.file_storage}}</span></label>
-        <label><b>Delivery worker</b><span class="healthy"><i></i>{{health.delivery_worker}}</span></label>
-        <label><b>Pending / retrying</b><span>{{health.pending_deliveries}} / {{health.retrying_deliveries}}</span></label>
-        <label><b>Failed deliveries</b><span>{{health.failed_deliveries}}</span></label>
+        <label
+          ><b>Overall status</b><span class="healthy"><i></i>{{ health.status }}</span></label
+        >
+        <label
+          ><b>Database</b><span class="healthy"><i></i>{{ health.database }}</span></label
+        >
+        <label
+          ><b>Report file storage</b
+          ><span class="healthy"><i></i>{{ health.file_storage }}</span></label
+        >
+        <label
+          ><b>Delivery worker</b
+          ><span class="healthy"><i></i>{{ health.delivery_worker }}</span></label
+        >
+        <label
+          ><b>Pending / retrying</b
+          ><span>{{ health.pending_deliveries }} / {{ health.retrying_deliveries }}</span></label
+        >
+        <label
+          ><b>Failed deliveries</b><span>{{ health.failed_deliveries }}</span></label
+        >
       </div>
     </section>
   }
-  @if(settings();as s){
+  @if (settings(); as s) {
     <section class="settings-card">
-      <header><div><h2>System Settings</h2><p>Persisted application preferences.</p></div><button class="save-button" (click)="save()">▣ &nbsp; Save Changes</button></header>
+      <header>
+        <div>
+          <h2>System Settings</h2>
+          <p>Persisted application preferences.</p>
+        </div>
+        <button class="save-button" (click)="save()">▣ &nbsp; Save Changes</button>
+      </header>
       <div class="settings-grid">
-        <label><b>Company name</b><input [ngModel]="s.company_name" (ngModelChange)="update('company_name',$event)"/></label>
-        <label><b>OCR confidence threshold</b><input type="number" [ngModel]="s.ocr_confidence_threshold" (ngModelChange)="update('ocr_confidence_threshold',$event)"/></label>
-        <label><b>PDF template</b><input [ngModel]="s.pdf_template" (ngModelChange)="update('pdf_template',$event)"/></label>
-        <label><b>Offline sync</b><input type="checkbox" [ngModel]="s.offline_sync_enabled" (ngModelChange)="update('offline_sync_enabled',$event)"/></label>
-        <label><b>Sync interval</b><input type="number" [ngModel]="s.offline_sync_minutes" (ngModelChange)="update('offline_sync_minutes',$event)"/></label>
-        <label><b>SMTP server</b><input [ngModel]="s.smtp_server" (ngModelChange)="update('smtp_server',$event)"/></label>
+        <label
+          ><b>Company name</b
+          ><input [ngModel]="s.company_name" (ngModelChange)="update('company_name', $event)"
+        /></label>
+        <label
+          ><b>OCR confidence threshold</b
+          ><input
+            type="number"
+            [ngModel]="s.ocr_confidence_threshold"
+            (ngModelChange)="update('ocr_confidence_threshold', $event)"
+        /></label>
+        <label
+          ><b>PDF template</b
+          ><input [ngModel]="s.pdf_template" (ngModelChange)="update('pdf_template', $event)"
+        /></label>
+        <label
+          ><b>Offline sync</b
+          ><input
+            type="checkbox"
+            [ngModel]="s.offline_sync_enabled"
+            (ngModelChange)="update('offline_sync_enabled', $event)"
+        /></label>
+        <label
+          ><b>Sync interval</b
+          ><input
+            type="number"
+            [ngModel]="s.offline_sync_minutes"
+            (ngModelChange)="update('offline_sync_minutes', $event)"
+        /></label>
+        <label
+          ><b>SMTP server</b
+          ><input [ngModel]="s.smtp_server" (ngModelChange)="update('smtp_server', $event)"
+        /></label>
       </div>
     </section>
   }
   <section class="settings-card audit">
-    <header><div><h2>Audit Log</h2><p>Track system activity and changes.</p></div></header>
-    <label class="search">Search audit log... <input [(ngModel)]="query" (keyup.enter)="loadAudit()"/><span>⌕</span></label>
-    <div class="table-scroll"><table><thead><tr><th>Timestamp</th><th>Actor</th><th>Action</th><th>Reference</th><th>Details</th></tr></thead><tbody>@for(item of audits();track item.id){<tr><td>{{item.occurred_at}}</td><td>{{item.actor}}</td><td>{{item.action}}</td><td>{{item.entity_id||'-'}}</td><td>{{item.entity_type}}</td></tr>}@empty{<tr><td colspan="5">No audit events found.</td></tr>}</tbody></table></div>
+    <header>
+      <div>
+        <h2>Audit Log</h2>
+        <p>Track system activity and changes.</p>
+      </div>
+    </header>
+    <label class="search"
+      >Search audit log... <input [(ngModel)]="query" (keyup.enter)="loadAudit()" /><span
+        >⌕</span
+      ></label
+    >
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Actor</th>
+            <th>Action</th>
+            <th>Reference</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of audits(); track item.id) {
+            <tr>
+              <td>{{ item.occurred_at }}</td>
+              <td>{{ item.actor }}</td>
+              <td>{{ item.action }}</td>
+              <td>{{ item.entity_id || '-' }}</td>
+              <td>{{ item.entity_type }}</td>
+            </tr>
+          } @empty {
+            <tr class="empty-row">
+              <td colspan="5">
+                <div class="empty-state">
+                  <span>▣</span><strong>No audit events found</strong
+                  ><small>System activity will appear here when events are recorded.</small>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
   </section>
 </section>

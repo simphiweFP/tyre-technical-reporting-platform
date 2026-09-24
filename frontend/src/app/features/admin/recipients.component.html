@@ -43,10 +43,24 @@
                 ><button class="mini" (click)="open(item)">✎ Edit</button>
               </td>
             </tr>
+          } @empty {
+            <tr class="empty-row">
+              <td colspan="6">
+                <div class="empty-state">
+                  <span>✉</span>
+                  <strong>No recipient rules found</strong>
+                  <small>Add a rule to route technical reports by branch and category.</small>
+                  <button class="empty-action" type="button" (click)="open()">＋ Add Rule</button>
+                </div>
+              </td>
+            </tr>
           }
         </tbody>
       </table>
     </div>
+    <footer class="table-footer">
+      <span>Showing {{ filtered().length }} of {{ recipients().length }} recipient rules</span>
+    </footer>
   </section>
   @if (showForm()) {
     <div class="modal-backdrop" (click)="showForm.set(false)">
