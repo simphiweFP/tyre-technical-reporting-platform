@@ -685,33 +685,102 @@ h1 {
   }
 
   .mobile-brand-bar {
-    padding-inline: clamp(24px, 5vw, 72px);
+    height: 76px;
+    padding-inline: clamp(32px, 5vw, 80px);
+  }
+
+  .mobile-brand-bar img {
+    width: 220px;
+    max-height: 54px;
+  }
+
+  .back-link span {
+    font-size: 11px;
+  }
+
+  .offline-pill {
+    padding: 8px 14px;
+    font-size: 12px;
   }
 
   .wizard-progress {
-    padding-inline: clamp(32px, 12vw, 220px);
+    padding: 20px clamp(56px, 10vw, 190px) 16px;
+  }
+
+  .wizard-progress:before {
+    top: 37px;
+  }
+
+  .wizard-progress span {
+    width: 34px;
+    height: 34px;
+    font-size: 13px;
+  }
+
+  .wizard-progress small {
+    min-height: 22px;
+    font-size: 10px;
   }
 
   .wizard-screen,
   .preview-screen,
   .success-screen {
-    width: min(100%, 1100px);
+    width: min(100%, 1280px);
     margin-inline: auto;
-    padding: 32px clamp(28px, 5vw, 64px);
+    padding: 38px clamp(40px, 6vw, 88px) 34px;
+  }
+
+  .wizard-screen h1,
+  .preview-screen h1 {
+    font-size: 27px;
+  }
+
+  .screen-copy {
+    margin-bottom: 26px;
+    font-size: 13px;
+  }
+
+  .mock-field {
+    margin-bottom: 18px;
+  }
+
+  .mock-field > span,
+  .mock-field > label {
+    font-size: 12px;
+  }
+
+  .mock-field input,
+  .mock-field select {
+    height: 52px;
+    font-size: 13px;
+  }
+
+  .segment-control button {
+    height: 48px;
+    font-size: 13px;
   }
 
   .wizard-form,
   .preview-screen {
-    padding-bottom: 92px;
+    padding-bottom: 96px;
   }
 
   .wizard-actions {
     position: fixed;
-    padding: 16px clamp(28px, 8vw, 140px);
+    grid-template-columns: repeat(2, minmax(260px, 430px));
+    justify-content: center;
+    gap: 16px;
+    padding: 14px clamp(32px, 8vw, 140px);
+  }
+
+  .outline-action,
+  .primary-action {
+    min-height: 48px;
+    font-size: 12px;
   }
 
   .two-column-fields {
-    gap: 0 24px;
+    gap: 0 28px;
   }
 
   .photo-checklist {
