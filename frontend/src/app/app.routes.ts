@@ -100,12 +100,6 @@ export const routes: Routes = [
           import('./features/admin/branches.component').then((m) => m.BranchesComponent),
       },
       {
-        path: 'admin/health',
-        canActivate: [roleGuard('administrator')],
-        loadComponent: () =>
-          import('./features/admin/system-health.component').then((m) => m.SystemHealthComponent),
-      },
-      {
         path: 'admin/settings',
         canActivate: [roleGuard('administrator')],
         loadComponent: () =>

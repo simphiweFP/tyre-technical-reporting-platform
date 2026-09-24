@@ -2,63 +2,47 @@
   <div class="crumb">Administration <b>›</b> System Settings</div>
   <header class="admin-title">
     <div>
-      <h1>System Settings</h1>
-      <p>Configure application preferences used by the technical reporting platform.</p>
+      <h1>Offline Data Management</h1>
+      <p>Manage report data captured on this device while the API is unavailable.</p>
     </div>
+    <button class="red-button" type="button" (click)="syncNow()" [disabled]="offline.syncing()">
+      {{ offline.syncing() ? 'Syncing…' : '↻ Sync now' }}
+    </button>
   </header>
 
   @if (message()) {
-    <div class="notice">{{ message() }}</div>
+    <div class="notice" [class.error-notice]="offline.stats().conflicts > 0">{{ message() }}</div>
   }
 
-  @if (settings(); as s) {
-    <section class="settings-card">
-      <header>
-        <div>
-          <h2>Application Settings</h2>
-          <p>Changes here affect how reports and platform services behave.</p>
-        </div>
-        <button class="save-button" (click)="save()">▣ &nbsp; Save Changes</button>
-      </header>
-      <div class="settings-grid">
-        <label
-          ><b>Company name</b
-          ><input [ngModel]="s.company_name" (ngModelChange)="update('company_name', $event)"
-        /></label>
-        <label
-          ><b>OCR confidence threshold</b
-          ><input
-            type="number"
-            min="0"
-            max="100"
-            [ngModel]="s.ocr_confidence_threshold"
-            (ngModelChange)="update('ocr_confidence_threshold', $event)"
-        /></label>
-        <label
-          ><b>PDF template</b
-          ><input [ngModel]="s.pdf_template" (ngModelChange)="update('pdf_template', $event)"
-        /></label>
-        <label
-          ><b>Offline sync</b
-          ><input
-            type="checkbox"
-            [ngModel]="s.offline_sync_enabled"
-            (ngModelChange)="update('offline_sync_enabled', $event)"
-        /></label>
-        <label
-          ><b>Sync interval (minutes)</b
-          ><input
-            type="number"
-            min="1"
-            max="1440"
-            [ngModel]="s.offline_sync_minutes"
-            (ngModelChange)="update('offline_sync_minutes', $event)"
-        /></label>
-        <label
-          ><b>SMTP server</b
-          ><input [ngModel]="s.smtp_server" (ngModelChange)="update('smtp_server', $event)"
-        /></label>
+  <section class="settings-card offline-card">
+    <header>
+      <div>
+        <h2>Device Sync Status</h2>
+        <p>Photos stay temporary in the browser until they are uploaded to the server filesystem.</p>
       </div>
-    </section>
-  }
+      <span class="connection-state" [class.offline]="!offline.online()">
+        <i></i>{{ offline.online() ? 'Online' : 'Offline' }}
+      </span>
+    </header>
+    <div class="offline-stat-grid">
+      <article><small>Reports waiting</small><strong>{{ offline.stats().pendingReports }}</strong><span>Locally saved report changes</span></article>
+      <article><small>Photos waiting</small><strong>{{ offline.stats().pendingPhotos }}</strong><span>Compressed images temporarily in IndexedDB</span></article>
+      <article><small>Deletes waiting</small><strong>{{ offline.stats().pendingDeletions }}</strong><span>Server image removals waiting for connection</span></article>
+      <article [class.warning-card]="offline.stats().conflicts > 0"><small>Conflicts</small><strong>{{ offline.stats().conflicts }}</strong><span>Server copy changed while this device was offline</span></article>
+    </div>
+  </section>
+
+  <section class="settings-card">
+    <header><div><h2>Offline Storage</h2><p>Unsynced work is protected until the API accepts it.</p></div></header>
+    <div class="settings-grid">
+      <label><b>Last successful sync</b><span>{{ offline.stats().lastSyncedAt ? (offline.stats().lastSyncedAt | date: 'dd/MM/yyyy HH:mm:ss') : 'Not synced yet' }}</span></label>
+      <label><b>Sync behaviour</b><span>Automatic when the browser reconnects</span></label>
+      <label><b>Conflict policy</b><span>Never overwrite a newer server report automatically</span></label>
+      <label><b>Photo destination</b><span>REPORT_FILE_ROOT after successful upload</span></label>
+    </div>
+    <div class="offline-actions">
+      <button class="save-button" type="button" (click)="clearReferenceCache()">Clear cached dropdown data</button>
+      <small>Pending reports and photos are not removed by this action.</small>
+    </div>
+  </section>
 </section>

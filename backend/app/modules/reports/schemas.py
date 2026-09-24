@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class ReportUpsertRequest(BaseModel):
     report: dict[str, Any]
+    expected_updated_at: datetime | None = None
 
 
 class ReportValidationRequest(BaseModel):

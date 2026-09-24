@@ -5,7 +5,9 @@
         >‹ <span>Dashboard</span></a
       >
       <img src="/royal-tyres-app-logo.png" alt="Royal Tyres" />
-      <span class="offline-pill"><b>☁</b> Offline</span>
+      @if (!offline.online()) {
+        <span class="offline-pill"><b>☁</b> Offline</span>
+      }
     </header>
 
     @if (!previewMode() && !successMode()) {

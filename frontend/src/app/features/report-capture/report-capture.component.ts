@@ -6,6 +6,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { ReportReferenceData, ReportStore } from '../../core/data/report.store';
 import { ReportDeliveryService } from '../../core/delivery/report-delivery.service';
 import { ReportIntelligenceService } from '../../core/media/report-intelligence.service';
+import { OfflineDataService } from '../../core/offline/offline-data.service';
 import {
   PHOTO_CATEGORIES,
   ReportPhoto,
@@ -26,6 +27,7 @@ export class ReportCaptureComponent implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly intelligence = inject(ReportIntelligenceService);
   private readonly delivery = inject(ReportDeliveryService);
+  readonly offline = inject(OfflineDataService);
   private readonly destroy$ = new Subject<void>();
   readonly step = signal(0);
   readonly captureMessage = signal('');
@@ -196,12 +198,16 @@ export class ReportCaptureComponent implements OnDestroy {
       };
       await this.store.saveNow(current);
       const stored = await this.store.uploadImage(current.id, category, optimized.blob, file.name);
-      this.report.update((r) => ({
-        ...r,
-        photos: r.photos.map((item) =>
-          item.category === category ? { ...item, storageId: stored.id } : item,
-        ),
-      }));
+      if (stored) {
+        this.report.update((r) => ({
+          ...r,
+          photos: r.photos.map((item) =>
+            item.category === category ? { ...item, storageId: stored.id } : item,
+          ),
+        }));
+      } else {
+        this.captureMessage.set('Photo saved on this device and will upload when you are online.');
+      }
       this.persist();
     } catch {
       this.captureMessage.set('The image could not be processed. Try another photo.');
@@ -209,7 +215,11 @@ export class ReportCaptureComponent implements OnDestroy {
   }
   async removePhoto(category: string): Promise<void> {
     const photo = this.photoFor(category);
-    if (photo?.storageId) await this.store.deleteImage(this.report().id, photo.storageId);
+    if (photo?.storageId) {
+      await this.store.deleteImage(this.report().id, photo.storageId);
+    } else {
+      await this.store.removeQueuedImage(this.report().id, category);
+    }
     this.report.update((r) => ({ ...r, photos: r.photos.filter((p) => p.category !== category) }));
     this.persist();
   }
@@ -232,6 +242,10 @@ export class ReportCaptureComponent implements OnDestroy {
     this.confirmed.set((event.target as HTMLInputElement).checked);
   }
   async sendReport(): Promise<void> {
+    if (!this.offline.online()) {
+      this.captureMessage.set('Sending is unavailable offline. The report is saved locally and will sync when you reconnect.');
+      return;
+    }
     if (!(await this.validateStep(3)) || !this.selectedRecipient()) return;
     const current = this.currentReport();
     this.report.set(current);
@@ -247,6 +261,10 @@ export class ReportCaptureComponent implements OnDestroy {
     this.deliveryEmail.set(result.recipient_email);
   }
   async downloadPdf(): Promise<void> {
+    if (!this.offline.online()) {
+      this.captureMessage.set('PDF generation requires the API. Reconnect first; your offline changes are safe.');
+      return;
+    }
     if (!(await this.validateStep(3))) return;
     this.pdfBusy.set(true);
     this.captureMessage.set('');

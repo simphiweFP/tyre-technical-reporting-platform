@@ -236,6 +236,15 @@ def upsert_report(
             raise HTTPException(status_code=422, detail={"fields": errors})
     record = db.get(TechnicalReportRecord, report_id)
     created = record is None
+    if (
+        record
+        and request.expected_updated_at
+        and _as_utc(record.updated_at) != _as_utc(request.expected_updated_at)
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Report changed on the server while this device was offline",
+        )
     if created:
         duplicate = db.scalar(
             select(TechnicalReportRecord).where(
@@ -454,6 +463,10 @@ def generate_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{request.filename}"'},
     )
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
 def _required_record(report_id: UUID, db: Session) -> TechnicalReportRecord:

@@ -1,8 +1,9 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ReportPhoto, TechnicalReport } from '../../shared/models/report.models';
+import { OfflineDataService } from '../offline/offline-data.service';
 
 interface ServerImage {
   id: string;
@@ -64,7 +65,9 @@ export interface ReportSearch {
 @Injectable({ providedIn: 'root' })
 export class ReportStore {
   private readonly http = inject(HttpClient);
+  readonly offline = inject(OfflineDataService);
   private readonly state = signal<TechnicalReport[]>([]);
+  private readonly serverUpdatedAt = new Map<string, string>();
   readonly reports = this.state.asReadonly();
   readonly loading = signal(false);
   readonly saving = signal(false);
@@ -76,7 +79,16 @@ export class ReportStore {
   private pendingSaves = 0;
 
   constructor() {
-    void this.refresh();
+    if (this.offline.online()) {
+      void this.refresh();
+    } else {
+      void this.loadOfflineReports();
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => {
+        void this.offline.syncNow().then(() => this.refresh());
+      });
+    }
   }
 
   get(id: string): TechnicalReport | undefined {
@@ -94,14 +106,24 @@ export class ReportStore {
     this.saveError.set('');
     this.updateLocal(report);
     try {
+      if (!this.offline.online()) {
+        await this.offline.queueReport(report, this.serverUpdatedAt.get(report.id) ?? null);
+        return;
+      }
       const response = await firstValueFrom(
         this.http.put<ServerReport>(`${environment.apiUrl}/reports/records/${report.id}`, {
           report,
         }),
       );
+      this.serverUpdatedAt.set(report.id, response.updated_at);
+      await this.offline.removePendingReport(report.id);
       this.updateLocal(this.mapReport(response));
     } catch (error) {
-      this.saveError.set('Changes are not saved to the server. Check your connection.');
+      if (!this.offline.online() || (error instanceof HttpErrorResponse && error.status === 0)) {
+        await this.offline.queueReport(report, this.serverUpdatedAt.get(report.id) ?? null);
+        return;
+      }
+      this.saveError.set('Changes could not be saved.');
       throw error;
     } finally {
       this.pendingSaves -= 1;
@@ -111,6 +133,11 @@ export class ReportStore {
 
   async refresh(search: ReportSearch = {}): Promise<void> {
     this.loading.set(true);
+    if (!this.offline.online()) {
+      await this.loadOfflineReports();
+      this.loading.set(false);
+      return;
+    }
     try {
       let params = new HttpParams()
         .set('query', search.query ?? '')
@@ -160,13 +187,31 @@ export class ReportStore {
   }
 
   async loadOne(reportId: string): Promise<TechnicalReport> {
-    const response = await firstValueFrom(
-      this.http.get<ServerReport>(`${environment.apiUrl}/reports/records/${reportId}`),
-    );
-    const report = this.mapReport(response);
-    this.updateLocal(report);
-    await this.hydrateImages(reportId);
-    return this.get(reportId) ?? report;
+    if (!this.offline.online()) {
+      const local = await this.offline.loadReport(reportId);
+      if (!local) throw new Error('Report is not available offline');
+      this.updateLocal(local);
+      return local;
+    }
+    try {
+      const response = await firstValueFrom(
+        this.http.get<ServerReport>(`${environment.apiUrl}/reports/records/${reportId}`),
+      );
+      this.serverUpdatedAt.set(reportId, response.updated_at);
+      const report = this.mapReport(response);
+      this.updateLocal(report);
+      await this.hydrateImages(reportId);
+      return this.get(reportId) ?? report;
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 0) {
+        const local = await this.offline.loadReport(reportId);
+        if (local) {
+          this.updateLocal(local);
+          return local;
+        }
+      }
+      throw error;
+    }
   }
 
   async uploadImage(
@@ -174,22 +219,52 @@ export class ReportStore {
     category: string,
     blob: Blob,
     filename: string,
-  ): Promise<ServerImage> {
+  ): Promise<ServerImage | null> {
+    if (!this.offline.online()) {
+      await this.offline.queuePhoto(reportId, category, blob, filename);
+      return null;
+    }
     const body = new FormData();
     body.append('image', blob, filename);
-    return firstValueFrom(
-      this.http.post<ServerImage>(
-        `${environment.apiUrl}/reports/records/${reportId}/images`,
-        body,
-        { params: { category } },
-      ),
-    );
+    try {
+      return await firstValueFrom(
+        this.http.post<ServerImage>(
+          `${environment.apiUrl}/reports/records/${reportId}/images`,
+          body,
+          { params: { category } },
+        ),
+      );
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 0) {
+        await this.offline.queuePhoto(reportId, category, blob, filename);
+        return null;
+      }
+      throw error;
+    }
   }
 
   async deleteImage(reportId: string, imageId: string): Promise<void> {
-    await firstValueFrom(
-      this.http.delete<void>(`${environment.apiUrl}/reports/records/${reportId}/images/${imageId}`),
-    );
+    if (!this.offline.online()) {
+      await this.offline.queueImageDeletion(reportId, imageId);
+      return;
+    }
+    try {
+      await firstValueFrom(
+        this.http.delete<void>(
+          `${environment.apiUrl}/reports/records/${reportId}/images/${imageId}`,
+        ),
+      );
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 0) {
+        await this.offline.queueImageDeletion(reportId, imageId);
+        return;
+      }
+      throw error;
+    }
+  }
+
+  removeQueuedImage(reportId: string, category: string): Promise<void> {
+    return this.offline.removeQueuedPhoto(reportId, category);
   }
 
   async archive(id: string): Promise<void> {
@@ -205,19 +280,39 @@ export class ReportStore {
     );
   }
 
-  referenceData(): Promise<ReportReferenceData> {
-    return firstValueFrom(
-      this.http.get<ReportReferenceData>(`${environment.apiUrl}/reports/reference-data`),
-    );
+  async referenceData(): Promise<ReportReferenceData> {
+    if (!this.offline.online()) {
+      return (await this.offline.referenceData()) ?? this.referenceFallback();
+    }
+    try {
+      const data = await firstValueFrom(
+        this.http.get<ReportReferenceData>(`${environment.apiUrl}/reports/reference-data`),
+      );
+      await this.offline.cacheReferenceData(data);
+      return data;
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 0) {
+        return (await this.offline.referenceData()) ?? this.referenceFallback();
+      }
+      throw error;
+    }
   }
 
-  validate(report: TechnicalReport, step: number): Promise<ReportValidationResult> {
-    return firstValueFrom(
-      this.http.post<ReportValidationResult>(`${environment.apiUrl}/reports/validate`, {
-        report,
-        step,
-      }),
-    );
+  async validate(report: TechnicalReport, step: number): Promise<ReportValidationResult> {
+    if (!this.offline.online()) return this.localValidation(report, step);
+    try {
+      return await firstValueFrom(
+        this.http.post<ReportValidationResult>(`${environment.apiUrl}/reports/validate`, {
+          report,
+          step,
+        }),
+      );
+    } catch (error) {
+      if (error instanceof HttpErrorResponse && error.status === 0) {
+        return this.localValidation(report, step);
+      }
+      throw error;
+    }
   }
 
   create(): TechnicalReport {
@@ -256,7 +351,67 @@ export class ReportStore {
     };
   }
 
+  private async loadOfflineReports(): Promise<void> {
+    const reports = await this.offline.listPendingReports();
+    this.state.set(reports);
+    this.total.set(reports.length);
+    this.matchingTotal.set(reports.length);
+    const counts: Record<string, number> = {};
+    for (const report of reports) counts[report.status] = (counts[report.status] ?? 0) + 1;
+    this.statusCounts.set(counts);
+  }
+
+  private localValidation(report: TechnicalReport, step: number): ReportValidationResult {
+    const errors: Record<string, string> = {};
+    if (step === 0 || step === 3) {
+      if (!report.salesperson.trim()) errors['salesperson'] = 'Salesperson is required.';
+      if (!report.customerName.trim()) errors['customerName'] = 'Customer name is required.';
+      if (!report.branch.trim()) errors['branch'] = 'Branch selection is required.';
+    }
+    if (step === 1 || step === 3) {
+      const captured = new Set(report.photos.map((photo) => photo.category));
+      for (const [category, message] of [
+        ['dot', 'DOT photo is required.'],
+        ['serialNumber', 'Serial number photo is required.'],
+        ['entireTyreDot', 'Entire tyre DOT-side photo is required.'],
+        ['entireTyreOpposite', 'Entire tyre opposite-side photo is required.'],
+        ['issue1', 'Issue photo is required.'],
+        ['issue2', 'Second issue photo is required.'],
+        ['bead1', 'Bead photo is required.'],
+        ['bead2', 'Second bead photo is required.'],
+        ['fullView', 'Full view photo is required.'],
+        ['internalCarcass1', 'Internal carcass photo is required.'],
+        ['internalCarcass2', 'Second internal carcass photo is required.'],
+        ['treadDepth1', 'Tread depth photo is required.'],
+        ['treadDepth2', 'Second tread depth photo is required.'],
+        ['treadDepth3', 'Third tread depth photo is required.'],
+        ['treadPattern', 'Tread pattern photo is required.'],
+        ['vehicle', 'Vehicle photo is required.'],
+      ] as const) {
+        if (!captured.has(category)) errors[`photos.${category}`] = message;
+      }
+    }
+    if (step === 2 || step === 3) {
+      if (!report.brand.trim()) errors['brand'] = 'Brand is required.';
+      if (!report.dot.trim()) errors['dot'] = 'DOT is required.';
+      if (!report.serialNumber.trim()) errors['serialNumber'] = 'Serial number is required.';
+    }
+    return { valid: Object.keys(errors).length === 0, errors };
+  }
+
+  private referenceFallback(): ReportReferenceData {
+    return {
+      branches: [],
+      customers: [],
+      categories: ['Manufacturing', 'Road hazard', 'Service related'],
+      brands: ['Bridgestone', 'Continental', 'Dunlop', 'Goodyear', 'Hankook', 'Michelin'],
+      patterns: [],
+      tyre_positions: ['Front left', 'Front right', 'Rear left', 'Rear right', 'Spare'],
+    };
+  }
+
   private mapReport(item: ServerReport): TechnicalReport {
+    this.serverUpdatedAt.set(item.id, item.updated_at);
     const photos: ReportPhoto[] = (item.report.photos ?? []).map((photo) => ({
       category: photo.category,
       name: photo.original_name,
