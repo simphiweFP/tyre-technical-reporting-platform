@@ -159,8 +159,19 @@ export class RecipientsComponent {
     }
   }
   private errorMessage(error: unknown, fallback: string): string {
-    if (error instanceof HttpErrorResponse && typeof error.error?.detail === 'string') {
-      return error.error.detail;
+    if (!(error instanceof HttpErrorResponse)) return fallback;
+    const detail = error.error?.detail;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      const messages = detail
+        .map((item) => {
+          const location = Array.isArray(item?.loc) ? item.loc : [];
+          const field = String(location.at(-1) ?? '').replace(/_/g, ' ');
+          const message = typeof item?.msg === 'string' ? item.msg : 'Invalid value';
+          return field ? `${field}: ${message}` : message;
+        })
+        .filter(Boolean);
+      if (messages.length) return messages.join(' ');
     }
     return fallback;
   }

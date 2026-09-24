@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Branch, ManagedUser, UserAdminService } from '../../core/admin/user-admin.service';
@@ -33,6 +34,7 @@ export class UsersComponent {
   readonly branches = signal<Branch[]>([]);
   readonly notice = signal('');
   readonly error = signal('');
+  readonly saving = signal(false);
   form = emptyUser();
   constructor() {
     void this.load();
@@ -68,14 +70,19 @@ export class UsersComponent {
     this.showForm.set(true);
   }
   async save(): Promise<void> {
-    if (!this.form.full_name || !this.form.email) return;
+    const fullName = this.form.full_name.trim();
+    const email = this.form.email.trim().toLowerCase();
+    const jobTitle = this.form.job_title.trim();
+    if (fullName.length < 2 || fullName.length > 150 || (!this.editing() && !email)) return;
+
     this.error.set('');
+    this.saving.set(true);
     try {
       const current = this.editing();
       if (current) {
         const updated = await this.admin.update(current.id, {
-          full_name: this.form.full_name,
-          job_title: this.form.job_title || null,
+          full_name: fullName,
+          job_title: jobTitle || null,
           role: this.form.role,
           branch_id: this.form.branch_id,
         });
@@ -83,15 +90,20 @@ export class UsersComponent {
         this.notice.set(`${updated.full_name} was updated.`);
       } else {
         const created = await this.admin.create({
-          ...this.form,
-          job_title: this.form.job_title || null,
+          email,
+          full_name: fullName,
+          job_title: jobTitle || null,
+          role: this.form.role,
+          branch_id: this.form.branch_id,
         });
         this.users.update((users) => [...users, created]);
         this.notice.set(`User created. Temporary password: ${created.temporary_password}`);
       }
       this.showForm.set(false);
-    } catch (error: any) {
-      this.error.set(error?.error?.detail ?? 'The user could not be saved.');
+    } catch (error) {
+      this.error.set(this.errorMessage(error, 'The user could not be saved.'));
+    } finally {
+      this.saving.set(false);
     }
   }
   async toggle(user: ManagedUser): Promise<void> {
@@ -110,6 +122,24 @@ export class UsersComponent {
       this.error.set('Users and branches could not be loaded.');
     }
   }
+  private errorMessage(error: unknown, fallback: string): string {
+    if (!(error instanceof HttpErrorResponse)) return fallback;
+    const detail = error.error?.detail;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      const messages = detail
+        .map((item) => {
+          const location = Array.isArray(item?.loc) ? item.loc : [];
+          const field = String(location.at(-1) ?? '').replace(/_/g, ' ');
+          const message = typeof item?.msg === 'string' ? item.msg : 'Invalid value';
+          return field ? `${field}: ${message}` : message;
+        })
+        .filter(Boolean);
+      if (messages.length) return messages.join(' ');
+    }
+    return fallback;
+  }
+
   private replace(user: ManagedUser): void {
     this.users.update((users) => users.map((item) => (item.id === user.id ? user : item)));
   }

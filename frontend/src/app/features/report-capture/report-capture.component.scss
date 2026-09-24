@@ -670,6 +670,60 @@ h1 {
   width: 100%;
   margin: 10px 0;
 }
+@media (min-width: 768px) {
+  .report-app {
+    min-height: 100vh;
+    place-items: stretch;
+    padding: 0;
+  }
+
+  .phone-shell {
+    width: 100%;
+    min-height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .mobile-brand-bar {
+    padding-inline: clamp(24px, 5vw, 72px);
+  }
+
+  .wizard-progress {
+    padding-inline: clamp(32px, 12vw, 220px);
+  }
+
+  .wizard-screen,
+  .preview-screen,
+  .success-screen {
+    width: min(100%, 1100px);
+    margin-inline: auto;
+    padding: 32px clamp(28px, 5vw, 64px);
+  }
+
+  .wizard-form,
+  .preview-screen {
+    padding-bottom: 92px;
+  }
+
+  .wizard-actions {
+    position: fixed;
+    padding: 16px clamp(28px, 8vw, 140px);
+  }
+
+  .two-column-fields {
+    gap: 0 24px;
+  }
+
+  .photo-checklist {
+    margin-inline: 0;
+  }
+
+  .vehicle-block {
+    margin-inline: 0;
+    border-radius: 8px;
+  }
+}
+
 @media (max-width: 520px) {
   .report-app {
     padding: 0;

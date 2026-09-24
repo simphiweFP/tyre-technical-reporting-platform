@@ -71,40 +71,96 @@
   </section>
   @if (showForm()) {
     <div class="modal-backdrop" (click)="showForm.set(false)">
-      <form class="modal" (click)="$event.stopPropagation()" (ngSubmit)="save()">
+      <form
+        #userForm="ngForm"
+        class="modal"
+        (click)="$event.stopPropagation()"
+        (ngSubmit)="save()"
+      >
         <header>
           <h2>{{ editing() ? 'Edit User' : 'Create User' }}</h2>
           <button type="button" (click)="showForm.set(false)">×</button>
         </header>
-        <label>Full name<input name="name" [(ngModel)]="form.full_name" required /></label
-        ><label
-          >Email<input
+
+        <label
+          >Full name
+          <input
+            #fullName="ngModel"
+            name="name"
+            [(ngModel)]="form.full_name"
+            required
+            minlength="2"
+            maxlength="150"
+          />
+          @if (fullName.invalid && fullName.touched) {
+            <small class="field-error">
+              {{ fullName.errors?.['required'] ? 'Full name is required.' : 'Use 2 to 150 characters.' }}
+            </small>
+          }
+        </label>
+
+        <label
+          >Email
+          <input
+            #email="ngModel"
             name="email"
             type="email"
             [(ngModel)]="form.email"
             [disabled]="!!editing()"
-            required /></label
-        ><label>Job title<input name="title" [(ngModel)]="form.job_title" /></label
-        ><label
-          >Role<select name="role" [(ngModel)]="form.role">
+            required
+          />
+          @if (email.invalid && email.touched) {
+            <small class="field-error">
+              {{ email.errors?.['required'] ? 'Email is required.' : 'Enter a valid email address.' }}
+            </small>
+          }
+        </label>
+
+        <label
+          >Job title
+          <input
+            #jobTitle="ngModel"
+            name="title"
+            [(ngModel)]="form.job_title"
+            maxlength="100"
+          />
+          @if (jobTitle.invalid && jobTitle.touched) {
+            <small class="field-error">Job title cannot exceed 100 characters.</small>
+          }
+        </label>
+
+        <label
+          >Role
+          <select #role="ngModel" name="role" [(ngModel)]="form.role" required>
             <option value="report_capturer">Report Capturer</option>
             <option value="viewer">Viewer/Auditor</option>
             <option value="administrator">Administrator</option>
             <option value="pending">Pending</option>
-          </select></label
-        ><label
-          >Branch<select name="branch" [(ngModel)]="form.branch_id">
+          </select>
+          @if (role.invalid && role.touched) {
+            <small class="field-error">Select a valid role.</small>
+          }
+        </label>
+
+        <label
+          >Branch
+          <select name="branch" [(ngModel)]="form.branch_id">
             <option [ngValue]="null">All branches / unassigned</option>
             @for (branch of branches(); track branch.id) {
               <option [ngValue]="branch.id">{{ branch.code }} · {{ branch.name }}</option>
             }
-          </select></label
-        >
+          </select>
+        </label>
+
         @if (error()) {
           <div class="notice error-notice">{{ error() }}</div>
         }
-        <button class="red-button" type="submit">
-          {{ editing() ? 'Save Changes' : 'Create User' }}
+        <button
+          class="red-button"
+          type="submit"
+          [disabled]="userForm.invalid || saving()"
+        >
+          {{ saving() ? 'Saving…' : editing() ? 'Save Changes' : 'Create User' }}
         </button>
       </form>
     </div>
