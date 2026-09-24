@@ -1,6 +1,13 @@
 <div class="app-frame">
   <aside class="sidebar" [class.open]="menuOpen()">
-    <div class="brand"><img src="/royal-tyres-app-logo.png" alt="Royal Tyres" /><button class="close-menu" (click)="menuOpen.set(false)">×</button></div>
+    <div class="brand">
+      <img src="/royal-tyres-app-logo.png" alt="Royal Tyres" /><button
+        class="close-menu"
+        (click)="menuOpen.set(false)"
+      >
+        ×
+      </button>
+    </div>
     <nav aria-label="Primary navigation">
       <a routerLink="/dashboard" routerLinkActive="active"><span>⌂</span>Overview</a>
       <a routerLink="/reports" routerLinkActive="active"><span>▤</span>Technical Claims</a>
@@ -9,25 +16,53 @@
       @if (auth.hasRole('administrator')) {
         <a routerLink="/admin/users" routerLinkActive="active"><span>♟</span>User Administration</a>
         <a routerLink="/admin/branches" routerLinkActive="active"><span>●</span>Branches</a>
-        <a routerLink="/admin/recipients" routerLinkActive="active"><span>✉</span>Report Recipients</a>
+        <a routerLink="/admin/recipients" routerLinkActive="active"
+          ><span>✉</span>Report Recipients</a
+        >
         <a routerLink="/admin/settings" routerLinkActive="active"><span>⚙</span>System Settings</a>
       }
     </nav>
   </aside>
-  @if (menuOpen()) { <button class="scrim" (click)="menuOpen.set(false)"></button> }
+  @if (menuOpen()) {
+    <button class="scrim" (click)="menuOpen.set(false)"></button>
+  }
   <main class="main-panel">
     <header class="topbar">
       <button class="menu-button" (click)="menuOpen.set(true)">☰</button>
-      <label class="global-search">⌕ <input [(ngModel)]="search" (keyup.enter)="runSearch()" placeholder="Search claims, customers, DOT or serial..." /></label>
+      @if (showGlobalSearch()) {
+        <label class="global-search"
+          >⌕
+          <input
+            [(ngModel)]="search"
+            (keyup.enter)="runSearch()"
+            placeholder="Search claims, customers, DOT or serial..."
+        /></label>
+      }
       <span class="top-icon alert">♧<i></i></span>
       <div class="profile-menu">
-        <button class="profile" type="button" aria-label="Open account menu" aria-haspopup="menu" [attr.aria-expanded]="profileOpen()" (click)="toggleProfile()">
-          <b>{{ initials() }}</b><span><strong>{{ auth.user()?.full_name || 'John Doe' }}</strong><small>{{ roleLabel() }}</small></span>
+        <button
+          class="profile"
+          type="button"
+          aria-label="Open account menu"
+          aria-haspopup="menu"
+          [attr.aria-expanded]="profileOpen()"
+          (click)="toggleProfile()"
+        >
+          <b>{{ initials() }}</b
+          ><span
+            ><strong>{{ auth.user()?.full_name || 'John Doe' }}</strong
+            ><small>{{ roleLabel() }}</small></span
+          >
         </button>
         @if (profileOpen()) {
           <div class="profile-dropdown" role="menu">
-            <div class="profile-summary"><strong>{{ auth.user()?.full_name || 'John Doe' }}</strong><small>{{ auth.user()?.email }}</small></div>
-            <button type="button" role="menuitem" (click)="logout()"><span>↪</span> Sign out</button>
+            <div class="profile-summary">
+              <strong>{{ auth.user()?.full_name || 'John Doe' }}</strong
+              ><small>{{ auth.user()?.email }}</small>
+            </div>
+            <button type="button" role="menuitem" (click)="logout()">
+              <span>↪</span> Sign out
+            </button>
           </div>
         }
       </div>
