@@ -3,7 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { TechnicalReport } from '../../shared/models/report.models';
-import { ReportReferenceData } from '../data/report.store';
+import type { ReportReferenceData } from '../data/report.store';
 
 interface PendingReport {
   id: string;
