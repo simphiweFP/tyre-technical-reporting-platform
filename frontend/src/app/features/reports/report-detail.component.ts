@@ -54,12 +54,16 @@ export class ReportDetailComponent {
     const r = this.report();
     if (!r) return;
     this.busy.set('pdf');
+    this.message.set('');
     try {
       await this.intelligence.downloadPdf(r);
       const updated = { ...r, status: 'Ready to Submit' as const };
       await this.store.saveNow(updated);
       this.report.set(updated);
       this.message.set('PDF generated and report marked ready.');
+    } catch (error) {
+      console.error('PDF generation failed', error);
+      this.message.set('PDF generation failed. Please try again.');
     } finally {
       this.busy.set('');
     }

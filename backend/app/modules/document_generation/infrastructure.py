@@ -34,21 +34,51 @@ LIGHT_BLUE = colors.HexColor("#EAF3FC")
 PALE_BLUE = colors.HexColor("#F7FAFD")
 BORDER = colors.HexColor("#D9D9D9")
 MUTED = colors.HexColor("#69778C")
-REGULAR_FONT = "RoyalTyresSans"
-BOLD_FONT = "RoyalTyresSansBold"
-ITALIC_FONT = "RoyalTyresSansItalic"
+REGULAR_FONT = "Helvetica"
+BOLD_FONT = "Helvetica-Bold"
+ITALIC_FONT = "Helvetica-Oblique"
 
 
 def _register_fonts() -> None:
-    font_root = Path("/usr/share/fonts/truetype/dejavu")
-    for name, filename in (
-        (REGULAR_FONT, "DejaVuSans.ttf"),
-        (BOLD_FONT, "DejaVuSans-Bold.ttf"),
-        (ITALIC_FONT, "DejaVuSans-Oblique.ttf"),
-    ):
-        path = font_root / filename
-        if name not in pdfmetrics.getRegisteredFontNames() and path.is_file():
-            pdfmetrics.registerFont(TTFont(name, str(path)))
+    global REGULAR_FONT, BOLD_FONT, ITALIC_FONT
+
+    candidates = [
+        (
+            Path("/usr/share/fonts/truetype/dejavu"),
+            "DejaVuSans.ttf",
+            "DejaVuSans-Bold.ttf",
+            "DejaVuSans-Oblique.ttf",
+        ),
+        (
+            Path("C:/Windows/Fonts"),
+            "arial.ttf",
+            "arialbd.ttf",
+            "ariali.ttf",
+        ),
+    ]
+
+    for font_root, regular_name, bold_name, italic_name in candidates:
+        regular_path = font_root / regular_name
+        bold_path = font_root / bold_name
+        italic_path = font_root / italic_name
+
+        if not (regular_path.is_file() and bold_path.is_file()):
+            continue
+
+        REGULAR_FONT = "RoyalTyresSans"
+        BOLD_FONT = "RoyalTyresSansBold"
+
+        if REGULAR_FONT not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont(REGULAR_FONT, str(regular_path)))
+        if BOLD_FONT not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont(BOLD_FONT, str(bold_path)))
+
+        if italic_path.is_file():
+            ITALIC_FONT = "RoyalTyresSansItalic"
+            if ITALIC_FONT not in pdfmetrics.getRegisteredFontNames():
+                pdfmetrics.registerFont(TTFont(ITALIC_FONT, str(italic_path)))
+
+        return
 
 
 class ReportLabTechnicalReportGenerator:
