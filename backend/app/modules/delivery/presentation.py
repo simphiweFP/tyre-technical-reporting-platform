@@ -34,6 +34,14 @@ from backend.app.modules.reports.infrastructure import TechnicalReportRecord
 router = APIRouter(tags=["Report delivery"])
 
 
+def _store_cc(addresses) -> str:
+    return ",".join(dict.fromkeys(str(address).lower() for address in addresses))
+
+
+def _read_cc(addresses: str) -> list[str]:
+    return [address.strip() for address in addresses.split(",") if address.strip()]
+
+
 @router.get("/recipients", response_model=list[RecipientResponse])
 def recipients(
     active_only: bool = Query(default=True),
@@ -68,10 +76,10 @@ def create_recipient(
         company=request.company.strip(),
         contact_name=request.contact_name.strip(),
         email=str(request.email).lower(),
-        default_cc=str(request.default_cc or "").lower(),
+        default_cc=_store_cc(request.default_cc),
         branch_code=request.branch_code.strip(),
         category=request.category.strip(),
-        escalation_hours=request.escalation_hours,
+        escalation_enabled=request.escalation_enabled,
     )
     db.add(recipient)
     db.flush()
@@ -110,8 +118,10 @@ def update_recipient(
             status_code=409, detail="A recipient with this email already exists"
         )
     for field, value in request.model_dump().items():
-        if field in {"email", "default_cc"}:
+        if field == "email":
             value = str(value or "").lower()
+        elif field == "default_cc":
+            value = _store_cc(value)
         setattr(recipient, field, value)
     db.add(
         AuditEvent(
@@ -215,8 +225,9 @@ def deliver_report(
             detail="Recipient is not configured for this claim category",
         )
     cc = [str(address).lower() for address in request.cc]
-    if recipient.default_cc and recipient.default_cc not in cc:
-        cc.append(recipient.default_cc)
+    for address in _read_cc(recipient.default_cc):
+        if address not in cc:
+            cc.append(address)
     attempt = DeliveryAttempt(
         claim_reference=claim,
         recipient_id=recipient.id,

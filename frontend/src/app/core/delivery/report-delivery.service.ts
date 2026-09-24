@@ -12,10 +12,10 @@ export interface RecipientInput {
   company: string;
   contact_name: string;
   email: string;
-  default_cc: string | null;
+  default_cc: string[];
   branch_code: string;
   category: string;
-  escalation_hours: number;
+  escalation_enabled: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

@@ -2,17 +2,17 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class RecipientCreate(BaseModel):
     company: str = Field(min_length=2, max_length=150)
     contact_name: str = Field(default="", max_length=150)
     email: EmailStr
-    default_cc: EmailStr | None = None
+    default_cc: list[EmailStr] = Field(default_factory=list, max_length=10)
     branch_code: str = Field(default="All Branches", max_length=20)
     category: str = Field(default="All Categories", max_length=100)
-    escalation_hours: int = Field(default=24, ge=1, le=720)
+    escalation_enabled: bool = True
 
 
 class RecipientUpdate(RecipientCreate):
@@ -24,12 +24,19 @@ class RecipientResponse(BaseModel):
     company: str
     contact_name: str
     email: EmailStr
-    default_cc: str
+    default_cc: list[EmailStr]
     branch_code: str
     category: str
-    escalation_hours: int
+    escalation_enabled: bool
     is_active: bool
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("default_cc", mode="before")
+    @classmethod
+    def parse_default_cc(cls, value):
+        if isinstance(value, str):
+            return [address.strip() for address in value.split(",") if address.strip()]
+        return value or []
 
 
 class DeliveryRequest(BaseModel):

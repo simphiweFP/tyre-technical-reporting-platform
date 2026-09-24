@@ -32,7 +32,8 @@ def create_recipient(client, headers):
             "company": "Manufacturer Claims",
             "contact_name": "Claims Desk",
             "email": "claims@example.co.za",
-            "default_cc": "manager@example.co.za",
+            "default_cc": ["manager@example.co.za", "audit@example.co.za"],
+            "escalation_enabled": True,
         },
     )
     assert response.status_code == 201
@@ -77,7 +78,7 @@ def test_report_delivery_is_queued_and_visible_in_history(client):
     assert response.status_code == 200
     assert response.json()["status"] == "Pending"
     assert response.json()["message_id"] is None
-    assert response.json()["cc"] == ["manager@example.co.za"]
+    assert response.json()["cc"] == ["manager@example.co.za", "audit@example.co.za"]
     history = client.get("/api/v1/reports/TR-2026-0042/deliveries", headers=headers)
     assert history.status_code == 200
     assert len(history.json()) == 1

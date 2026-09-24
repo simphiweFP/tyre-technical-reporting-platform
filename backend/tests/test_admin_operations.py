@@ -151,13 +151,18 @@ def test_admin_can_manage_recipient_rules(client):
             "company": "Fleet Partner",
             "contact_name": "Claims Desk",
             "email": "claims@example.com",
-            "default_cc": "manager@example.com",
+            "default_cc": ["manager@example.com", "audit@example.com"],
             "branch_code": "PHX",
             "category": "Manufacturing",
-            "escalation_hours": 12,
+            "escalation_enabled": True,
         },
     )
     assert created.status_code == 201
+    assert created.json()["default_cc"] == [
+        "manager@example.com",
+        "audit@example.com",
+    ]
+    assert created.json()["escalation_enabled"] is True
     recipient_id = created.json()["id"]
 
     updated = client.put(
@@ -167,17 +172,17 @@ def test_admin_can_manage_recipient_rules(client):
             "company": "Fleet Partner",
             "contact_name": "Claims Team",
             "email": "claims@example.com",
-            "default_cc": None,
+            "default_cc": ["claims-manager@example.com"],
             "branch_code": "All Branches",
             "category": "All Categories",
-            "escalation_hours": 48,
+            "escalation_enabled": False,
             "is_active": False,
         },
     )
     assert updated.status_code == 200
     assert updated.json()["contact_name"] == "Claims Team"
-    assert updated.json()["default_cc"] == ""
-    assert updated.json()["escalation_hours"] == 48
+    assert updated.json()["default_cc"] == ["claims-manager@example.com"]
+    assert updated.json()["escalation_enabled"] is False
     assert updated.json()["is_active"] is False
 
 
@@ -192,7 +197,7 @@ def test_recipient_rules_are_applied_to_claim_delivery(client):
             "email": "routing@example.com",
             "branch_code": "Phoenix",
             "category": "Manufacturing",
-            "escalation_hours": 24,
+            "escalation_enabled": True,
         },
     ).json()
     report_id = "d09e7d92-d5df-487b-a9b6-9996925866de"

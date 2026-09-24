@@ -4,6 +4,17 @@ import { FormsModule } from '@angular/forms';
 import { Branch, UserAdminService } from '../../core/admin/user-admin.service';
 import { ReportDeliveryService } from '../../core/delivery/report-delivery.service';
 import { REPORT_CATEGORIES, ReportRecipient } from '../../shared/models/report.models';
+
+interface RecipientFormState {
+  company: string;
+  contact: string;
+  email: string;
+  cc: string[];
+  branch_code: string;
+  category: string;
+  escalation_enabled: boolean;
+}
+
 @Component({
   selector: 'app-recipients',
   imports: [FormsModule],
@@ -20,16 +31,18 @@ export class RecipientsComponent {
   readonly editing = signal<ReportRecipient | null>(null);
   readonly notice = signal('');
   readonly dialogError = signal('');
+  readonly ccDraft = signal('');
+  readonly ccError = signal('');
   readonly saving = signal(false);
   readonly categories = REPORT_CATEGORIES;
-  newRecipient = {
+  newRecipient: RecipientFormState = {
     company: '',
     contact: '',
     email: '',
-    cc: '',
+    cc: [],
     branch_code: 'All Branches',
     category: 'All Categories',
-    escalation_hours: 24,
+    escalation_enabled: true,
   };
   constructor() {
     void this.load();
@@ -44,6 +57,8 @@ export class RecipientsComponent {
   open(item?: ReportRecipient) {
     this.notice.set('');
     this.dialogError.set('');
+    this.ccDraft.set('');
+    this.ccError.set('');
     this.editing.set(item ?? null);
     this.newRecipient = item
       ? {
@@ -53,29 +68,30 @@ export class RecipientsComponent {
           cc: item.default_cc,
           branch_code: item.branch_code,
           category: item.category,
-          escalation_hours: item.escalation_hours,
+          escalation_enabled: item.escalation_enabled,
         }
       : {
           company: '',
           contact: '',
           email: '',
-          cc: '',
+          cc: [],
           branch_code: 'All Branches',
           category: 'All Categories',
-          escalation_hours: 24,
+          escalation_enabled: true,
         };
     this.showForm.set(true);
   }
   async save() {
+    if (this.ccDraft().trim() && !this.addCc()) return;
     const x = this.newRecipient;
     const input = {
       company: x.company,
       contact_name: x.contact,
       email: x.email,
-      default_cc: x.cc || null,
+      default_cc: x.cc,
       branch_code: x.branch_code,
       category: x.category,
-      escalation_hours: x.escalation_hours,
+      escalation_enabled: x.escalation_enabled,
     };
     this.saving.set(true);
     this.dialogError.set('');
@@ -104,6 +120,31 @@ export class RecipientsComponent {
   }
   async test(item: ReportRecipient) {
     this.notice.set((await this.delivery.testRecipient(item.id)).message);
+  }
+  addCc(): boolean {
+    const addresses = this.ccDraft()
+      .split(/[;,]/)
+      .map((address) => address.trim().toLowerCase())
+      .filter(Boolean);
+    if (!addresses.length) return true;
+    const invalid = addresses.find((address) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address));
+    if (invalid) {
+      this.ccError.set(`Enter a valid email address: ${invalid}`);
+      return false;
+    }
+    const combined = [...new Set([...this.newRecipient.cc, ...addresses])];
+    if (combined.length > 10) {
+      this.ccError.set('You can add up to 10 default CC addresses.');
+      return false;
+    }
+    this.newRecipient.cc = combined;
+    this.ccDraft.set('');
+    this.ccError.set('');
+    return true;
+  }
+  removeCc(address: string): void {
+    this.newRecipient.cc = this.newRecipient.cc.filter((item) => item !== address);
+    this.ccError.set('');
   }
   private async load() {
     try {

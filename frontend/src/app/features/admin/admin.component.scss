@@ -283,6 +283,78 @@ td:last-child {
   font-size: 10px;
   line-height: 1.4;
 }
+.recipient-address {
+  display: grid;
+  gap: 3px;
+}
+.recipient-address strong {
+  font-size: 10px;
+  font-weight: 600;
+}
+.recipient-address small {
+  max-width: 320px;
+  overflow: hidden;
+  color: #65758e;
+  font-size: 8px;
+  text-overflow: ellipsis;
+}
+.cc-field {
+  display: grid;
+  gap: 7px;
+}
+.cc-field > label {
+  display: flex;
+  justify-content: space-between;
+}
+.cc-field > label small {
+  color: #71809a;
+  font-size: 9px;
+  font-weight: 500;
+}
+.cc-entry {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 7px;
+}
+.cc-entry input {
+  min-width: 0;
+}
+.cc-entry button {
+  min-width: 72px;
+  border: 1px solid #79aff2;
+  border-radius: 4px;
+  color: #1265c1;
+  background: #f5faff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.cc-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cc-list span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 14px;
+  padding: 5px 7px 5px 9px;
+  color: #174b82;
+  background: #eaf4ff;
+  font-size: 9px;
+}
+.cc-list button {
+  width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  color: #174b82;
+  background: #d5e8fb;
+  line-height: 1;
+}
 .settings-card {
   margin-bottom: 12px;
 }

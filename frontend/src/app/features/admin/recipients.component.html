@@ -21,7 +21,7 @@
             <th>Branch</th>
             <th>Category</th>
             <th>Recipient(s)</th>
-            <th>Escalation rule</th>
+            <th>Escalation</th>
             <th>Active</th>
             <th>Actions</th>
           </tr>
@@ -31,8 +31,19 @@
             <tr>
               <td>{{ item.branch_code }}</td>
               <td>{{ item.category }}</td>
-              <td>{{ item.email }}</td>
-              <td>After {{ item.escalation_hours }} hours</td>
+              <td>
+                <div class="recipient-address">
+                  <strong>{{ item.email }}</strong>
+                  @if (item.default_cc.length) {
+                    <small>CC: {{ item.default_cc.join(', ') }}</small>
+                  }
+                </div>
+              </td>
+              <td>
+                <span class="state" [class.disabled]="!item.escalation_enabled"
+                  ><i></i>{{ item.escalation_enabled ? 'Enabled' : 'Disabled' }}</span
+                >
+              </td>
               <td>
                 <button class="switch" [class.off]="!item.is_active" (click)="toggle(item)">
                   <i></i>
@@ -152,27 +163,48 @@
             </small>
           }
         </label>
-        <label
-          >Default CC
-          <input #cc="ngModel" name="cc" type="email" [(ngModel)]="newRecipient.cc" />
-          @if (cc.invalid && cc.touched) {
-            <small class="field-error">Enter a valid CC email address.</small>
+        <div class="cc-field">
+          <label for="default-cc"
+            >Default CC <small>Add one or multiple email addresses.</small></label
+          >
+          <div class="cc-entry">
+            <input
+              id="default-cc"
+              name="ccDraft"
+              type="text"
+              [ngModel]="ccDraft()"
+              (ngModelChange)="ccDraft.set($event)"
+              (keydown.enter)="$event.preventDefault(); addCc()"
+              placeholder="name@company.co.za"
+            />
+            <button type="button" (click)="addCc()">＋ Add</button>
+          </div>
+          @if (ccError()) {
+            <small class="field-error">{{ ccError() }}</small>
           }
-        </label>
-        <label
-          >Escalation hours
-          <input
-            #hours="ngModel"
-            name="hours"
-            type="number"
-            [(ngModel)]="newRecipient.escalation_hours"
-            required
-            min="1"
-            max="720"
-          />
-          @if (hours.invalid && hours.touched) {
-            <small class="field-error">Enter a value between 1 and 720 hours.</small>
+          @if (newRecipient.cc.length) {
+            <div class="cc-list">
+              @for (address of newRecipient.cc; track address) {
+                <span
+                  >{{ address
+                  }}<button
+                    type="button"
+                    [attr.aria-label]="'Remove ' + address"
+                    (click)="removeCc(address)"
+                  >
+                    ×
+                  </button></span
+                >
+              }
+            </div>
           }
+        </div>
+        <label
+          >Escalation status
+          <select name="escalationStatus" [(ngModel)]="newRecipient.escalation_enabled">
+            <option [ngValue]="true">Enabled</option>
+            <option [ngValue]="false">Disabled</option>
+          </select>
         </label>
         <button class="red-button" type="submit" [disabled]="recipientForm.invalid || saving()">
           {{ saving() ? 'Saving…' : 'Save Rule' }}

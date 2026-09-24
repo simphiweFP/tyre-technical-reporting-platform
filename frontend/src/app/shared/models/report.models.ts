@@ -90,11 +90,11 @@ export interface ReportRecipient {
   company: string;
   contact_name: string;
   email: string;
-  default_cc: string;
+  default_cc: string[];
   is_active: boolean;
   branch_code: string;
   category: string;
-  escalation_hours: number;
+  escalation_enabled: boolean;
 }
 export interface DeliveryAttempt {
   id: string;
