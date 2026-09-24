@@ -9,13 +9,18 @@
   <div class="delivery-layout">
     <main>
       <section class="filter-panel delivery-filters">
-        <label class="wide-search"
-          >⌕<input
-            [(ngModel)]="query"
-            (keyup.enter)="load()"
-            placeholder="Search by claim ref or recipient email..."
-        /></label>
-        <div class="filter-actions">
+        <div class="filter-row">
+          <label class="search-field"
+            ><span>Search</span>
+            <div class="search-control">
+              <b>⌕</b
+              ><input
+                [(ngModel)]="query"
+                (keyup.enter)="load()"
+                placeholder="Search by claim ref or recipient email..."
+              />
+            </div>
+          </label>
           <label
             >Status<select [(ngModel)]="status" (change)="load()">
               <option value="">All statuses</option>

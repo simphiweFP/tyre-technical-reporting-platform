@@ -378,21 +378,46 @@ td a {
   border-radius: 7px;
   box-shadow: 0 3px 10px #163a6810;
 }
-.delivery-filters .wide-search,
-.viewer-filter .wide-search {
-  height: 40px;
-  background: #fff;
-}
-.delivery-filters .filter-actions {
-  grid-template-columns: minmax(190px, 280px) 140px;
-  justify-content: start;
-  gap: 10px;
-  margin-top: 10px;
+.delivery-filters .filter-row {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(180px, 240px) 140px;
+  align-items: end;
+  gap: 12px;
+  margin: 0;
 }
 .filter-panel label,
 .viewer-filter label {
   color: #17345e;
   font-size: 9px;
+}
+.search-field {
+  display: grid;
+  gap: 5px;
+}
+.search-control {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #cbd7e5;
+  border-radius: 4px;
+  padding: 0 10px;
+  color: #173a67;
+  background: #fff;
+}
+.search-control b {
+  font-size: 12px;
+  font-weight: 500;
+}
+.search-control input {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  outline: 0;
+  color: #173158;
+  background: transparent;
+  font-size: 10px;
 }
 .filter-panel select,
 .filter-panel button,
@@ -535,7 +560,8 @@ td a {
   background: #ffeaed;
 }
 .viewer-filter {
-  grid-template-columns: minmax(190px, 260px) minmax(300px, 1fr);
+  grid-template-columns: minmax(320px, 1fr) minmax(180px, 240px);
+  align-items: end;
   gap: 12px;
 }
 .viewer-mode {
@@ -589,7 +615,7 @@ td a {
   .viewer-filter {
     grid-template-columns: 1fr;
   }
-  .delivery-filters .filter-actions {
+  .delivery-filters .filter-row {
     grid-template-columns: 1fr;
   }
   .photo-grid {
