@@ -67,11 +67,18 @@ export class ReportListComponent {
     }
   }
 
-  selectStatus(value: string, archived = false): void {
+  selectStatus(value: string): void {
+    this.archived.set(false);
     this.status.set(value);
-    this.archived.set(archived);
     void this.load(true);
   }
+
+  viewArchived(): void {
+    this.status.set('');
+    this.archived.update((value) => !value);
+    void this.load(true);
+  }
+
   clear(): void {
     this.query.set('');
     this.status.set('');
@@ -81,23 +88,28 @@ export class ReportListComponent {
     this.archived.set(false);
     void this.load(true);
   }
+
   previous(): void {
     if (this.page() === 0) return;
     this.page.update((value) => value - 1);
     void this.load();
   }
+
   next(): void {
     if (this.page() + 1 >= this.pageCount()) return;
     this.page.update((value) => value + 1);
     void this.load();
   }
+
   async archiveReport(id: string): Promise<void> {
     await this.store.archive(id);
     await this.load();
   }
+
   count(status?: ReportStatus): number {
     return status ? (this.store.statusCounts()[status] ?? 0) : this.store.matchingTotal();
   }
+
   statusLabel(value: string): string {
     return value === 'Email Sent'
       ? 'Sent'
@@ -107,6 +119,7 @@ export class ReportListComponent {
           ? 'Ready'
           : value;
   }
+
   statusClass(value: string): string {
     return value.toLowerCase().replaceAll(' ', '-');
   }

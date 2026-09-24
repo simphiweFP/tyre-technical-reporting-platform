@@ -63,7 +63,9 @@ export const routes: Routes = [
         path: 'delivery-centre',
         canActivate: [roleGuard('administrator', 'report_capturer', 'viewer')],
         loadComponent: () =>
-          import('./features/reports/delivery-centre.component').then((m) => m.DeliveryCentreComponent),
+          import('./features/reports/delivery-centre.component').then(
+            (m) => m.DeliveryCentreComponent,
+          ),
       },
       {
         path: 'audit-viewer',
@@ -96,6 +98,12 @@ export const routes: Routes = [
         canActivate: [roleGuard('administrator')],
         loadComponent: () =>
           import('./features/admin/branches.component').then((m) => m.BranchesComponent),
+      },
+      {
+        path: 'admin/health',
+        canActivate: [roleGuard('administrator')],
+        loadComponent: () =>
+          import('./features/admin/system-health.component').then((m) => m.SystemHealthComponent),
       },
       {
         path: 'admin/settings',

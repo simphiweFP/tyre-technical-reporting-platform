@@ -2,53 +2,21 @@
   <div class="crumb">Administration <b>›</b> System Settings</div>
   <header class="admin-title">
     <div>
-      <h1>System &amp; Audit</h1>
-      <p>Configure preferences and monitor operational health.</p>
+      <h1>System Settings</h1>
+      <p>Configure application preferences used by the technical reporting platform.</p>
     </div>
   </header>
+
   @if (message()) {
     <div class="notice">{{ message() }}</div>
   }
-  @if (operations(); as health) {
-    <section class="settings-card">
-      <header>
-        <div>
-          <h2>Operational Health</h2>
-          <p>Live API dependencies and delivery queue.</p>
-        </div>
-        <button class="save-button" (click)="refreshOperations()">↻ &nbsp; Refresh</button>
-      </header>
-      <div class="settings-grid">
-        <label
-          ><b>Overall status</b><span class="healthy"><i></i>{{ health.status }}</span></label
-        >
-        <label
-          ><b>Database</b><span class="healthy"><i></i>{{ health.database }}</span></label
-        >
-        <label
-          ><b>Report file storage</b
-          ><span class="healthy"><i></i>{{ health.file_storage }}</span></label
-        >
-        <label
-          ><b>Delivery worker</b
-          ><span class="healthy"><i></i>{{ health.delivery_worker }}</span></label
-        >
-        <label
-          ><b>Pending / retrying</b
-          ><span>{{ health.pending_deliveries }} / {{ health.retrying_deliveries }}</span></label
-        >
-        <label
-          ><b>Failed deliveries</b><span>{{ health.failed_deliveries }}</span></label
-        >
-      </div>
-    </section>
-  }
+
   @if (settings(); as s) {
     <section class="settings-card">
       <header>
         <div>
-          <h2>System Settings</h2>
-          <p>Persisted application preferences.</p>
+          <h2>Application Settings</h2>
+          <p>Changes here affect how reports and platform services behave.</p>
         </div>
         <button class="save-button" (click)="save()">▣ &nbsp; Save Changes</button>
       </header>
@@ -61,6 +29,8 @@
           ><b>OCR confidence threshold</b
           ><input
             type="number"
+            min="0"
+            max="100"
             [ngModel]="s.ocr_confidence_threshold"
             (ngModelChange)="update('ocr_confidence_threshold', $event)"
         /></label>
@@ -76,9 +46,11 @@
             (ngModelChange)="update('offline_sync_enabled', $event)"
         /></label>
         <label
-          ><b>Sync interval</b
+          ><b>Sync interval (minutes)</b
           ><input
             type="number"
+            min="1"
+            max="1440"
             [ngModel]="s.offline_sync_minutes"
             (ngModelChange)="update('offline_sync_minutes', $event)"
         /></label>
@@ -89,50 +61,4 @@
       </div>
     </section>
   }
-  <section class="settings-card audit">
-    <header>
-      <div>
-        <h2>Audit Log</h2>
-        <p>Track system activity and changes.</p>
-      </div>
-    </header>
-    <label class="search"
-      >Search audit log... <input [(ngModel)]="query" (keyup.enter)="loadAudit()" /><span
-        >⌕</span
-      ></label
-    >
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>Timestamp</th>
-            <th>Actor</th>
-            <th>Action</th>
-            <th>Reference</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (item of audits(); track item.id) {
-            <tr>
-              <td>{{ item.occurred_at }}</td>
-              <td>{{ item.actor }}</td>
-              <td>{{ item.action }}</td>
-              <td>{{ item.entity_id || '-' }}</td>
-              <td>{{ item.entity_type }}</td>
-            </tr>
-          } @empty {
-            <tr class="empty-row">
-              <td colspan="5">
-                <div class="empty-state">
-                  <span>▣</span><strong>No audit events found</strong
-                  ><small>System activity will appear here when events are recorded.</small>
-                </div>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-  </section>
 </section>

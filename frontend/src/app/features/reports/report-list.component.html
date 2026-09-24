@@ -8,6 +8,7 @@
       <a routerLink="/reports/new" class="new-claim">＋ &nbsp; New Claim</a>
     }
   </header>
+
   <section class="filter-card">
     <label class="wide-search"
       >⌕<input
@@ -25,8 +26,8 @@
         </select></label
       >
       <label
-        >Status<select [(ngModel)]="status" (change)="load(true)">
-          <option value="">All</option>
+        >Status<select [(ngModel)]="status" (change)="archived.set(false); load(true)">
+          <option value="">All workflow statuses</option>
           <option>Draft</option>
           <option>Ready to Submit</option>
           <option>Submitted</option>
@@ -39,36 +40,49 @@
       <button (click)="clear()">Clear filters</button>
     </div>
   </section>
-  <nav class="status-tabs">
-    <button [class.active]="!status() && !archived()" (click)="selectStatus('')">
-      All <b>{{ count() }}</b>
+
+  <div class="claims-toolbar">
+    <nav class="status-tabs" aria-label="Workflow status">
+      <button [class.active]="!status() && !archived()" (click)="selectStatus('')">
+        All <b>{{ count() }}</b>
+      </button>
+      <button [class.active]="status() === 'Draft' && !archived()" (click)="selectStatus('Draft')">
+        <i class="draft"></i>Draft <b>{{ count('Draft') }}</b>
+      </button>
+      <button
+        [class.active]="status() === 'Ready to Submit' && !archived()"
+        (click)="selectStatus('Ready to Submit')"
+      >
+        <i class="ready"></i>Ready <b>{{ count('Ready to Submit') }}</b>
+      </button>
+      <button
+        [class.active]="status() === 'Submitted' && !archived()"
+        (click)="selectStatus('Submitted')"
+      >
+        <i class="submitted"></i>Submitted <b>{{ count('Submitted') }}</b>
+      </button>
+      <button
+        [class.active]="status() === 'Email Sent' && !archived()"
+        (click)="selectStatus('Email Sent')"
+      >
+        <i class="sent"></i>Sent <b>{{ count('Email Sent') }}</b>
+      </button>
+      <button
+        [class.active]="status() === 'Email Failed' && !archived()"
+        (click)="selectStatus('Email Failed')"
+      >
+        <i class="failed"></i>Failed <b>{{ count('Email Failed') }}</b>
+      </button>
+    </nav>
+    <button class="archive-view" [class.active]="archived()" type="button" (click)="viewArchived()">
+      ▣ {{ archived() ? 'Viewing archived' : 'View archived' }}
     </button>
-    <button [class.active]="status() === 'Draft' && !archived()" (click)="selectStatus('Draft')">
-      <i class="draft"></i>Draft <b>{{ count('Draft') }}</b>
-    </button>
-    <button
-      [class.active]="status() === 'Ready to Submit' && !archived()"
-      (click)="selectStatus('Ready to Submit')"
-    >
-      <i class="ready"></i>Ready <b>{{ count('Ready to Submit') }}</b>
-    </button>
-    <button
-      [class.active]="status() === 'Email Sent' && !archived()"
-      (click)="selectStatus('Email Sent')"
-    >
-      <i class="sent"></i>Sent <b>{{ count('Email Sent') }}</b>
-    </button>
-    <button
-      [class.active]="status() === 'Email Failed' && !archived()"
-      (click)="selectStatus('Email Failed')"
-    >
-      <i class="failed"></i>Failed <b>{{ count('Email Failed') }}</b>
-    </button>
-    <button [class.active]="archived()" (click)="selectStatus('', true)"><i></i>Archived</button>
-  </nav>
+  </div>
+
   @if (message()) {
     <p class="operation-message">{{ message() }}</p>
   }
+
   <section class="claims-table">
     <div class="table-scroll">
       <table>
@@ -114,14 +128,19 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="9">No claims match these filters.</td>
+              <td colspan="9">
+                {{ archived() ? 'No archived claims match these filters.' : 'No claims match these filters.' }}
+              </td>
             </tr>
           }
         </tbody>
       </table>
     </div>
     <footer>
-      <span>Showing {{ store.reports().length }} of {{ store.total() }} claims</span>
+      <span>
+        Showing {{ store.reports().length }} of {{ store.total() }}
+        {{ archived() ? 'archived claims' : 'claims' }}
+      </span>
       <div>
         <button (click)="previous()" [disabled]="page() === 0">‹</button
         ><button class="current">{{ page() + 1 }}</button
