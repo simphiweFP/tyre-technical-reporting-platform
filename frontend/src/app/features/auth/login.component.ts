@@ -2,66 +2,117 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+
 @Component({
   selector: 'app-login',
   imports: [ReactiveFormsModule, RouterLink],
   template: `
-    <main class="login-page">
-      <section class="story-panel">
-        <div class="story-content">
-          <div class="brand-lockup"><span>RT</span><strong>Royal Tyres</strong></div>
-          <p class="kicker">Technical reporting, rebuilt.</p>
-          <h1>From inspection to a complete report—without the paperwork.</h1>
-          <p>
-            Capture every required tyre image, keep technical information together and prepare a
-            professional report from any device.
-          </p>
-          <div class="trust-row">
-            <span>✓ Guided capture</span><span>✓ Secure access</span><span>✓ Automatic drafts</span>
+    <main class="auth-page">
+      <header class="auth-topbar">
+        <a class="auth-brand" routerLink="/login">
+          <img src="/royal-tyres-app-logo.png" alt="Royal Tyres" />
+        </a>
+        <span>Technical Reporting Platform</span>
+      </header>
+
+      <section class="auth-shell">
+        <section class="product-panel">
+          <div class="product-copy">
+            <p class="product-kicker">Peak Performance Tyres · Royal Tyres</p>
+            <h1>Technical reporting, built for the workshop.</h1>
+            <p class="product-intro">
+              Capture inspections, manage tyre claims and deliver professional reports from one
+              connected workspace.
+            </p>
+
+            <div class="workflow-strip">
+              <article>
+                <span>01</span>
+                <div><strong>Capture</strong><small>Guided claim details</small></div>
+              </article>
+              <article>
+                <span>02</span>
+                <div><strong>Inspect</strong><small>Tyre data and photos</small></div>
+              </article>
+              <article>
+                <span>03</span>
+                <div><strong>Deliver</strong><small>PDF and email workflow</small></div>
+              </article>
+            </div>
+
+            <div class="product-preview">
+              <div class="preview-head">
+                <div>
+                  <small>LIVE WORKFLOW PREVIEW</small>
+                  <strong>TR-2026-4F1501</strong>
+                </div>
+                <span>Draft</span>
+              </div>
+              <div class="preview-grid">
+                <div><small>Branch</small><strong>Phoenix</strong></div>
+                <div><small>Photos</small><strong>12 / 16</strong></div>
+                <div><small>Tyre</small><strong>Bridgestone</strong></div>
+                <div><small>Status</small><strong>Continue capture</strong></div>
+              </div>
+              <div class="preview-progress"><span></span></div>
+            </div>
           </div>
-        </div>
-      </section>
-      <section class="form-panel">
-        <div class="login-card">
-          <div class="mobile-logo"><span>RT</span><strong>Royal Tyres</strong></div>
-          <p class="eyebrow">Staff portal</p>
-          <h2>Welcome back</h2>
-          <p class="subtext">Sign in with your Royal Tyres account.</p>
-          <a class="button microsoft" [href]="auth.microsoftLoginUrl()"
-            >Continue with Microsoft / Outlook</a
-          >
-          <div class="divider"><span>or use your account</span></div>
-          <form [formGroup]="form" (ngSubmit)="submit()">
-            <div class="field">
-              <label for="email">Email address</label
-              ><input
-                id="email"
-                type="email"
-                formControlName="email"
-                autocomplete="username"
-                placeholder="name@royaltyres.co.za"
-              />
+        </section>
+
+        <section class="form-panel">
+          <div class="login-card">
+            <div class="form-brand">
+              <img src="/royal-tyres-app-logo.png" alt="Royal Tyres" />
+              <span>Staff portal</span>
             </div>
-            <div class="field">
-              <label for="password"
-                >Password <a routerLink="/forgot-password">Forgot password?</a></label
-              ><input
-                id="password"
-                type="password"
-                formControlName="password"
-                autocomplete="current-password"
-                placeholder="Enter your password"
-              />
-            </div>
-            @if (error()) {
-              <div class="login-error">{{ error() }}</div>
-            }
-            <button class="button primary" type="submit" [disabled]="form.invalid || loading()">
-              {{ loading() ? 'Signing in…' : 'Sign in securely' }}
-            </button>
-          </form>
-          <p class="support">New here? <a routerLink="/register">Create a new account</a></p>
-        </div>
+            <p class="eyebrow">Staff portal</p>
+            <h2>Welcome back</h2>
+            <p class="subtext">Sign in to the Royal Tyres technical reporting platform.</p>
+
+            <a class="button microsoft" [href]="auth.microsoftLoginUrl()">
+              <span class="microsoft-mark">M</span>
+              Continue with Microsoft / Outlook
+            </a>
+
+            <div class="divider"><span>or use your account</span></div>
+
+            <form [formGroup]="form" (ngSubmit)="submit()">
+              <div class="field">
+                <label for="email">Email address</label>
+                <input
+                  id="email"
+                  type="email"
+                  formControlName="email"
+                  autocomplete="username"
+                  placeholder="name@royaltyres.co.za"
+                />
+              </div>
+              <div class="field">
+                <label for="password">
+                  Password
+                  <a routerLink="/forgot-password">Forgot password?</a>
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  formControlName="password"
+                  autocomplete="current-password"
+                  placeholder="Enter your password"
+                />
+              </div>
+
+              @if (error()) {
+                <div class="login-error">{{ error() }}</div>
+              }
+
+              <button class="button primary" type="submit" [disabled]="form.invalid || loading()">
+                {{ loading() ? 'Signing in…' : 'Sign in securely' }}
+              </button>
+            </form>
+
+            <p class="support">New here? <a routerLink="/register">Create a new account</a></p>
+          </div>
+        </section>
       </section>
     </main>
   `,
@@ -77,6 +128,7 @@ export class LoginComponent {
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(8)]],
   });
+
   submit(): void {
     if (this.form.invalid) return;
     this.loading.set(true);
