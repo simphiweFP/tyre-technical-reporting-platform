@@ -22,10 +22,30 @@ import { AuthService } from '../../core/auth/auth.service';
               Password recovery is part of the same protected staff workflow. Your reports and
               captured data remain unchanged.
             </p>
-            <div class="workflow-strip">
-              <article><span>01</span><div><strong>Request</strong><small>Enter your account email</small></div></article>
-              <article><span>02</span><div><strong>Verify</strong><small>Open the secure reset link</small></div></article>
-              <article><span>03</span><div><strong>Return</strong><small>Continue your reports</small></div></article>
+            <div class="workflow-experience auth-journey recovery-journey">
+              <div class="journey-rail" aria-label="Password recovery workflow">
+                <article class="journey-step current">
+                  <span class="step-dot">01</span>
+                  <div><strong>Request</strong><small>Enter email</small></div>
+                </article>
+                <article class="journey-step">
+                  <span class="step-dot">02</span>
+                  <div><strong>Verify</strong><small>Open reset link</small></div>
+                </article>
+                <article class="journey-step">
+                  <span class="step-dot">03</span>
+                  <div><strong>Return</strong><small>Continue reports</small></div>
+                </article>
+              </div>
+
+              <div class="journey-note recovery-note">
+                <div class="journey-note-mark">↺</div>
+                <div>
+                  <small>ACCOUNT RECOVERY</small>
+                  <strong>Your report data stays exactly where you left it.</strong>
+                  <p>Password recovery only restores access; it does not alter captured claim data.</p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -94,12 +114,31 @@ export class ForgotPasswordComponent {
             <p class="product-intro">
               Once updated, you can return directly to the same Royal Tyres reporting workspace.
             </p>
-            <div class="product-preview compact-preview">
-              <div class="preview-head">
-                <div><small>ACCOUNT SECURITY</small><strong>Protected staff access</strong></div>
+            <div class="workflow-experience auth-journey recovery-journey">
+              <div class="journey-rail" aria-label="Password reset workflow">
+                <article class="journey-step complete">
+                  <span class="step-dot">01</span>
+                  <div><strong>Request</strong><small>Email confirmed</small></div>
+                </article>
+                <article class="journey-step current">
+                  <span class="step-dot">02</span>
+                  <div><strong>Reset</strong><small>Choose password</small></div>
+                </article>
+                <article class="journey-step">
+                  <span class="step-dot">03</span>
+                  <div><strong>Return</strong><small>Sign in again</small></div>
+                </article>
+              </div>
+
+              <div class="journey-note recovery-note">
+                <div class="journey-note-mark">✓</div>
+                <div>
+                  <small>PROTECTED STAFF ACCESS</small>
+                  <strong>Only your sign-in credential is changing.</strong>
+                  <p>Your reports, photos and claim history remain untouched.</p>
+                </div>
                 <span>Secure</span>
               </div>
-              <p>Your report data is not changed during password recovery.</p>
             </div>
           </div>
         </section>

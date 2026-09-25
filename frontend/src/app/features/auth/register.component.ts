@@ -23,21 +23,34 @@ import { AuthService } from '../../core/auth/auth.service';
               and report delivery.
             </p>
 
-            <div class="workflow-strip">
-              <article><span>01</span><div><strong>Register</strong><small>Create your staff access</small></div></article>
-              <article><span>02</span><div><strong>Assigned</strong><small>Admin sets your role</small></div></article>
-              <article><span>03</span><div><strong>Report</strong><small>Start capturing claims</small></div></article>
-            </div>
+            <div class="workflow-experience auth-journey">
+              <div class="journey-rail" aria-label="Staff registration workflow">
+                <article class="journey-step current">
+                  <span class="step-dot">01</span>
+                  <div><strong>Register</strong><small>Create staff access</small></div>
+                </article>
+                <article class="journey-step">
+                  <span class="step-dot">02</span>
+                  <div><strong>Assigned</strong><small>Role + branch</small></div>
+                </article>
+                <article class="journey-step">
+                  <span class="step-dot">03</span>
+                  <div><strong>Report</strong><small>Start capturing</small></div>
+                </article>
+              </div>
 
-            <div class="product-preview compact-preview">
-              <div class="preview-head">
-                <div><small>ACCESS FLOW</small><strong>Secure staff onboarding</strong></div>
+              <div class="journey-note">
+                <div class="journey-note-mark">✓</div>
+                <div>
+                  <small>SECURE STAFF ONBOARDING</small>
+                  <strong>Your account enters a protected pending state.</strong>
+                  <p>
+                    An administrator assigns the correct branch and reporting permission before
+                    access is activated.
+                  </p>
+                </div>
                 <span>Pending</span>
               </div>
-              <p>
-                New accounts stay protected until an administrator assigns the correct branch and
-                reporting permission.
-              </p>
             </div>
           </div>
         </section>
