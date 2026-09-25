@@ -25,36 +25,48 @@ import { AuthService } from '../../core/auth/auth.service';
               connected workspace.
             </p>
 
-            <div class="workflow-strip">
-              <article>
-                <span>01</span>
-                <div><strong>Capture</strong><small>Guided claim details</small></div>
-              </article>
-              <article>
-                <span>02</span>
-                <div><strong>Inspect</strong><small>Tyre data and photos</small></div>
-              </article>
-              <article>
-                <span>03</span>
-                <div><strong>Deliver</strong><small>PDF and email workflow</small></div>
-              </article>
-            </div>
+            <div class="workflow-experience">
+              <div class="journey-rail" aria-label="Technical reporting workflow">
+                <article class="journey-step complete">
+                  <span class="step-dot">01</span>
+                  <div><strong>Capture</strong><small>Claim details</small></div>
+                </article>
+                <article class="journey-step current">
+                  <span class="step-dot">02</span>
+                  <div><strong>Inspect</strong><small>Tyre data + photos</small></div>
+                </article>
+                <article class="journey-step">
+                  <span class="step-dot">03</span>
+                  <div><strong>Deliver</strong><small>Report + email</small></div>
+                </article>
+              </div>
 
-            <div class="product-preview">
-              <div class="preview-head">
-                <div>
-                  <small>LIVE WORKFLOW PREVIEW</small>
-                  <strong>TR-2026-4F1501</strong>
+              <div class="claim-snapshot">
+                <div class="snapshot-main">
+                  <div class="snapshot-title">
+                    <span class="snapshot-icon">TR</span>
+                    <div>
+                      <small>ACTIVE TECHNICAL CLAIM</small>
+                      <strong>TR-2026-4F1501</strong>
+                    </div>
+                  </div>
+                  <span class="snapshot-status">Draft</span>
                 </div>
-                <span>Draft</span>
+
+                <div class="snapshot-meta">
+                  <span><b>Phoenix</b><small>Branch</small></span>
+                  <span><b>Bridgestone</b><small>Tyre</small></span>
+                  <span><b>12 / 16</b><small>Photos captured</small></span>
+                </div>
+
+                <div class="snapshot-footer">
+                  <div>
+                    <span class="snapshot-progress"><i></i></span>
+                    <small>Inspection in progress</small>
+                  </div>
+                  <strong>Continue capture →</strong>
+                </div>
               </div>
-              <div class="preview-grid">
-                <div><small>Branch</small><strong>Phoenix</strong></div>
-                <div><small>Photos</small><strong>12 / 16</strong></div>
-                <div><small>Tyre</small><strong>Bridgestone</strong></div>
-                <div><small>Status</small><strong>Continue capture</strong></div>
-              </div>
-              <div class="preview-progress"><span></span></div>
             </div>
           </div>
         </section>
