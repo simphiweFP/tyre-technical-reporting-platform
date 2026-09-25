@@ -263,6 +263,15 @@ def retry_delivery(
     attempt = db.get(DeliveryAttempt, delivery_id)
     if not attempt:
         raise HTTPException(status_code=404, detail="Delivery not found")
+    if user.role == Role.REPORT_CAPTURER:
+        record = db.scalar(
+            select(TechnicalReportRecord).where(
+                TechnicalReportRecord.claim_reference == attempt.claim_reference,
+                TechnicalReportRecord.created_by == user.id,
+            )
+        )
+        if not record:
+            raise HTTPException(status_code=404, detail="Delivery not found")
     if attempt.status not in {"Failed", "Retrying"}:
         raise HTTPException(
             status_code=409, detail="Only failed deliveries can be retried"

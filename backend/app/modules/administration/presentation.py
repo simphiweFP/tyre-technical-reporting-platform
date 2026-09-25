@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, or_, select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from backend.app.core.database import get_db
@@ -135,17 +135,24 @@ def audit_events(
             AuditEvent.entity_type == "technical_report",
             AuditEvent.entity_id.in_(owned_refs),
         )
-    if query:
-        term = f"%{query.strip()}%"
-        statement = statement.where(
-            or_(
-                AuditEvent.action.ilike(term),
-                AuditEvent.entity_id.ilike(term),
-                User.full_name.ilike(term),
-                User.email.ilike(term),
-            )
-        )
     rows = db.execute(statement).all()
+    if query.strip():
+        term = query.strip().casefold()
+        rows = [
+            (event, user)
+            for event, user in rows
+            if any(
+                term in str(value or "").casefold()
+                for value in (
+                    event.action,
+                    event.entity_id,
+                    user.full_name if user else "",
+                    user.email if user else "",
+                    (event.details or {}).get("claim_reference"),
+                    (event.details or {}).get("status"),
+                )
+            )
+        ]
     items = [
         AuditEventResponse(
             id=event.id,
