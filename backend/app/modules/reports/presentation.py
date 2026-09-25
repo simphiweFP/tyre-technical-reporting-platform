@@ -57,16 +57,19 @@ def validate_technical_report(
 @router.get("/reference-data", response_model=ReportReferenceDataResponse)
 def report_reference_data(
     db: Session = Depends(get_db),
-    _: User = Depends(
+    user: User = Depends(
         require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
     ),
 ):
     branches = db.scalars(
         select(Branch).where(Branch.is_active.is_(True)).order_by(Branch.name)
     ).all()
-    records = db.scalars(
-        select(TechnicalReportRecord).where(TechnicalReportRecord.archived.is_(False))
-    ).all()
+    records_query = select(TechnicalReportRecord).where(
+        TechnicalReportRecord.archived.is_(False)
+    )
+    if user.role == Role.REPORT_CAPTURER:
+        records_query = records_query.where(TechnicalReportRecord.created_by == user.id)
+    records = db.scalars(records_query).all()
 
     def report_values(field: str) -> list[str]:
         return sorted(
@@ -100,13 +103,16 @@ def report_reference_data(
 @router.get("/analytics/summary", response_model=AnalyticsResponse)
 def analytics_summary(
     db: Session = Depends(get_db),
-    _: User = Depends(
+    user: User = Depends(
         require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
     ),
 ):
-    records = db.scalars(
-        select(TechnicalReportRecord).where(TechnicalReportRecord.archived.is_(False))
-    ).all()
+    records_query = select(TechnicalReportRecord).where(
+        TechnicalReportRecord.archived.is_(False)
+    )
+    if user.role == Role.REPORT_CAPTURER:
+        records_query = records_query.where(TechnicalReportRecord.created_by == user.id)
+    records = db.scalars(records_query).all()
 
     def group(attribute: str) -> dict[str, int]:
         result: dict[str, int] = {}
@@ -146,13 +152,15 @@ def list_reports(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=250),
     db: Session = Depends(get_db),
-    _: User = Depends(
+    user: User = Depends(
         require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
     ),
 ):
     statement = select(TechnicalReportRecord).order_by(
         TechnicalReportRecord.updated_at.desc()
     )
+    if user.role == Role.REPORT_CAPTURER:
+        statement = statement.where(TechnicalReportRecord.created_by == user.id)
     if archived_only:
         statement = statement.where(TechnicalReportRecord.archived.is_(True))
     elif not include_archived:
@@ -215,11 +223,13 @@ def list_reports(
 def get_report(
     report_id: UUID,
     db: Session = Depends(get_db),
-    _: User = Depends(
+    user: User = Depends(
         require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
     ),
 ):
-    return _required_report(report_id, db)
+    record = _required_record(report_id, db)
+    _ensure_report_access(record, user)
+    return _report_response(record, db)
 
 
 @router.put("/records/{report_id}", response_model=ReportResponse)
@@ -236,6 +246,8 @@ def upsert_report(
             raise HTTPException(status_code=422, detail={"fields": errors})
     record = db.get(TechnicalReportRecord, report_id)
     created = record is None
+    if record:
+        _ensure_report_access(record, user)
     if (
         record
         and request.expected_updated_at
@@ -320,7 +332,8 @@ async def upload_report_image(
     db: Session = Depends(get_db),
     user: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
 ):
-    _required_record(report_id, db)
+    record = _required_record(report_id, db)
+    _ensure_report_access(record, user)
     if image.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(
             status_code=415, detail="Only JPEG, PNG and WebP images are supported"
@@ -404,10 +417,12 @@ def download_report_image(
     report_id: UUID,
     image_id: UUID,
     db: Session = Depends(get_db),
-    _: User = Depends(
+    user: User = Depends(
         require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
     ),
 ):
+    record = _required_record(report_id, db)
+    _ensure_report_access(record, user)
     image = db.get(ReportImage, image_id)
     if not image or image.report_id != report_id:
         raise HTTPException(status_code=404, detail="Image not found")
@@ -431,6 +446,8 @@ def delete_report_image(
     db: Session = Depends(get_db),
     user: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
 ):
+    record = _required_record(report_id, db)
+    _ensure_report_access(record, user)
     image = db.get(ReportImage, image_id)
     if not image or image.report_id != report_id:
         raise HTTPException(status_code=404, detail="Image not found")
@@ -474,6 +491,11 @@ def _required_record(report_id: UUID, db: Session) -> TechnicalReportRecord:
     if not record:
         raise HTTPException(status_code=404, detail="Report not found")
     return record
+
+
+def _ensure_report_access(record: TechnicalReportRecord, user: User) -> None:
+    if user.role == Role.REPORT_CAPTURER and record.created_by != user.id:
+        raise HTTPException(status_code=404, detail="Report not found")
 
 
 def _required_report(report_id: UUID, db: Session) -> ReportResponse:

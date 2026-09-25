@@ -106,3 +106,76 @@ def test_report_crud_search_image_analytics_and_archive(client):
     ).json()
     assert archived["total"] == 1
     assert archived["items"][0]["id"] == report_id
+
+
+def test_report_capturer_only_sees_owned_claims_and_audit(client):
+    admin_headers = login_headers(client)
+    branches = client.get("/api/v1/auth/branches", headers=admin_headers).json()
+    created_user = client.post(
+        "/api/v1/auth/users",
+        headers=admin_headers,
+        json={
+            "full_name": "Capture User",
+            "email": "capture@example.com",
+            "job_title": "Report Capturer",
+            "role": "report_capturer",
+            "branch_id": branches[0]["id"],
+        },
+    ).json()
+    password = created_user["temporary_password"]
+    capture_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "capture@example.com", "password": password},
+    )
+    capture_headers = {
+        "Authorization": f"Bearer {capture_login.json()['access_token']}"
+    }
+
+    admin_report_id = "2ab745b0-0e8e-49ef-bf3b-1b8a67a19c51"
+    own_report_id = "89a33b2e-991d-4d0e-9442-d217e6b43dc1"
+    client.put(
+        f"/api/v1/reports/records/{admin_report_id}",
+        headers=admin_headers,
+        json={
+            "report": {
+                "id": admin_report_id,
+                "claimReference": "TR-ADMIN-ONLY",
+                "status": "Draft",
+                "customerName": "Admin Fleet",
+                "branch": "PHX",
+                "photos": [],
+            }
+        },
+    )
+    client.put(
+        f"/api/v1/reports/records/{own_report_id}",
+        headers=capture_headers,
+        json={
+            "report": {
+                "id": own_report_id,
+                "claimReference": "TR-MY-CLAIM",
+                "status": "Draft",
+                "customerName": "My Fleet",
+                "branch": "PHX",
+                "photos": [],
+            }
+        },
+    )
+
+    listing = client.get("/api/v1/reports/records", headers=capture_headers)
+    assert listing.status_code == 200
+    assert [item["id"] for item in listing.json()["items"]] == [own_report_id]
+    assert (
+        client.get(
+            f"/api/v1/reports/records/{admin_report_id}", headers=capture_headers
+        ).status_code
+        == 404
+    )
+
+    audit = client.get("/api/v1/admin/audit-events", headers=capture_headers)
+    assert audit.status_code == 200
+    references = {
+        item["details"].get("claim_reference") for item in audit.json()["items"]
+    }
+    assert "TR-MY-CLAIM" in references
+    assert "TR-ADMIN-ONLY" not in references

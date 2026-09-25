@@ -69,7 +69,7 @@ export const routes: Routes = [
       },
       {
         path: 'audit-viewer',
-        canActivate: [roleGuard('administrator', 'viewer')],
+        canActivate: [roleGuard('administrator', 'report_capturer', 'viewer')],
         loadComponent: () =>
           import('./features/reports/report-viewer.component').then((m) => m.ReportViewerComponent),
       },

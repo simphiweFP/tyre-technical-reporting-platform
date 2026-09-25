@@ -3,35 +3,49 @@
   <header class="operation-title">
     <div>
       <h1>Audit Viewer</h1>
-      <p>Read-only system and technical-report activity</p>
+      <p>
+        {{
+          isCapturer()
+            ? 'History for technical claims you created'
+            : 'Read-only system and technical-report activity'
+        }}
+      </p>
     </div>
     <div class="viewer-mode">
       ▣
-      <span
-        ><strong>VIEWER MODE</strong><small>Read-only access. No editing permitted.</small></span
-      >
+      <span>
+        <strong>{{ isCapturer() ? 'MY CLAIM HISTORY' : 'VIEWER MODE' }}</strong>
+        <small>
+          {{
+            isCapturer()
+              ? 'Only activity linked to your own claims is shown.'
+              : 'Read-only access. No editing permitted.'
+          }}
+        </small>
+      </span>
     </div>
   </header>
 
   <section class="viewer-filter">
-    <label class="search-field"
-      ><span>Search</span>
+    <label class="search-field">
+      <span>Search</span>
       <div class="search-control">
-        <b>⌕</b
-        ><input
+        <b>⌕</b>
+        <input
           [(ngModel)]="query"
           (keyup.enter)="load()"
-          placeholder="Search activity, user or claim..."
+          placeholder="Search action or claim reference..."
         />
       </div>
     </label>
-    <label
-      >Period<select [(ngModel)]="days" (change)="load()">
+    <label>
+      Period
+      <select [(ngModel)]="days" (change)="load()">
         <option [ngValue]="7">Last 7 days</option>
         <option [ngValue]="30">Last 30 days</option>
         <option [ngValue]="365">Last year</option>
-      </select></label
-    >
+      </select>
+    </label>
   </section>
 
   @if (message()) {
@@ -46,8 +60,7 @@
             <th>Timestamp</th>
             <th>Actor</th>
             <th>Action</th>
-            <th>Entity</th>
-            <th>Reference</th>
+            <th>Claim / Reference</th>
             <th>Details</th>
           </tr>
         </thead>
@@ -56,19 +69,23 @@
             <tr>
               <td>{{ item.occurred_at }}</td>
               <td class="actor">{{ item.actor }}</td>
-              <td>
-                <span class="audit-action">{{ item.action }}</span>
-              </td>
-              <td>{{ item.entity_type }}</td>
-              <td class="reference">{{ item.entity_id || '—' }}</td>
+              <td><span class="audit-action">{{ actionLabel(item.action) }}</span></td>
+              <td class="reference">{{ item.details['claim_reference'] || item.entity_id || '—' }}</td>
               <td class="details-cell">{{ details(item) }}</td>
             </tr>
           } @empty {
             <tr class="empty-row">
-              <td colspan="6">
+              <td colspan="5">
                 <div class="empty-state">
-                  <span>▣</span><strong>No audit activity found</strong
-                  ><small>Try another search term or select a longer period.</small>
+                  <span>▣</span>
+                  <strong>No audit activity found</strong>
+                  <small>
+                    {{
+                      isCapturer()
+                        ? 'Activity for claims you create will appear here.'
+                        : 'Try another search term or select a longer period.'
+                    }}
+                  </small>
                 </div>
               </td>
             </tr>

@@ -21,6 +21,7 @@ from backend.app.modules.delivery.infrastructure import DeliveryAttempt
 from backend.app.modules.identity.dependencies import require_roles
 from backend.app.modules.identity.domain import Role
 from backend.app.modules.identity.infrastructure import User
+from backend.app.modules.reports.infrastructure import TechnicalReportRecord
 from backend.app.modules.reports.storage import ReportFileStorage
 
 router = APIRouter(prefix="/admin", tags=["Administration"])
@@ -109,7 +110,9 @@ def audit_events(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=250),
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles(Role.ADMINISTRATOR, Role.VIEWER)),
+    current: User = Depends(
+        require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
+    ),
 ):
     statement = (
         select(AuditEvent, User)
@@ -117,6 +120,21 @@ def audit_events(
         .where(AuditEvent.occurred_at >= datetime.now(UTC) - timedelta(days=days))
         .order_by(AuditEvent.occurred_at.desc())
     )
+    if current.role == Role.REPORT_CAPTURER:
+        owned = db.scalars(
+            select(TechnicalReportRecord).where(
+                TechnicalReportRecord.created_by == current.id
+            )
+        ).all()
+        owned_refs = [str(record.id) for record in owned] + [
+            record.claim_reference for record in owned
+        ]
+        if not owned_refs:
+            return AuditListResponse(items=[], total=0)
+        statement = statement.where(
+            AuditEvent.entity_type == "technical_report",
+            AuditEvent.entity_id.in_(owned_refs),
+        )
     if query:
         term = f"%{query.strip()}%"
         statement = statement.where(

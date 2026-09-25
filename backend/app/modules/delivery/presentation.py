@@ -203,6 +203,8 @@ def deliver_report(
         raise HTTPException(
             status_code=422, detail="Save the report before scheduling delivery"
         )
+    if user.role == Role.REPORT_CAPTURER and record.created_by != user.id:
+        raise HTTPException(status_code=404, detail="Report not found")
     if record.status == "Draft":
         raise HTTPException(
             status_code=422,
@@ -289,10 +291,19 @@ def retry_delivery(
 def delivery_history(
     claim_reference: str,
     db: Session = Depends(get_db),
-    _: User = Depends(
+    user: User = Depends(
         require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
     ),
 ):
+    if user.role == Role.REPORT_CAPTURER:
+        record = db.scalar(
+            select(TechnicalReportRecord).where(
+                TechnicalReportRecord.claim_reference == claim_reference,
+                TechnicalReportRecord.created_by == user.id,
+            )
+        )
+        if not record:
+            raise HTTPException(status_code=404, detail="Report not found")
     query = (
         select(DeliveryAttempt)
         .where(DeliveryAttempt.claim_reference == claim_reference)
@@ -308,11 +319,16 @@ def list_deliveries(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=250),
     db: Session = Depends(get_db),
-    _: User = Depends(
+    user: User = Depends(
         require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
     ),
 ):
     statement = select(DeliveryAttempt).order_by(DeliveryAttempt.created_at.desc())
+    if user.role == Role.REPORT_CAPTURER:
+        owned_claims = select(TechnicalReportRecord.claim_reference).where(
+            TechnicalReportRecord.created_by == user.id
+        )
+        statement = statement.where(DeliveryAttempt.claim_reference.in_(owned_claims))
     if delivery_status:
         statement = statement.where(DeliveryAttempt.status == delivery_status)
     if query:
