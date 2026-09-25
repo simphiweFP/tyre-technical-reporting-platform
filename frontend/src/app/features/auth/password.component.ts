@@ -3,13 +3,6 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 
-const shellIntro = `
-  <header class="auth-topbar">
-    <a class="auth-brand" routerLink="/login"><img src="/royal-tyres-app-logo.png" alt="Royal Tyres" /></a>
-    <span>Technical Reporting Platform</span>
-  </header>
-`;
-
 @Component({
   selector: 'app-forgot-password',
   imports: [ReactiveFormsModule, RouterLink],
