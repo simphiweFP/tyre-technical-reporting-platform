@@ -29,13 +29,13 @@ from backend.app.modules.reports.infrastructure import (
 from backend.app.modules.reports.schemas import (
     AnalyticsResponse,
     ImageResponse,
+    ReferenceOption,
     ReportListResponse,
     ReportReferenceDataResponse,
     ReportResponse,
     ReportUpsertRequest,
     ReportValidationRequest,
     ReportValidationResponse,
-    ReferenceOption,
 )
 from backend.app.modules.reports.validation import validate_report
 
@@ -84,7 +84,9 @@ def report_reference_data(
         | {"Bridgestone", "Continental", "Dunlop", "Goodyear", "Hankook", "Michelin"}
     )
     return ReportReferenceDataResponse(
-        branches=[ReferenceOption(value=branch.code, label=branch.name) for branch in branches],
+        branches=[
+            ReferenceOption(value=branch.code, label=branch.name) for branch in branches
+        ],
         customers=report_values("customerName"),
         categories=["Manufacturing", "Road hazard", "Service related"],
         brands=brands,
@@ -413,7 +415,9 @@ def download_report_image(
     try:
         content = base64.b64decode(image.base64_data, validate=True)
     except (ValueError, TypeError) as exc:
-        raise HTTPException(status_code=500, detail="Stored image data is invalid") from exc
+        raise HTTPException(
+            status_code=500, detail="Stored image data is invalid"
+        ) from exc
 
     safe_filename = (
         image.original_name.replace("\r", "").replace("\n", "").replace('"', "'")
