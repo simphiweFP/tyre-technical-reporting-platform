@@ -65,9 +65,6 @@ services:
     env_file: .env
     environment:
       SMTP_HOST: ${SMTP_DOCKER_HOST:-mailpit}
-      REPORT_FILE_ROOT: /app/data/technical-reports
-    volumes:
-      - report_files:/app/data/technical-reports
     depends_on:
       api:
         condition: service_healthy
