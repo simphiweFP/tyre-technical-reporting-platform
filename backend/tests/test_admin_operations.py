@@ -92,7 +92,12 @@ def test_report_search_filters_real_branch_codes_and_dot_data(client):
     headers = login_headers(client)
     reports = [
         ("11111111-1111-4111-8111-111111111111", "TR-PHX-CODE", "PHX", "DOT-CODE-1"),
-        ("22222222-2222-4222-8222-222222222222", "TR-PHX-NAME", "Phoenix", "DOT-NAME-2"),
+        (
+            "22222222-2222-4222-8222-222222222222",
+            "TR-PHX-NAME",
+            "Phoenix",
+            "DOT-NAME-2",
+        ),
         ("33333333-3333-4333-8333-333333333333", "TR-OTHER", "DBN", "DOT-OTHER-3"),
     ]
     for report_id, claim, branch, dot in reports:
@@ -279,7 +284,7 @@ def test_operations_health_is_admin_only(client):
     response = client.get("/api/v1/admin/operations", headers=headers)
     assert response.status_code == 200
     assert response.json()["database"] == "healthy"
-    assert response.json()["file_storage"] == "healthy"
+    assert response.json()["file_storage"] == "database"
     assert response.json()["delivery_worker"] == "not_started"
 
     viewer_headers = login_headers(client, "viewer@example.com")

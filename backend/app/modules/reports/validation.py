@@ -1,6 +1,5 @@
 from typing import Any
 
-
 REQUIRED_PHOTOS = {
     "dot": "DOT photo is required.",
     "serialNumber": "Serial number photo is required.",
