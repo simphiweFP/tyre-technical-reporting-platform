@@ -1,4 +1,3 @@
-import base64
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
