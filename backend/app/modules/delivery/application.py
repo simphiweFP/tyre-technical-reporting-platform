@@ -1,3 +1,4 @@
+import base64
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
@@ -12,7 +13,6 @@ from backend.app.modules.reports.infrastructure import (
     ReportImage,
     TechnicalReportRecord,
 )
-from backend.app.modules.reports.storage import ReportFileStorage
 
 
 class ReportDeliveryService:
@@ -34,7 +34,6 @@ class ReportDeliveryService:
         )
         report = attempt.report_payload
         if report_record:
-            storage = ReportFileStorage()
             images = self.db.scalars(
                 select(ReportImage)
                 .where(ReportImage.report_id == report_record.id)
@@ -46,7 +45,9 @@ class ReportDeliveryService:
                     {
                         "category": image.category,
                         "label": image.category.replace("_", " ").title(),
-                        "filePath": str(storage.resolve(image.file_path)),
+                        "previewUrl": (
+                            f"data:{image.content_type};base64,{image.base64_data}"
+                        ),
                     }
                     for image in images
                 ],
