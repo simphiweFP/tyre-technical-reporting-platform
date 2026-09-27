@@ -18,7 +18,7 @@
     <header>
       <div>
         <h2>Device Sync Status</h2>
-        <p>Photos stay temporary in the browser until they are uploaded to the server filesystem.</p>
+        <p>Photos stay temporary in the browser until they are uploaded and stored in the database.</p>
       </div>
       <span class="connection-state" [class.offline]="!offline.online()">
         <i></i>{{ offline.online() ? 'Online' : 'Offline' }}
@@ -38,7 +38,7 @@
       <label><b>Last successful sync</b><span>{{ offline.stats().lastSyncedAt ? (offline.stats().lastSyncedAt | date: 'dd/MM/yyyy HH:mm:ss') : 'Not synced yet' }}</span></label>
       <label><b>Sync behaviour</b><span>Automatic when the browser reconnects</span></label>
       <label><b>Conflict policy</b><span>Never overwrite a newer server report automatically</span></label>
-      <label><b>Photo destination</b><span>REPORT_FILE_ROOT after successful upload</span></label>
+      <label><b>Photo destination</b><span>PostgreSQL database after successful upload</span></label>
     </div>
     <div class="offline-actions">
       <button class="save-button" type="button" (click)="clearReferenceCache()">Clear cached dropdown data</button>
