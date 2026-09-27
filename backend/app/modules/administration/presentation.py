@@ -22,7 +22,6 @@ from backend.app.modules.identity.dependencies import require_roles
 from backend.app.modules.identity.domain import Role
 from backend.app.modules.identity.infrastructure import User
 from backend.app.modules.reports.infrastructure import TechnicalReportRecord
-from backend.app.modules.reports.storage import ReportFileStorage
 
 router = APIRouter(prefix="/admin", tags=["Administration"])
 
@@ -33,7 +32,6 @@ def operations_status(
     _: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
     db.execute(text("SELECT 1"))
-    ReportFileStorage().ensure_ready()
     heartbeat = db.get(OperationalHeartbeat, "delivery-worker")
     worker_status = "not_started"
     if heartbeat:
@@ -60,7 +58,7 @@ def operations_status(
     return OperationsStatusResponse(
         status="healthy" if worker_status == "healthy" else "degraded",
         database="healthy",
-        file_storage="healthy",
+        file_storage="database",
         delivery_worker=worker_status,
         worker_last_seen_at=heartbeat.last_seen_at if heartbeat else None,
         pending_deliveries=counts.get("Pending", 0),
