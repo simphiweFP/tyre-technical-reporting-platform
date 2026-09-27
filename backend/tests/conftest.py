@@ -20,7 +20,6 @@ from backend.app.modules.identity.infrastructure import User
 
 @pytest.fixture()
 def client(tmp_path):
-    get_settings().report_file_root = str(tmp_path / "report-share")
     engine = create_engine(
         f"sqlite:///{tmp_path / 'test.db'}", connect_args={"check_same_thread": False}
     )
