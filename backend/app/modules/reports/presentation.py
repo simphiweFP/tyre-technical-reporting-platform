@@ -1,11 +1,11 @@
+import base64
 import hashlib
 from datetime import UTC, date, datetime, time
 from io import BytesIO
-from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from PIL import Image as PillowImage
 from PIL import UnidentifiedImageError
 from sqlalchemy import or_, select
@@ -37,7 +37,6 @@ from backend.app.modules.reports.schemas import (
     ReportValidationResponse,
     ReferenceOption,
 )
-from backend.app.modules.reports.storage import ReportFileStorage
 from backend.app.modules.reports.validation import validate_report
 
 router = APIRouter(prefix="/reports", tags=["Technical reports"])
@@ -347,6 +346,7 @@ async def upload_report_image(
         raise HTTPException(
             status_code=422, detail="The uploaded file is not a valid image"
         ) from exc
+
     digest = hashlib.sha256(content).hexdigest()
     existing = db.scalar(
         select(ReportImage).where(
@@ -359,34 +359,25 @@ async def upload_report_image(
         raise HTTPException(
             status_code=409, detail="This image is already used in another category"
         )
-    storage = ReportFileStorage()
+
     previous = db.scalar(
         select(ReportImage).where(
             ReportImage.report_id == report_id, ReportImage.category == category
         )
     )
-    previous_path = previous.file_path if previous else None
     if previous:
         db.delete(previous)
         db.flush()
+
     suffix = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}[
         image.content_type
     ]
-    record = _required_record(report_id, db)
-    relative_path = storage.store_image(
-        report_id=report_id,
-        claim_reference=record.claim_reference,
-        category=category,
-        digest=digest,
-        suffix=suffix,
-        content=content,
-    )
     stored = ReportImage(
         report_id=report_id,
         category=category,
-        original_name=image.filename or Path(relative_path).name,
+        original_name=image.filename or f"{category}{suffix}",
         content_type=image.content_type,
-        file_path=relative_path,
+        base64_data=base64.b64encode(content).decode("ascii"),
         sha256=digest,
         byte_size=len(content),
     )
@@ -400,14 +391,7 @@ async def upload_report_image(
             details={"category": category, "sha256": digest},
         )
     )
-    try:
-        db.commit()
-    except Exception:
-        db.rollback()
-        storage.delete(relative_path)
-        raise
-    if previous_path and previous_path != relative_path:
-        storage.delete(previous_path)
+    db.commit()
     db.refresh(stored)
     return stored
 
@@ -427,13 +411,17 @@ def download_report_image(
     if not image or image.report_id != report_id:
         raise HTTPException(status_code=404, detail="Image not found")
     try:
-        path = ReportFileStorage().resolve(image.file_path)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail="Image not found") from exc
-    if not path.is_file():
-        raise HTTPException(status_code=404, detail="Image not found")
-    return FileResponse(
-        path, media_type=image.content_type, filename=image.original_name
+        content = base64.b64decode(image.base64_data, validate=True)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=500, detail="Stored image data is invalid") from exc
+
+    safe_filename = (
+        image.original_name.replace("\r", "").replace("\n", "").replace('"', "'")
+    )
+    return StreamingResponse(
+        BytesIO(content),
+        media_type=image.content_type,
+        headers={"Content-Disposition": f'inline; filename="{safe_filename}"'},
     )
 
 
@@ -451,7 +439,6 @@ def delete_report_image(
     image = db.get(ReportImage, image_id)
     if not image or image.report_id != report_id:
         raise HTTPException(status_code=404, detail="Image not found")
-    ReportFileStorage().delete(image.file_path)
     db.delete(image)
     db.add(
         AuditEvent(
