@@ -27,7 +27,7 @@ The system avoids microservices, generic repositories for every entity and abstr
 4. `feat: complete report delivery and audit tracking`
    - Third-party email delivery, retry, delivery history, audit trail, final tests and deployment documentation.
 5. `feat: make the reporting platform production ready`
-   - Server report persistence, protected local image files, full report APIs, public registration, Microsoft account linking, user administration, password recovery, durable email queue, analytics and operational protections.
+   - Server report persistence, database-backed Base64 image storage, full report APIs, public registration, Microsoft account linking, user administration, password recovery, durable email queue, analytics and operational protections.
 
 ## Phase 1 setup
 
@@ -65,7 +65,7 @@ npm install
 npm start
 ```
 
-The frontend expects the API at `http://localhost:8000/api/v1`. Reports and drafts are stored in PostgreSQL. Compressed images are written to the configured local media directory with metadata in PostgreSQL and are only served through authenticated endpoints. Docker uses a persistent `report_images` volume.
+The frontend expects the API at `http://localhost:8000/api/v1`. Reports, drafts and compressed report images are stored in PostgreSQL. Image bytes are Base64-encoded in `report_images.base64_data` and are only served through authenticated endpoints.
 
 ## Registration and sign-in
 
@@ -138,23 +138,19 @@ OCR values are always suggestions requiring operator confirmation. Parser fixtur
 
 ## Backups and retention
 
-Images and generated report files use the same persistent company file-server pattern as SalesApp ROD documents. PostgreSQL stores relative paths and metadata only. Set `REPORT_FILE_ROOT` to the mounted SMB/NFS share used by both the API and delivery worker—for example `/mnt/royal-tyres/technical-reports`. On Windows infrastructure this mount can be backed by `\\RoyalTyresFileServer\\TechnicalReports`. Do not point production at a container's temporary filesystem.
-
-For container deployment, copy `deploy/docker-compose.file-server.yml.example` to a deployment-specific override and set `REPORT_FILE_SHARE_HOST_PATH` to the share's host mount. The override bind-mounts the same persistent directory into both the API and delivery worker. Share credentials stay in the operating system's SMB/NFS mount configuration and are never stored in this repository.
-
-Files are organised under `year/month/claim-reference/report-id`, and all resolved paths are constrained to the configured share. `scripts/backup.sh` creates a PostgreSQL custom-format dump and a matching archive of the report file share. Set `PG_BACKUP_URL`, `REPORT_FILE_ROOT` and an encrypted `BACKUP_ROOT`, schedule it outside the application container, and regularly test restores. Archived reports older than `REPORT_RETENTION_DAYS` can be removed with:
+Report images are stored in PostgreSQL as Base64 together with their metadata, so the database is the complete persistence layer for technical reports and their photographs. `scripts/backup.sh` creates a PostgreSQL custom-format dump; no separate image-directory backup is required. Set `PG_BACKUP_URL` and an encrypted `BACKUP_ROOT`, schedule it outside the application container, and regularly test restores. Archived reports older than `REPORT_RETENTION_DAYS` can be removed with:
 
 ```bash
 python -m backend.app.maintenance
 ```
 
-Each backup includes a `SHA256SUMS` manifest. Run `sha256sum -c SHA256SUMS` before every restore test. The administration System & Audit screen reports database, file-storage, delivery-worker heartbeat and delivery-queue health; a worker becomes stale after 30 seconds without a heartbeat.
+Each backup includes a `SHA256SUMS` manifest. Run `sha256sum -c SHA256SUMS` before every restore test. The administration System & Audit screen reports database, delivery-worker heartbeat and delivery-queue health; a worker becomes stale after 30 seconds without a heartbeat.
 
 ## Production deployment checklist
 
 - Replace the JWT secret and seeded administrator password with managed secrets.
 - Use PostgreSQL with encrypted backups. API startup applies pending migrations automatically.
-- Back up the database and report-image directory as one recovery set and test restores.
+- Back up PostgreSQL and test restores; report images are included in the database dump.
 - Configure an HTTPS reverse proxy and restrict `ALLOWED_ORIGINS` to the deployed Angular URL.
 - Configure authenticated SMTP with TLS and verify the sender domain's SPF, DKIM and DMARC records.
 - Retain delivery and audit records according to the organisation's privacy policy.
