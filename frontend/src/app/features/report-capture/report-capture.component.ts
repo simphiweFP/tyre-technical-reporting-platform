@@ -32,6 +32,9 @@ export class ReportCaptureComponent implements OnDestroy {
   private readonly customerSearch$ = new Subject<string>();
   readonly step = signal(0);
   readonly captureMessage = signal('');
+  readonly customerMatches = signal<string[]>([]);
+  readonly customerLookupBusy = signal(false);
+  readonly customerDropdownOpen = signal(false);
   readonly readonlyView = computed(() => this.auth.hasRole('viewer'));
   readonly recipients = signal<ReportRecipient[]>([]);
   readonly selectedRecipient = signal('');
@@ -157,8 +160,24 @@ export class ReportCaptureComponent implements OnDestroy {
   }
   onCustomerSearch(value: string): void {
     const term = value.trim();
-    if (term.length < 2) return;
+    if (term.length < 2) {
+      this.customerMatches.set([]);
+      this.customerDropdownOpen.set(false);
+      return;
+    }
+
+    this.customerDropdownOpen.set(true);
     this.customerSearch$.next(term);
+  }
+
+  selectCustomer(customer: string): void {
+    this.form.controls.customerName.setValue(customer);
+    this.customerMatches.set([]);
+    this.customerDropdownOpen.set(false);
+  }
+
+  closeCustomerDropdown(): void {
+    window.setTimeout(() => this.customerDropdownOpen.set(false), 150);
   }
 
   async saveDraft(): Promise<void> {
@@ -320,18 +339,18 @@ export class ReportCaptureComponent implements OnDestroy {
     void this.router.navigate(['/reports/new']).then(() => window.location.reload());
   }
   private async loadCustomerSuggestions(term: string): Promise<void> {
+    this.customerLookupBusy.set(true);
     try {
       const customers = await this.store.customerSuggestions(term);
       if (this.form.controls.customerName.value.trim() !== term) return;
 
-      this.referenceData.update((data) => ({
-        ...data,
-        customers: [...new Set([...data.customers, ...customers])].sort((a, b) =>
-          a.localeCompare(b),
-        ),
-      }));
+      this.customerMatches.set(customers.slice(0, 20));
+      this.customerDropdownOpen.set(true);
     } catch {
+      this.customerMatches.set([]);
       // Customer entry remains free text when lookup is unavailable.
+    } finally {
+      this.customerLookupBusy.set(false);
     }
   }
 
