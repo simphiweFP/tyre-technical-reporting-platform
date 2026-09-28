@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     jwt_secret_file: str = ""
     smtp_password_file: str = ""
     microsoft_client_secret_file: str = ""
+    customer_json_path: str = "backend/data/customers.json"
+    sap_customer_endpoint: str = ""
+    sap_customer_search_param: str = "search"
+    sap_customer_timeout_seconds: float = 8.0
+    sap_api_key_header: str = "X-API-Key"
+    sap_api_key: str = ""
 
     @property
     def cors_origins(self) -> list[str]:
