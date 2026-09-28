@@ -77,8 +77,10 @@ class SmtpEmailGateway:
         with smtplib.SMTP(
             self.settings.smtp_host, self.settings.smtp_port, timeout=20
         ) as client:
+            client.ehlo()
             if self.settings.smtp_use_tls:
                 client.starttls()
+                client.ehlo()
             if self.settings.smtp_username:
                 client.login(self.settings.smtp_username, self.settings.smtp_password)
             client.send_message(email)
