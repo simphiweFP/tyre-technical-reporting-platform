@@ -68,15 +68,33 @@
               <i>♙</i>
               <input
                 formControlName="customerName"
-                list="customer-options"
                 placeholder="Search or type customer name"
+                autocomplete="off"
                 (input)="onCustomerSearch($any($event.target).value)"
+                (focus)="onCustomerSearch(form.controls.customerName.value)"
+                (blur)="closeCustomerDropdown()"
               />
-              <datalist id="customer-options">
-                @for (customer of referenceData().customers; track customer) {
-                  <option [value]="customer"></option>
-                }
-              </datalist>
+              @if (customerDropdownOpen()) {
+                <div class="customer-suggestions">
+                  @if (customerLookupBusy()) {
+                    <div class="customer-suggestion-state">Searching customers…</div>
+                  } @else if (customerMatches().length) {
+                    @for (customer of customerMatches(); track customer) {
+                      <button
+                        type="button"
+                        class="customer-suggestion"
+                        (mousedown)="selectCustomer(customer)"
+                      >
+                        {{ customer }}
+                      </button>
+                    }
+                  } @else if (form.controls.customerName.value.trim().length >= 2) {
+                    <div class="customer-suggestion-state">
+                      No customer found. You can keep typing a new customer name.
+                    </div>
+                  }
+                </div>
+              }
               @if (validationErrors()['customerName']) {
                 <small class="field-error">{{ validationErrors()['customerName'] }}</small>
               }
