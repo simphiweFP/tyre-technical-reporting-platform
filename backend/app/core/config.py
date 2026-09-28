@@ -15,12 +15,12 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:4200"
     seed_admin_email: str = "admin@royaltyres.co.za"
     seed_admin_password: str = "ChangeMe123!"
-    smtp_host: str = "localhost"
-    smtp_port: int = 1025
-    smtp_username: str = ""
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_username: str = "@aspiremoney.co.uk"
     smtp_password: str = ""
-    smtp_use_tls: bool = False
-    email_from: str = "technical-reports@royaltyres.co.za"
+    smtp_use_tls: bool = True
+    email_from: str = "hr@better-compare.co.za"
     email_from_name: str = "Royal Tyres Technical Reports"
     public_app_url: str = "http://localhost:4200"
     royal_tyres_logo_path: str = ""
