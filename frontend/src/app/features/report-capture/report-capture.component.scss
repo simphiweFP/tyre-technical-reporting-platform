@@ -226,13 +226,22 @@ h1 {
   font-weight: 400;
 }
 
+.customer-field {
+  z-index: 40;
+}
+
+.customer-field > i {
+  bottom: 15px;
+}
+
 .customer-suggestions {
   position: absolute;
   z-index: 30;
-  top: calc(100% - 2px);
+  top: 100%;
   left: 0;
   right: 0;
-  max-height: 240px;
+  max-height: 260px;
+  margin-top: 4px;
   overflow-y: auto;
   border: 1px solid #cdd2d7;
   border-radius: 7px;
