@@ -38,6 +38,7 @@ from backend.app.modules.reports.schemas import (
     ReportValidationResponse,
 )
 from backend.app.modules.reports.validation import validate_report
+from backend.app.modules.reports.customer_lookup import customer_suggestions, load_json_customers
 
 router = APIRouter(prefix="/reports", tags=["Technical reports"])
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
@@ -87,7 +88,7 @@ def report_reference_data(
         branches=[
             ReferenceOption(value=branch.code, label=branch.name) for branch in branches
         ],
-        customers=report_values("customerName"),
+        customers=load_json_customers() or report_values("customerName"),
         categories=["Manufacturing", "Road hazard", "Service related"],
         brands=brands,
         patterns=report_values("pattern"),
@@ -99,6 +100,16 @@ def report_reference_data(
             "Spare",
         ],
     )
+
+
+@router.get("/customers", response_model=list[str])
+async def search_customers(
+    search: str = Query(min_length=1, max_length=120),
+    _: User = Depends(
+        require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
+    ),
+):
+    return await customer_suggestions(search)
 
 
 @router.get("/analytics/summary", response_model=AnalyticsResponse)
