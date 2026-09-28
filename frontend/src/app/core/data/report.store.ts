@@ -298,6 +298,18 @@ export class ReportStore {
     }
   }
 
+  customerSuggestions(search: string): Promise<string[]> {
+    const term = search.trim();
+    if (!term || !this.offline.online()) return Promise.resolve([]);
+
+    return firstValueFrom(
+      this.http.get<string[]>(
+        `${environment.apiUrl}/reports/customers`,
+        { params: { search: term } },
+      ),
+    );
+  }
+
   async validate(report: TechnicalReport, step: number): Promise<ReportValidationResult> {
     if (!this.offline.online()) return this.localValidation(report, step);
     try {
