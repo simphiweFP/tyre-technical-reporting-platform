@@ -63,12 +63,16 @@
                 <small class="field-error">{{ validationErrors()['salesperson'] }}</small>
               }
             </label>
-            <label class="mock-field" [class.has-error]="validationErrors()['customerName']">
-              <span>Customer name <em>*</em></span>
+            <div
+              class="mock-field customer-field"
+              [class.has-error]="validationErrors()['customerName']"
+            >
+              <label for="customer-name">Customer name <em>*</em></label>
               <i>♙</i>
               <input
+                id="customer-name"
                 formControlName="customerName"
-                placeholder="Search or type customer name"
+                placeholder="Type at least 3 characters"
                 autocomplete="off"
                 (input)="onCustomerSearch($any($event.target).value)"
                 (focus)="onCustomerSearch(form.controls.customerName.value)"
@@ -77,7 +81,7 @@
               @if (customerDropdownOpen()) {
                 <div class="customer-suggestions">
                   @if (customerLookupBusy()) {
-                    <div class="customer-suggestion-state">Searching customers…</div>
+                    <div class="customer-suggestion-state">Searching SAP…</div>
                   } @else if (customerMatches().length) {
                     @for (customer of customerMatches(); track customer) {
                       <button
@@ -88,7 +92,7 @@
                         {{ customer }}
                       </button>
                     }
-                  } @else if (form.controls.customerName.value.trim().length >= 2) {
+                  } @else if (form.controls.customerName.value.trim().length >= 3) {
                     <div class="customer-suggestion-state">
                       No customer found. You can keep typing a new customer name.
                     </div>
@@ -98,7 +102,7 @@
               @if (validationErrors()['customerName']) {
                 <small class="field-error">{{ validationErrors()['customerName'] }}</small>
               }
-            </label>
+            </div>
             <label class="mock-field">
               <span>Customer invoice no. <small>(optional)</small></span>
               <i>▤</i>
