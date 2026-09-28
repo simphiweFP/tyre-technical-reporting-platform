@@ -251,7 +251,11 @@ def deliver_report(
     )
     db.commit()
     db.refresh(attempt)
-    return attempt
+
+    # Try to send immediately so the UI does not leave successful deliveries queued.
+    # If SMTP fails, ReportDeliveryService marks the attempt for retry and the
+    # delivery worker can pick it up later.
+    return _service(db).deliver(attempt, user.id)
 
 
 @router.post("/reports/deliveries/{delivery_id}/retry", response_model=DeliveryResponse)
