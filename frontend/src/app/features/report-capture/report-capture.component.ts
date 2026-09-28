@@ -114,7 +114,7 @@ export class ReportCaptureComponent implements OnDestroy {
       .pipe(debounceTime(650), takeUntil(this.destroy$))
       .subscribe(() => this.persist());
     this.customerSearch$
-      .pipe(debounceTime(300), takeUntil(this.destroy$))
+      .pipe(debounceTime(400), takeUntil(this.destroy$))
       .subscribe((term) => void this.loadCustomerSuggestions(term));
     void this.loadDeliveryData();
     void this.loadReferenceData();
@@ -160,12 +160,26 @@ export class ReportCaptureComponent implements OnDestroy {
   }
   onCustomerSearch(value: string): void {
     const term = value.trim();
-    if (term.length < 2) {
+
+    if (term.length < 3) {
       this.customerMatches.set([]);
       this.customerDropdownOpen.set(false);
       return;
     }
 
+    const normalized = term.toLowerCase();
+    const localMatches = this.referenceData()
+      .customers
+      .filter((customer) => customer.toLowerCase().includes(normalized))
+      .slice(0, 20);
+
+    if (localMatches.length) {
+      this.customerMatches.set(localMatches);
+      this.customerDropdownOpen.set(true);
+      return;
+    }
+
+    this.customerMatches.set([]);
     this.customerDropdownOpen.set(true);
     this.customerSearch$.next(term);
   }
