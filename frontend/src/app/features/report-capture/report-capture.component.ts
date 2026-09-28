@@ -29,6 +29,7 @@ export class ReportCaptureComponent implements OnDestroy {
   private readonly delivery = inject(ReportDeliveryService);
   readonly offline = inject(OfflineDataService);
   private readonly destroy$ = new Subject<void>();
+  private readonly customerSearch$ = new Subject<string>();
   readonly step = signal(0);
   readonly captureMessage = signal('');
   readonly readonlyView = computed(() => this.auth.hasRole('viewer'));
@@ -109,6 +110,9 @@ export class ReportCaptureComponent implements OnDestroy {
     this.form.valueChanges
       .pipe(debounceTime(650), takeUntil(this.destroy$))
       .subscribe(() => this.persist());
+    this.customerSearch$
+      .pipe(debounceTime(300), takeUntil(this.destroy$))
+      .subscribe((term) => void this.loadCustomerSuggestions(term));
     void this.loadDeliveryData();
     void this.loadReferenceData();
     if (this.route.snapshot.paramMap.get('id')) void this.loadServerReport();
@@ -151,6 +155,12 @@ export class ReportCaptureComponent implements OnDestroy {
   previous(): void {
     if (this.step() > 0) this.goTo(this.step() - 1);
   }
+  onCustomerSearch(value: string): void {
+    const term = value.trim();
+    if (term.length < 2) return;
+    this.customerSearch$.next(term);
+  }
+
   async saveDraft(): Promise<void> {
     const updated = this.currentReport();
     this.report.set(updated);
@@ -309,6 +319,22 @@ export class ReportCaptureComponent implements OnDestroy {
   startAnotherReport(): void {
     void this.router.navigate(['/reports/new']).then(() => window.location.reload());
   }
+  private async loadCustomerSuggestions(term: string): Promise<void> {
+    try {
+      const customers = await this.store.customerSuggestions(term);
+      if (this.form.controls.customerName.value.trim() !== term) return;
+
+      this.referenceData.update((data) => ({
+        ...data,
+        customers: [...new Set([...data.customers, ...customers])].sort((a, b) =>
+          a.localeCompare(b),
+        ),
+      }));
+    } catch {
+      // Customer entry remains free text when lookup is unavailable.
+    }
+  }
+
   private async loadDeliveryData(): Promise<void> {
     try {
       const current = this.currentReport();
