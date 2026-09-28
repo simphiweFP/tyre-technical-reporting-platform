@@ -26,10 +26,6 @@ services:
     depends_on:
       database:
         condition: service_healthy
-      mailpit:
-        condition: service_started
-    environment:
-      SMTP_HOST: ${SMTP_DOCKER_HOST:-mailpit}
     restart: unless-stopped
     healthcheck:
       test:
@@ -63,15 +59,11 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     env_file: .env
-    environment:
-      SMTP_HOST: ${SMTP_DOCKER_HOST:-mailpit}
     depends_on:
       api:
         condition: service_healthy
       database:
         condition: service_healthy
-      mailpit:
-        condition: service_started
     restart: unless-stopped
     command: ["python", "-m", "backend.app.worker"]
 
