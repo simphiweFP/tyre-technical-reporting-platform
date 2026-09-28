@@ -81,7 +81,7 @@
               @if (customerDropdownOpen()) {
                 <div class="customer-suggestions">
                   @if (customerLookupBusy()) {
-                    <div class="customer-suggestion-state">Searching SAP…</div>
+                    <div class="customer-suggestion-state">Searching customers…</div>
                   } @else if (customerMatches().length) {
                     @for (customer of customerMatches(); track customer) {
                       <button
