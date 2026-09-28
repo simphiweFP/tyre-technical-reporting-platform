@@ -70,6 +70,7 @@
                 formControlName="customerName"
                 list="customer-options"
                 placeholder="Search or type customer name"
+                (input)="onCustomerSearch($any($event.target).value)"
               />
               <datalist id="customer-options">
                 @for (customer of referenceData().customers; track customer) {
