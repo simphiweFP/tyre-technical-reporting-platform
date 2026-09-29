@@ -12,7 +12,7 @@ def _extract_card_names(payload: Any) -> list[str]:
 
     def walk(value: Any) -> None:
         if isinstance(value, dict):
-            card_name = value.get("CardName")
+            card_name = value.get("CardName") or value.get("cardName")
             if card_name is not None:
                 text = str(card_name).strip()
                 if text:
@@ -65,7 +65,11 @@ async def search_sap_customers(search: str) -> list[str]:
     if settings.sap_api_key:
         headers[settings.sap_api_key_header] = settings.sap_api_key
 
-    params = {settings.sap_customer_search_param: search.strip()}
+    params: dict[str, str] = {}
+    if settings.sap_customer_company_db:
+        params["companyDb"] = settings.sap_customer_company_db
+    if settings.sap_customer_search_param:
+        params[settings.sap_customer_search_param] = search.strip()
 
     try:
         async with httpx.AsyncClient(timeout=settings.sap_customer_timeout_seconds) as client:
