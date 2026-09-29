@@ -102,10 +102,10 @@ def search_json_customers(search: str) -> list[str]:
     ]
 
 
-async def fetch_sap_customers() -> tuple[list[dict[str, Any]], list[str]]:
+async def fetch_sap_customers() -> tuple[list[dict[str, Any]], list[str], dict[str, int]]:
     settings = get_settings()
     if not settings.sap_customer_endpoint:
-        return [], []
+        raise RuntimeError("SAP_CUSTOMER_ENDPOINT is not configured")
 
     headers: dict[str, str] = {}
     if settings.sap_api_key:
@@ -113,6 +113,7 @@ async def fetch_sap_customers() -> tuple[list[dict[str, Any]], list[str]]:
 
     customers: list[dict[str, Any]] = []
     companies_checked: list[str] = []
+    company_counts: dict[str, int] = {}
 
     # Call each SAP company sequentially. The middleware keeps a SAP login session
     # per company, so sequential calls avoid switching that session concurrently.
@@ -126,13 +127,18 @@ async def fetch_sap_customers() -> tuple[list[dict[str, Any]], list[str]]:
             response.raise_for_status()
 
             company_customers = _extract_customer_records(response.json())
+            company_counts[company_db] = len(company_customers)
+
             for customer in company_customers:
                 customer["CompanyDb"] = company_db
 
             customers.extend(company_customers)
             companies_checked.append(company_db)
 
-    return customers, companies_checked
+    if not companies_checked:
+        raise RuntimeError("No SAP companies were configured for customer refresh")
+
+    return customers, companies_checked, company_counts
 
 
 def _write_customer_records(records: list[dict[str, Any]]) -> None:
@@ -148,7 +154,7 @@ def _write_customer_records(records: list[dict[str, Any]]) -> None:
 
 async def refresh_customer_cache() -> dict[str, Any]:
     async with _customer_sync_lock:
-        sap_records, companies_checked = await fetch_sap_customers()
+        sap_records, companies_checked, company_counts = await fetch_sap_customers()
         existing = load_json_customer_records()
 
         existing_codes = {
@@ -198,6 +204,7 @@ async def refresh_customer_cache() -> dict[str, Any]:
             "total": len(existing),
             "checked": len(sap_records),
             "companiesChecked": companies_checked,
+            "companyCounts": company_counts,
             "refreshedAt": datetime.now(UTC).isoformat(),
         }
 

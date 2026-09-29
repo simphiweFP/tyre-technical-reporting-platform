@@ -214,17 +214,27 @@ export class ReportCaptureComponent implements OnDestroy {
       this.customerMatches.set(matches);
       this.customerDropdownOpen.set(Boolean(term));
 
-      if (matches.length) {
+      const sources = result.companyCounts
+        ? Object.entries(result.companyCounts)
+            .map(([company, count]) => `${company}: ${count}`)
+            .join(', ')
+        : '';
+
+      if (result.checked === 0) {
+        this.customerRefreshMessage.set(
+          'SAP returned no customer records. Check the middleware /sap/customers endpoint and RTC/RVS company values.',
+        );
+      } else if (matches.length) {
         this.customerRefreshMessage.set(
           result.added
-            ? `Customer list refreshed. ${result.added} new customer${result.added === 1 ? '' : 's'} added.`
-            : 'Customer list is up to date.',
+            ? `Customer list refreshed from SAP (${sources}). ${result.added} new customer${result.added === 1 ? '' : 's'} added.`
+            : `Customer list refreshed from SAP (${sources}). No new customers were added.`,
         );
       } else {
         this.customerRefreshMessage.set(
           result.added
-            ? `Customer list refreshed and ${result.added} new customer${result.added === 1 ? '' : 's'} added, but no match was found. You can keep typing the customer name.`
-            : 'Customer list is up to date. No matching customer was found, so you can keep typing the customer name.',
+            ? `SAP refresh complete (${sources}). ${result.added} new customer${result.added === 1 ? '' : 's'} added, but no match was found. You can keep typing the customer name.`
+            : `SAP refresh complete (${sources}). No matching customer was found, so you can keep typing the customer name.`,
         );
       }
     } catch {

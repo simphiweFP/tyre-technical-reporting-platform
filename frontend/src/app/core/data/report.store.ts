@@ -56,6 +56,8 @@ export interface CustomerRefreshResult {
   added: number;
   total: number;
   checked: number;
+  companiesChecked?: string[];
+  companyCounts?: Record<string, number>;
   refreshedAt: string;
 }
 
