@@ -102,27 +102,37 @@ def search_json_customers(search: str) -> list[str]:
     ]
 
 
-async def fetch_sap_customers() -> list[dict[str, Any]]:
+async def fetch_sap_customers() -> tuple[list[dict[str, Any]], list[str]]:
     settings = get_settings()
     if not settings.sap_customer_endpoint:
-        return []
+        return [], []
 
     headers: dict[str, str] = {}
     if settings.sap_api_key:
         headers[settings.sap_api_key_header] = settings.sap_api_key
 
-    params: dict[str, str] = {}
-    if settings.sap_customer_company_db:
-        params["companyDb"] = settings.sap_customer_company_db
+    customers: list[dict[str, Any]] = []
+    companies_checked: list[str] = []
 
+    # Call each SAP company sequentially. The middleware keeps a SAP login session
+    # per company, so sequential calls avoid switching that session concurrently.
     async with httpx.AsyncClient(timeout=settings.sap_customer_timeout_seconds) as client:
-        response = await client.get(
-            settings.sap_customer_endpoint,
-            params=params,
-            headers=headers,
-        )
-        response.raise_for_status()
-        return _extract_customer_records(response.json())
+        for company_db in settings.sap_customer_databases:
+            response = await client.get(
+                settings.sap_customer_endpoint,
+                params={"companyDb": company_db},
+                headers=headers,
+            )
+            response.raise_for_status()
+
+            company_customers = _extract_customer_records(response.json())
+            for customer in company_customers:
+                customer["CompanyDb"] = company_db
+
+            customers.extend(company_customers)
+            companies_checked.append(company_db)
+
+    return customers, companies_checked
 
 
 def _write_customer_records(records: list[dict[str, Any]]) -> None:
@@ -138,7 +148,7 @@ def _write_customer_records(records: list[dict[str, Any]]) -> None:
 
 async def refresh_customer_cache() -> dict[str, Any]:
     async with _customer_sync_lock:
-        sap_records = await fetch_sap_customers()
+        sap_records, companies_checked = await fetch_sap_customers()
         existing = load_json_customer_records()
 
         existing_codes = {
@@ -187,6 +197,7 @@ async def refresh_customer_cache() -> dict[str, Any]:
             "added": added,
             "total": len(existing),
             "checked": len(sap_records),
+            "companiesChecked": companies_checked,
             "refreshedAt": datetime.now(UTC).isoformat(),
         }
 
