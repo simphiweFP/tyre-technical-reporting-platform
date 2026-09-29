@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     microsoft_client_secret_file: str = ""
     customer_json_path: str = "backend/data/customers.json"
     sap_customer_endpoint: str = ""
-    sap_customer_company_dbs: str = "SBK_RBK_COM,SBK_ROYAL"
+    sap_customer_company_dbs: str = "RTC,RVS"
     sap_customer_search_param: str = ""
     sap_customer_timeout_seconds: float = 8.0
     sap_api_key_header: str = "X-API-Key"
