@@ -91,8 +91,10 @@ async def search_sap_customers(search: str) -> list[str]:
 
 
 async def customer_suggestions(search: str) -> list[str]:
+    # 1. Search the local customer JSON first.
     local_matches = search_json_customers(search)
     if local_matches:
         return local_matches
 
+    # 2. Only when the JSON has no matching CardName, call the SAP middleware.
     return await search_sap_customers(search)

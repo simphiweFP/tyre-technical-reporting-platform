@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     customer_json_path: str = "backend/data/customers.json"
     sap_customer_endpoint: str = ""
     sap_customer_company_db: str = ""
-    sap_customer_search_param: str = "search"
+    sap_customer_search_param: str = ""
     sap_customer_timeout_seconds: float = 8.0
     sap_api_key_header: str = "X-API-Key"
     sap_api_key: str = ""
