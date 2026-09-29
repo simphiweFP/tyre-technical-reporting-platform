@@ -8,6 +8,7 @@ opencv-python-headless>=4.10,<5
 pillow>=11,<12
 psycopg[binary]>=3.2,<4
 pydantic-settings>=2.6,<3
+pyodbc>=5.1,<6
 pwdlib[argon2]>=0.2,<1
 PyJWT>=2.9,<3
 pytesseract>=0.3.13,<1

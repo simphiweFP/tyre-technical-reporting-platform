@@ -1,10 +1,12 @@
 import asyncio
 import json
+import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import httpx
+import pyodbc
 
 from backend.app.core.config import get_settings
 
@@ -102,10 +104,66 @@ def search_json_customers(search: str) -> list[str]:
     ]
 
 
+def _validated_schema(schema: str) -> str:
+    if not re.fullmatch(r"[A-Za-z0-9_]+", schema):
+        raise RuntimeError(f"Invalid HANA schema name: {schema}")
+    return schema
+
+
+def _fetch_hana_customers_sync() -> tuple[list[dict[str, Any]], list[str], dict[str, int]]:
+    settings = get_settings()
+    if not settings.hana_connection:
+        raise RuntimeError("HANA_CONNECTION is not configured")
+    if not settings.hana_schemas:
+        raise RuntimeError("HANA_CUSTOMER_SCHEMAS is not configured")
+
+    customers: list[dict[str, Any]] = []
+    schemas_checked: list[str] = []
+    schema_counts: dict[str, int] = {}
+
+    with pyodbc.connect(settings.hana_connection, timeout=8) as connection:
+        cursor = connection.cursor()
+
+        for raw_schema in settings.hana_schemas:
+            schema = _validated_schema(raw_schema)
+            sql = (
+                f'SELECT "CardCode", "CardName", "LicTradNum" '
+                f'FROM "{schema}"."OCRD" '
+                f'WHERE "CardType" = \'C\' '
+                f'ORDER BY "CardName"'
+            )
+            rows = cursor.execute(sql).fetchall()
+            schema_counts[schema] = len(rows)
+
+            for row in rows:
+                customers.append(
+                    {
+                        "CardCode": str(row[0] or "").strip(),
+                        "CardName": str(row[1] or "").strip(),
+                        "VATNumber": row[2] if row[2] is not None else "[NULL]",
+                        "CompanyDb": schema,
+                    }
+                )
+
+            schemas_checked.append(schema)
+
+    return customers, schemas_checked, schema_counts
+
+
 async def fetch_sap_customers() -> tuple[list[dict[str, Any]], list[str], dict[str, int]]:
     settings = get_settings()
+
+    # Preferred path for the Python app: connect directly to HANA using the
+    # HDBODBC connection string from HANA_CONNECTION.
+    if settings.hana_connection and settings.hana_schemas:
+        return await asyncio.to_thread(_fetch_hana_customers_sync)
+
+    # Backward-compatible fallback: use the existing SAP middleware endpoint.
     if not settings.sap_customer_endpoint:
-        raise RuntimeError("SAP_CUSTOMER_ENDPOINT is not configured")
+        raise RuntimeError(
+            "Configure HANA_CONNECTION + HANA_CUSTOMER_SCHEMAS "
+            "or SAP_CUSTOMER_ENDPOINT"
+        )
 
     headers: dict[str, str] = {}
     if settings.sap_api_key:
@@ -115,8 +173,6 @@ async def fetch_sap_customers() -> tuple[list[dict[str, Any]], list[str], dict[s
     companies_checked: list[str] = []
     company_counts: dict[str, int] = {}
 
-    # Call each SAP company sequentially. The middleware keeps a SAP login session
-    # per company, so sequential calls avoid switching that session concurrently.
     async with httpx.AsyncClient(timeout=settings.sap_customer_timeout_seconds) as client:
         for company_db in settings.sap_customer_databases:
             response = await client.get(

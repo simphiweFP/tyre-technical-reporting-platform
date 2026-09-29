@@ -43,12 +43,22 @@ class Settings(BaseSettings):
     smtp_password_file: str = ""
     microsoft_client_secret_file: str = ""
     customer_json_path: str = "backend/data/customers.json"
+    hana_connection: str = ""
+    hana_customer_schemas: str = ""
     sap_customer_endpoint: str = "http://localhost:5001/sap/customers"
     sap_customer_company_dbs: str = "RTC,RVS"
     sap_customer_search_param: str = ""
     sap_customer_timeout_seconds: float = 8.0
     sap_api_key_header: str = "X-API-Key"
     sap_api_key: str = ""
+
+    @property
+    def hana_schemas(self) -> list[str]:
+        return [
+            schema.strip()
+            for schema in self.hana_customer_schemas.split(",")
+            if schema.strip()
+        ]
 
     @property
     def sap_customer_databases(self) -> list[str]:
