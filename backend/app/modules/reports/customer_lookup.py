@@ -1,12 +1,10 @@
 import asyncio
 import json
-import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import httpx
-import pyodbc
 
 from backend.app.core.config import get_settings
 
@@ -104,97 +102,27 @@ def search_json_customers(search: str) -> list[str]:
     ]
 
 
-def _validated_schema(schema: str) -> str:
-    if not re.fullmatch(r"[A-Za-z0-9_]+", schema):
-        raise RuntimeError(f"Invalid HANA schema name: {schema}")
-    return schema
-
-
-def _fetch_hana_customers_sync() -> tuple[list[dict[str, Any]], list[str], dict[str, int]]:
+async def fetch_sap_customers() -> list[dict[str, Any]]:
     settings = get_settings()
-    if not settings.hana_connection:
-        raise RuntimeError("HANA_CONNECTION is not configured")
-    if not settings.hana_schemas:
-        raise RuntimeError("HANA_CUSTOMER_SCHEMAS is not configured")
-
-    customers: list[dict[str, Any]] = []
-    schemas_checked: list[str] = []
-    schema_counts: dict[str, int] = {}
-
-    with pyodbc.connect(settings.hana_connection, timeout=8) as connection:
-        cursor = connection.cursor()
-
-        for raw_schema in settings.hana_schemas:
-            schema = _validated_schema(raw_schema)
-            sql = (
-                f'SELECT "CardCode", "CardName", "LicTradNum" '
-                f'FROM "{schema}"."OCRD" '
-                f'WHERE "CardType" = \'C\' '
-                f'ORDER BY "CardName"'
-            )
-            rows = cursor.execute(sql).fetchall()
-            schema_counts[schema] = len(rows)
-
-            for row in rows:
-                customers.append(
-                    {
-                        "CardCode": str(row[0] or "").strip(),
-                        "CardName": str(row[1] or "").strip(),
-                        "VATNumber": row[2] if row[2] is not None else "[NULL]",
-                        "CompanyDb": schema,
-                    }
-                )
-
-            schemas_checked.append(schema)
-
-    return customers, schemas_checked, schema_counts
-
-
-async def fetch_sap_customers() -> tuple[list[dict[str, Any]], list[str], dict[str, int]]:
-    settings = get_settings()
-
-    # Preferred path for the Python app: connect directly to HANA using the
-    # HDBODBC connection string from HANA_CONNECTION.
-    if settings.hana_connection and settings.hana_schemas:
-        return await asyncio.to_thread(_fetch_hana_customers_sync)
-
-    # Backward-compatible fallback: use the existing SAP middleware endpoint.
     if not settings.sap_customer_endpoint:
-        raise RuntimeError(
-            "Configure HANA_CONNECTION + HANA_CUSTOMER_SCHEMAS "
-            "or SAP_CUSTOMER_ENDPOINT"
-        )
+        return []
 
     headers: dict[str, str] = {}
     if settings.sap_api_key:
         headers[settings.sap_api_key_header] = settings.sap_api_key
 
-    customers: list[dict[str, Any]] = []
-    companies_checked: list[str] = []
-    company_counts: dict[str, int] = {}
+    params: dict[str, str] = {}
+    if settings.sap_customer_company_db:
+        params["companyDb"] = settings.sap_customer_company_db
 
     async with httpx.AsyncClient(timeout=settings.sap_customer_timeout_seconds) as client:
-        for company_db in settings.sap_customer_databases:
-            response = await client.get(
-                settings.sap_customer_endpoint,
-                params={"companyDb": company_db},
-                headers=headers,
-            )
-            response.raise_for_status()
-
-            company_customers = _extract_customer_records(response.json())
-            company_counts[company_db] = len(company_customers)
-
-            for customer in company_customers:
-                customer["CompanyDb"] = company_db
-
-            customers.extend(company_customers)
-            companies_checked.append(company_db)
-
-    if not companies_checked:
-        raise RuntimeError("No SAP companies were configured for customer refresh")
-
-    return customers, companies_checked, company_counts
+        response = await client.get(
+            settings.sap_customer_endpoint,
+            params=params,
+            headers=headers,
+        )
+        response.raise_for_status()
+        return _extract_customer_records(response.json())
 
 
 def _write_customer_records(records: list[dict[str, Any]]) -> None:
@@ -210,7 +138,7 @@ def _write_customer_records(records: list[dict[str, Any]]) -> None:
 
 async def refresh_customer_cache() -> dict[str, Any]:
     async with _customer_sync_lock:
-        sap_records, companies_checked, company_counts = await fetch_sap_customers()
+        sap_records = await fetch_sap_customers()
         existing = load_json_customer_records()
 
         existing_codes = {
@@ -259,8 +187,6 @@ async def refresh_customer_cache() -> dict[str, Any]:
             "added": added,
             "total": len(existing),
             "checked": len(sap_records),
-            "companiesChecked": companies_checked,
-            "companyCounts": company_counts,
             "refreshedAt": datetime.now(UTC).isoformat(),
         }
 
