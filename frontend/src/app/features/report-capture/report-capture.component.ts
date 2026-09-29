@@ -34,6 +34,8 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly captureMessage = signal('');
   readonly customerMatches = signal<string[]>([]);
   readonly customerLookupBusy = signal(false);
+  readonly customerRefreshBusy = signal(false);
+  readonly customerRefreshMessage = signal('');
   readonly customerDropdownOpen = signal(false);
   readonly readonlyView = computed(() => this.auth.hasRole('viewer'));
   readonly recipients = signal<ReportRecipient[]>([]);
@@ -188,6 +190,50 @@ export class ReportCaptureComponent implements OnDestroy {
     this.form.controls.customerName.setValue(customer);
     this.customerMatches.set([]);
     this.customerDropdownOpen.set(false);
+    this.customerRefreshMessage.set('');
+  }
+
+  async refreshCustomers(): Promise<void> {
+    if (this.customerRefreshBusy()) return;
+
+    const term = this.form.controls.customerName.value.trim();
+    this.customerRefreshBusy.set(true);
+    this.customerRefreshMessage.set('');
+
+    try {
+      const result = await this.store.refreshCustomers();
+      const data = await this.store.referenceData();
+      this.referenceData.set(data);
+
+      const matches = term
+        ? data.customers
+            .filter((customer) => customer.toLowerCase().includes(term.toLowerCase()))
+            .slice(0, 20)
+        : [];
+
+      this.customerMatches.set(matches);
+      this.customerDropdownOpen.set(Boolean(term));
+
+      if (matches.length) {
+        this.customerRefreshMessage.set(
+          result.added
+            ? `Customer list refreshed. ${result.added} new customer${result.added === 1 ? '' : 's'} added.`
+            : 'Customer list is up to date.',
+        );
+      } else {
+        this.customerRefreshMessage.set(
+          result.added
+            ? `Customer list refreshed and ${result.added} new customer${result.added === 1 ? '' : 's'} added, but no match was found. You can keep typing the customer name.`
+            : 'Customer list is up to date. No matching customer was found, so you can keep typing the customer name.',
+        );
+      }
+    } catch {
+      this.customerRefreshMessage.set(
+        'Customer refresh could not reach SAP. You can still enter the customer name manually.',
+      );
+    } finally {
+      this.customerRefreshBusy.set(false);
+    }
   }
 
   closeCustomerDropdown(): void {

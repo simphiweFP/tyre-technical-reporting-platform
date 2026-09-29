@@ -51,6 +51,14 @@ export interface ReportValidationResult {
   errors: Record<string, string>;
 }
 
+export interface CustomerRefreshResult {
+  success: boolean;
+  added: number;
+  total: number;
+  checked: number;
+  refreshedAt: string;
+}
+
 export interface ReportSearch {
   query?: string;
   status?: string;
@@ -306,6 +314,18 @@ export class ReportStore {
       this.http.get<string[]>(
         `${environment.apiUrl}/reports/customers`,
         { params: { search: term } },
+      ),
+    );
+  }
+
+  refreshCustomers(): Promise<CustomerRefreshResult> {
+    if (!this.offline.online()) {
+      return Promise.reject(new Error('Customer refresh requires an internet connection.'));
+    }
+    return firstValueFrom(
+      this.http.post<CustomerRefreshResult>(
+        `${environment.apiUrl}/reports/customers/refresh`,
+        null,
       ),
     );
   }

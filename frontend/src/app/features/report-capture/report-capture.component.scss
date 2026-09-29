@@ -277,6 +277,46 @@ h1 {
   font-size: 11px;
 }
 
+.customer-not-found {
+  display: grid;
+  gap: 8px;
+}
+
+.customer-not-found small {
+  color: #858c93;
+  font-size: 9px;
+}
+
+.customer-refresh-button {
+  width: fit-content;
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid #2f3398;
+  border-radius: 6px;
+  color: #2f3398;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.customer-refresh-button:hover:not(:disabled) {
+  background: #f3f3fb;
+}
+
+.customer-refresh-button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.customer-refresh-message {
+  display: block;
+  margin-top: 7px;
+  color: #5f6872;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
 .segment-control {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -1,4 +1,5 @@
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,15 +17,32 @@ from backend.app.modules.administration.presentation import (
 from backend.app.modules.delivery.presentation import router as delivery_router
 from backend.app.modules.identity.presentation import router as auth_router
 from backend.app.modules.reports.presentation import router as reports_router
+from backend.app.modules.reports.customer_lookup import refresh_customer_cache_if_due
 
 settings = get_settings()
+
+
+async def customer_cache_scheduler() -> None:
+    while True:
+        try:
+            await refresh_customer_cache_if_due()
+        except Exception:
+            # SAP/customer sync must never prevent the reporting API from running.
+            pass
+        await asyncio.sleep(60 * 60)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     settings.validate_for_startup()
     run_database_migrations()
-    yield
+    customer_sync_task = asyncio.create_task(customer_cache_scheduler())
+    try:
+        yield
+    finally:
+        customer_sync_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await customer_sync_task
 
 
 app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)

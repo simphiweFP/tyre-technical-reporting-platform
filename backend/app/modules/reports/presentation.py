@@ -38,7 +38,11 @@ from backend.app.modules.reports.schemas import (
     ReportValidationResponse,
 )
 from backend.app.modules.reports.validation import validate_report
-from backend.app.modules.reports.customer_lookup import customer_suggestions, load_json_customers
+from backend.app.modules.reports.customer_lookup import (
+    customer_suggestions,
+    load_json_customers,
+    refresh_customer_cache,
+)
 
 router = APIRouter(prefix="/reports", tags=["Technical reports"])
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
@@ -110,6 +114,21 @@ async def search_customers(
     ),
 ):
     return await customer_suggestions(search)
+
+
+@router.post("/customers/refresh")
+async def refresh_customers(
+    _: User = Depends(
+        require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)
+    ),
+):
+    try:
+        return await refresh_customer_cache()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Customer refresh failed: {exc}",
+        ) from exc
 
 
 @router.get("/analytics/summary", response_model=AnalyticsResponse)

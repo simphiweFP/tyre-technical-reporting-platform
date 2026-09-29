@@ -93,11 +93,24 @@
                       </button>
                     }
                   } @else if (form.controls.customerName.value.trim().length >= 3) {
-                    <div class="customer-suggestion-state">
-                      No customer found. You can keep typing a new customer name.
+                    <div class="customer-suggestion-state customer-not-found">
+                      <span>No customer found in the saved customer list.</span>
+                      <button
+                        type="button"
+                        class="customer-refresh-button"
+                        [disabled]="customerRefreshBusy()"
+                        (mousedown)="$event.preventDefault()"
+                        (click)="refreshCustomers()"
+                      >
+                        {{ customerRefreshBusy() ? 'Refreshing…' : '↻ Refresh customers' }}
+                      </button>
+                      <small>If it is still not found after refresh, keep typing the customer name.</small>
                     </div>
                   }
                 </div>
+              }
+              @if (customerRefreshMessage()) {
+                <small class="customer-refresh-message">{{ customerRefreshMessage() }}</small>
               }
               @if (validationErrors()['customerName']) {
                 <small class="field-error">{{ validationErrors()['customerName'] }}</small>
