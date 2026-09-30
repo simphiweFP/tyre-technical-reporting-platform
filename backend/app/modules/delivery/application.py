@@ -1,3 +1,5 @@
+import base64
+import hashlib
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
@@ -75,17 +77,32 @@ class ReportDeliveryService:
                     for image in images
                 ],
             }
-        pdf = self.generator.execute(report)
         claim = attempt.claim_reference
+        subject = attempt.email_subject or f"Royal Tyres technical report {claim}"
+        body = attempt.email_body or (
+            f"Please find the Royal Tyres technical report {claim} attached.\n\n"
+            "This is an automated delivery."
+        )
+        attachment_name = attempt.attachment_name or f"{claim}.pdf"
+
+        # The first send creates an immutable snapshot. Retries reuse the exact
+        # same PDF bytes and email content rather than regenerating a changed report.
+        if attempt.sent_pdf_base64:
+            pdf = base64.b64decode(attempt.sent_pdf_base64)
+        else:
+            pdf = self.generator.execute(report)
+            attempt.email_subject = subject
+            attempt.email_body = body
+            attempt.attachment_name = attachment_name
+            attempt.sent_pdf_base64 = base64.b64encode(pdf).decode("ascii")
+            attempt.sent_pdf_sha256 = hashlib.sha256(pdf).hexdigest()
+
         message = EmailMessage(
-            subject=f"Royal Tyres technical report {claim}",
-            body=(
-                f"Please find the Royal Tyres technical report {claim} attached.\n\n"
-                "This is an automated delivery."
-            ),
+            subject=subject,
+            body=body,
             to=(recipient.email,),
             cc=tuple(attempt.cc),
-            attachment_name=f"{claim}.pdf",
+            attachment_name=attachment_name,
             attachment=pdf,
         )
         attempt.attempt_count += 1
