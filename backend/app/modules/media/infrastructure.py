@@ -1,12 +1,16 @@
 import base64
 import json
+
 import httpx
 
 from backend.app.core.config import get_settings
 
+
 class GeminiTyreExtractor:
-    PROMPT = """Analyse this tyre or vehicle inspection image and extract only values that are clearly visible.
-Return an empty string for anything you cannot confidently read. Do not invent values.
+    PROMPT = """Analyse this tyre or vehicle inspection image.
+Extract only values that are clearly visible.
+Return an empty string for anything you cannot confidently read.
+Do not invent values.
 
 Fields:
 brand, size, pattern, dot, serialNumber, vehicleMakeModel, rtd, comment
@@ -68,7 +72,9 @@ brand, size, pattern, dot, serialNumber, vehicleMakeModel, rtd, comment
             text = body["candidates"][0]["content"]["parts"][0]["text"]
             parsed = json.loads(text)
         except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
-            raise RuntimeError("Gemini returned an invalid structured response") from exc
+            raise RuntimeError(
+                "Gemini returned an invalid structured response"
+            ) from exc
 
         return {
             field: str(parsed.get(field) or "").strip()
