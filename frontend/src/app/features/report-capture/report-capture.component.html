@@ -212,6 +212,44 @@
                 <span>Inspected pressure (psi)</span><i>◔</i
                 ><input formControlName="inspectedPressure" placeholder="e.g. 100" />
               </label>
+              <label class="mock-field compact">
+                <span>Inspected location</span><i>●</i
+                ><input formControlName="inspectedLocation" placeholder="Enter inspected location" />
+              </label>
+              <label class="mock-field compact">
+                <span>Returned with rim?</span><i>⊗</i>
+                <select formControlName="returnedWithRim">
+                  <option [ngValue]="null">Select option</option>
+                  <option [ngValue]="true">Yes</option>
+                  <option [ngValue]="false">No</option>
+                </select>
+                <b>›</b>
+              </label>
+              <label class="mock-field compact">
+                <span>Fitted / Loose</span><i>◉</i>
+                <select formControlName="fittedLoose">
+                  <option value="">Select option</option>
+                  <option value="Fitted">Fitted</option>
+                  <option value="Loose">Loose</option>
+                </select>
+                <b>›</b>
+              </label>
+              <label class="mock-field compact">
+                <span>Claim code or description</span><i>▤</i
+                ><input formControlName="claimCode" placeholder="Enter claim code or description" />
+              </label>
+              <label class="mock-field compact">
+                <span>Tyre mileage</span><i>◔</i
+                ><input formControlName="tyreMileage" placeholder="Enter tyre mileage" />
+              </label>
+              <label class="mock-field compact">
+                <span>Nature of repair</span><i>▤</i
+                ><input formControlName="natureOfRepair" placeholder="Enter repair details" />
+              </label>
+              <label class="mock-field compact">
+                <span>Goods transported</span><i>▤</i
+                ><input formControlName="goodsTransported" placeholder="Enter goods transported" />
+              </label>
             </div>
 
             <div class="vehicle-block">
@@ -239,6 +277,14 @@
                 <b>›</b>
               </button>
             </div>
+            <label class="mock-field other-info-field">
+              <span>Other relevant info</span>
+              <textarea
+                formControlName="notes"
+                rows="4"
+                placeholder="Add any other relevant info here..."
+              ></textarea>
+            </label>
           </section>
         }
 
@@ -407,41 +453,6 @@
           </section>
         }
 
-        @if (step() === 3) {
-          <section class="wizard-screen review-screen">
-            <h1>Review &amp; confirm</h1>
-            <p class="screen-copy">Check the tyre information and photos before submitting.</p>
-
-            <section class="ai-review-card">
-              <header><strong>Tyre details</strong><span>● Ready to review</span></header>
-              @for (row of reviewRows(); track row.label) {
-                <div>
-                  <strong>{{ row.label }}</strong
-                  ><span>{{ row.value }}</span
-                  ><button type="button" (click)="goTo(2)">✎</button>
-                </div>
-              }
-            </section>
-
-            @if (duplicateWarning()) {
-              <div class="form-message" role="alert">{{ duplicateWarning() }}</div>
-            }
-
-            <label class="confirm-card">
-              <strong>Please confirm</strong>
-              <span
-                ><input
-                  type="checkbox"
-                  [checked]="confirmed()"
-                  (change)="toggleConfirmed($event)"
-                />
-                I confirm the information is correct and the photos clearly show the tyre and
-                issues.</span
-              >
-            </label>
-          </section>
-        }
-
         <footer class="wizard-actions">
           @if (step() === 0) {
             <button type="button" class="outline-action" (click)="saveDraft()">
@@ -453,9 +464,9 @@
           <button
             type="submit"
             class="primary-action"
-            [disabled]="step() === 3 && (!confirmed() || submitting())"
+            [disabled]="step() === 2 && submitting()"
           >
-            {{ step() === 3 ? (submitting() ? 'Saving…' : 'Preview report') : 'Next' }} &nbsp; ›
+            {{ step() === 2 ? (submitting() ? 'Saving…' : 'Preview report') : 'Next' }} &nbsp; ›
           </button>
         </footer>
       </form>
