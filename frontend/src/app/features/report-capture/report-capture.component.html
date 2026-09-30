@@ -227,16 +227,117 @@
                 /></label>
               </div>
             </div>
-            <label class="mock-field tyre-position"
-              ><i>⊗</i><span>Tyre position</span
-              ><select formControlName="tyrePosition">
-                <option value="">Select position</option>
-                @for (position of referenceData().tyre_positions; track position) {
-                  <option [value]="position">{{ position }}</option>
-                }</select
-              ><b>›</b></label
-            >
+            <div class="mock-field tyre-position-picker">
+              <span>Tyre position</span>
+              <button
+                type="button"
+                class="tyre-position-trigger"
+                (click)="openTyrePositionModal()"
+              >
+                <i>⊗</i>
+                <strong>{{ form.controls.tyrePosition.value || 'Select position' }}</strong>
+                <b>›</b>
+              </button>
+            </div>
           </section>
+        }
+
+        @if (tyrePositionModalOpen()) {
+          <div
+            class="tyre-position-modal-backdrop"
+            role="presentation"
+            (click)="closeTyrePositionModal()"
+          >
+            <section
+              class="tyre-position-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Select tyre position"
+              (click)="$event.stopPropagation()"
+            >
+              <header>
+                <h2>Select Tyre Position</h2>
+                <button type="button" aria-label="Close" (click)="closeTyrePositionModal()">×</button>
+              </header>
+
+              <div class="vehicle-tabs">
+                @for (type of ['Car', 'Horse', 'Trailer']; track type) {
+                  <button
+                    type="button"
+                    [class.active]="tyreVehicleType() === type"
+                    (click)="selectTyreVehicleType($any(type))"
+                  >
+                    {{ type }}
+                  </button>
+                }
+              </div>
+
+              <div class="axle-diagram">
+                @if (tyreVehicleType() === 'Car') {
+                  <div class="axle-row car-row">
+                    <span class="axle-label">Front</span>
+                    <button type="button" class="wheel" [class.selected]="isTyrePosition('Front left')" (click)="selectTyrePosition('Front left')"></button>
+                    <span class="axle-bar"></span>
+                    <button type="button" class="wheel" [class.selected]="isTyrePosition('Front right')" (click)="selectTyrePosition('Front right')"></button>
+                  </div>
+                  <div class="axle-row car-row">
+                    <span class="axle-label">Rear</span>
+                    <button type="button" class="wheel" [class.selected]="isTyrePosition('Rear left')" (click)="selectTyrePosition('Rear left')"></button>
+                    <span class="axle-bar"></span>
+                    <button type="button" class="wheel" [class.selected]="isTyrePosition('Rear right')" (click)="selectTyrePosition('Rear right')"></button>
+                  </div>
+                } @else if (tyreVehicleType() === 'Horse') {
+                  <div class="axle-row">
+                    <span class="axle-label">Steer</span>
+                    <button type="button" class="wheel" [class.selected]="isTyrePosition('Steer left')" (click)="selectTyrePosition('Steer left')"></button>
+                    <span class="axle-bar"></span>
+                    <button type="button" class="wheel" [class.selected]="isTyrePosition('Steer right')" (click)="selectTyrePosition('Steer right')"></button>
+                  </div>
+
+                  <div class="axle-row dual">
+                    <span class="axle-label">Drive 1</span>
+                    <div class="dual-wheel">
+                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 1 left outer')" (click)="selectTyrePosition('Drive 1 left outer')"></button>
+                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 1 left inner')" (click)="selectTyrePosition('Drive 1 left inner')"></button>
+                    </div>
+                    <span class="axle-bar"></span>
+                    <div class="dual-wheel">
+                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 1 right inner')" (click)="selectTyrePosition('Drive 1 right inner')"></button>
+                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 1 right outer')" (click)="selectTyrePosition('Drive 1 right outer')"></button>
+                    </div>
+                  </div>
+
+                  <div class="axle-row dual">
+                    <span class="axle-label">Drive 2</span>
+                    <div class="dual-wheel">
+                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 2 left outer')" (click)="selectTyrePosition('Drive 2 left outer')"></button>
+                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 2 left inner')" (click)="selectTyrePosition('Drive 2 left inner')"></button>
+                    </div>
+                    <span class="axle-bar"></span>
+                    <div class="dual-wheel">
+                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 2 right inner')" (click)="selectTyrePosition('Drive 2 right inner')"></button>
+                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 2 right outer')" (click)="selectTyrePosition('Drive 2 right outer')"></button>
+                    </div>
+                  </div>
+                } @else {
+                  @for (axle of [1, 2, 3]; track axle) {
+                    <div class="axle-row dual">
+                      <span class="axle-label">Axle {{ axle }}</span>
+                      <div class="dual-wheel">
+                        <button type="button" class="wheel" [class.selected]="isTyrePosition('Axle ' + axle + ' left outer')" (click)="selectTyrePosition('Axle ' + axle + ' left outer')"></button>
+                        <button type="button" class="wheel" [class.selected]="isTyrePosition('Axle ' + axle + ' left inner')" (click)="selectTyrePosition('Axle ' + axle + ' left inner')"></button>
+                      </div>
+                      <span class="axle-bar"></span>
+                      <div class="dual-wheel">
+                        <button type="button" class="wheel" [class.selected]="isTyrePosition('Axle ' + axle + ' right inner')" (click)="selectTyrePosition('Axle ' + axle + ' right inner')"></button>
+                        <button type="button" class="wheel" [class.selected]="isTyrePosition('Axle ' + axle + ' right outer')" (click)="selectTyrePosition('Axle ' + axle + ' right outer')"></button>
+                      </div>
+                    </div>
+                  }
+                }
+              </div>
+            </section>
+          </div>
         }
 
         @if (step() === 1) {
