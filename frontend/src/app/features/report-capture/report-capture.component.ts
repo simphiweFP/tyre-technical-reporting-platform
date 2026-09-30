@@ -135,8 +135,7 @@ export class ReportCaptureComponent implements OnDestroy {
     if (value > this.step()) {
       if (value > this.step() + 1 || !(await this.validateStep(this.step()))) return;
     }
-    this.step.set(value);
-    if (value === 3) void this.loadDeliveryData();
+    this.step.set(Math.max(0, Math.min(value, 2)));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   async next(): Promise<void> {
@@ -493,7 +492,7 @@ export class ReportCaptureComponent implements OnDestroy {
   }
   editReport(): void {
     this.previewMode.set(false);
-    this.step.set(3);
+    this.step.set(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   async sendFromPreview(): Promise<void> {
