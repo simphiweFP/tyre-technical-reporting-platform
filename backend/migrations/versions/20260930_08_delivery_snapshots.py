@@ -11,12 +11,20 @@ depends_on = None
 
 def upgrade() -> None:
     with op.batch_alter_table("report_delivery_attempts") as batch:
-        batch.add_column(sa.Column("email_subject", sa.String(length=500), nullable=True))
+        batch.add_column(
+            sa.Column("email_subject", sa.String(length=500), nullable=True)
+        )
         batch.add_column(sa.Column("email_body", sa.Text(), nullable=True))
-        batch.add_column(sa.Column("attachment_name", sa.String(length=255), nullable=True))
+        batch.add_column(
+            sa.Column("attachment_name", sa.String(length=255), nullable=True)
+        )
         batch.add_column(sa.Column("sent_pdf_base64", sa.Text(), nullable=True))
-        batch.add_column(sa.Column("sent_pdf_sha256", sa.String(length=64), nullable=True))
-        batch.add_column(sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True))
+        batch.add_column(
+            sa.Column("sent_pdf_sha256", sa.String(length=64), nullable=True)
+        )
+        batch.add_column(
+            sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True)
+        )
         batch.create_index(
             "ix_report_delivery_attempts_deleted_at",
             ["deleted_at"],
