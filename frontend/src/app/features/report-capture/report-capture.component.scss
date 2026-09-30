@@ -1138,3 +1138,24 @@ h1 {
     height: 52px;
   }
 }
+
+
+.other-info-field textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 12px 13px;
+  border: 1px solid #cdd2d7;
+  border-radius: 7px;
+  outline: 0;
+  resize: vertical;
+  color: #25303c;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.other-info-field textarea:focus {
+  border-color: #be1e2d;
+  box-shadow: 0 0 0 2px #be1e2d18;
+}
