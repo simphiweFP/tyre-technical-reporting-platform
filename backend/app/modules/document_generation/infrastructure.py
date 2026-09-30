@@ -187,24 +187,33 @@ class ReportLabTechnicalReportGenerator:
                 "FieldLabel",
                 "BodyText",
                 fontName=BOLD_FONT,
-                fontSize=6.5,
-                leading=8,
+                fontSize=9.5,
+                leading=11.5,
                 textColor=BLACK,
             ),
             "FieldValue": style(
                 "FieldValue",
                 "BodyText",
                 fontName=REGULAR_FONT,
-                fontSize=6.5,
-                leading=8,
+                fontSize=9.5,
+                leading=11.5,
                 textColor=BLACK,
             ),
             "PhotoLabel": style(
                 "PhotoLabel",
                 "BodyText",
                 fontName=BOLD_FONT,
-                fontSize=8,
-                leading=10,
+                fontSize=14,
+                leading=17,
+                textColor=BLACK,
+                alignment=TA_LEFT,
+            ),
+            "PhotoComment": style(
+                "PhotoComment",
+                "BodyText",
+                fontName=REGULAR_FONT,
+                fontSize=10,
+                leading=13,
                 textColor=BLACK,
                 alignment=TA_LEFT,
             ),
@@ -306,8 +315,8 @@ class ReportLabTechnicalReportGenerator:
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("LEFTPADDING", (0, 0), (-1, -1), 1.5 * mm),
             ("RIGHTPADDING", (0, 0), (-1, -1), 1.5 * mm),
-            ("TOPPADDING", (0, 0), (-1, -1), 0.55 * mm),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0.55 * mm),
+            ("TOPPADDING", (0, 0), (-1, -1), 1.15 * mm),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.15 * mm),
         ]
         table = Table(
             rows,
@@ -337,14 +346,26 @@ class ReportLabTechnicalReportGenerator:
                 )
                 picture.hAlign = "LEFT"
                 name = str(photo.get("label") or photo.get("category", "Photo"))
-                pages.extend(
-                    [
-                        PageBreak(),
-                        Paragraph(escape(name.upper()), styles["PhotoLabel"]),
-                        Spacer(1, 3 * mm),
-                        picture,
-                    ]
-                )
+                comment = str(
+                    photo.get("comment")
+                    or photo.get("aiComment")
+                    or (report.get("photoComments") or {}).get(photo.get("category"))
+                    or ""
+                ).strip()
+                page_items = [
+                    PageBreak(),
+                    Paragraph(escape(name.upper()), styles["PhotoLabel"]),
+                    Spacer(1, 4 * mm),
+                    picture,
+                ]
+                if comment:
+                    page_items.extend(
+                        [
+                            Spacer(1, 3 * mm),
+                            Paragraph(escape(comment), styles["PhotoComment"]),
+                        ]
+                    )
+                pages.extend(page_items)
             except Exception:
                 continue
         if not pages:
@@ -366,6 +387,10 @@ class ReportLabTechnicalReportGenerator:
     @staticmethod
     def _value(report: dict, key: str, fallback: str = "Not recorded") -> str:
         value = report.get(key)
+        if key == "updatedAt" and value not in (None, ""):
+            return str(value).strip()[:10]
+        if key == "returnedWithRim" and isinstance(value, bool):
+            return "Yes" if value else "No"
         return str(value).strip() if value not in (None, "") else fallback
 
     @staticmethod
@@ -411,10 +436,30 @@ class ReportLabTechnicalReportGenerator:
         return [
             ("Claim Reference", "claimReference"),
             ("Date", "updatedAt"),
-            ("Class", "internalExternal"),
-            *cls._claim_fields()[1:],
-            *cls._inspection_fields(),
-            *cls._vehicle_fields(),
+            ("Claim Type", "internalExternal"),
+            ("Salesperson", "salesperson"),
+            ("Customer Name", "customerName"),
+            ("Customer Invoice No.", "customerInvoiceNumber"),
+            ("Category", "category"),
+            ("Inspected Location", "inspectedLocation"),
+            ("Returned with Rim?", "returnedWithRim"),
+            ("Fitted / Loose", "fittedLoose"),
+            ("Brand", "brand"),
+            ("Rim Size", "rimSize"),
+            ("Pattern", "pattern"),
+            ("DOT", "dot"),
+            ("Serial Number", "serialNumber"),
+            ("Branch", "branch"),
+            ("Claim Code or Description", "claimCode"),
+            ("Remaining Tread Depth [mm]", "remainingTreadDepth"),
+            ("Inspected Pressure", "inspectedPressure"),
+            ("Tyre Mileage", "tyreMileage"),
+            ("Tyre Position", "tyrePosition"),
+            ("Nature of Repair", "natureOfRepair"),
+            ("Vehicle (make/model)", "vehicleMakeModel"),
+            ("Vehicle Mileage", "vehicleMileage"),
+            ("Goods transport", "goodsTransported"),
+            ("Other relevant info", "notes"),
         ]
 
     @staticmethod
