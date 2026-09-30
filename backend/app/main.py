@@ -35,7 +35,8 @@ async def customer_cache_scheduler() -> None:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     settings.validate_for_startup()
-    run_database_migrations()
+    if settings.environment != "test":
+        run_database_migrations()
     customer_sync_task = asyncio.create_task(customer_cache_scheduler())
     try:
         yield
