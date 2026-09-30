@@ -6,9 +6,11 @@ import {
   ReportDeliveryService,
 } from '../../core/delivery/report-delivery.service';
 import { DeliveryAttempt } from '../../shared/models/report.models';
+import { SweetAlertService } from '../../core/ui/sweet-alert.service';
 @Component({selector:'app-delivery-centre',imports:[CommonModule,FormsModule],templateUrl:'./delivery-centre.component.html',styleUrl: './delivery-centre.component.scss'})
 export class DeliveryCentreComponent{
   private readonly delivery=inject(ReportDeliveryService);
+  private readonly alerts=inject(SweetAlertService);
   readonly items=signal<DeliveryAttempt[]>([]);
   readonly total=signal(0);
   readonly query=signal('');
@@ -32,14 +34,22 @@ export class DeliveryCentreComponent{
   }
 
   async retry(id:string){
+    if(!(await this.alerts.confirm('Retry failed delivery?','The original saved email and PDF snapshot will be sent again.','Retry email','warning'))) return;
     this.message.set('');
+    this.alerts.loading('Retrying email…','Using the original delivery snapshot.');
     try{
       const result=await this.delivery.retry(id);
-      this.message.set(result.status==='Sent'?'Email resent successfully.':'Email resend attempted.');
+      this.alerts.close();
+      const message=result.status==='Sent'?'Email sent successfully.':'Email retry attempted.';
+      this.message.set(message);
+      await this.alerts.success('Delivery retry complete',message);
       await this.load();
       if(this.selected()?.id===id) await this.view(id);
     }catch{
-      this.message.set('Email could not be resent. Open the delivery to view the latest error.');
+      this.alerts.close();
+      const message='Email could not be retried. Open the delivery to view the latest error.';
+      this.message.set(message);
+      await this.alerts.error('Retry failed',message);
       await this.load();
     }
   }
@@ -61,29 +71,46 @@ export class DeliveryCentreComponent{
 
   async sendFollowUp(id:string){
     const message=this.followUpMessage().trim();
-    if(!message) return;
+    if(!message){
+      await this.alerts.warning('Message required','Type your follow-up message before sending.');
+      return;
+    }
+    if(!(await this.alerts.confirm('Send follow-up?','Your message will be sent as a reply to the original email thread.','Send follow-up'))) return;
     this.followUpBusy.set(true);
     this.message.set('');
+    this.alerts.loading('Sending follow-up…','Keeping the message in the original email conversation.');
     try{
       await this.delivery.followUp(id,message);
+      this.alerts.close();
       this.message.set('Follow-up email sent in the original email thread.');
       this.followUpMessage.set('');
+      await this.alerts.success('Follow-up sent','Your message was sent successfully.');
     }catch{
+      this.alerts.close();
       this.message.set('Follow-up email could not be sent.');
+      await this.alerts.error('Follow-up failed','The follow-up email could not be delivered.');
     }finally{
       this.followUpBusy.set(false);
     }
   }
 
   async remove(id:string){
-    if(!window.confirm('Remove this delivery record from the active Delivery Centre? This is a soft delete.')) return;
+    if(!(await this.alerts.confirm(
+      'Remove delivery record?',
+      'This is a soft delete. The record stays in the database for audit history.',
+      'Remove record',
+      'warning',
+      true,
+    ))) return;
     try{
       await this.delivery.softDeleteDelivery(id);
       if(this.selected()?.id===id) this.closeDetails();
       this.message.set('Delivery record removed from the active list.');
       await this.load();
+      await this.alerts.success('Delivery removed','The record is hidden from the active Delivery Centre and retained for audit.');
     }catch{
       this.message.set('Delivery record could not be removed.');
+      await this.alerts.error('Delete failed','The delivery record could not be removed.');
     }
   }
 
