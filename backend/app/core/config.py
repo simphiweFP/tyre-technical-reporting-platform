@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     jwt_secret_file: str = ""
     smtp_password_file: str = ""
     microsoft_client_secret_file: str = ""
+    gemini_api_key_file: str = ""
     customer_json_path: str = "backend/data/customers.json"
     sap_customer_endpoint: str = ""
     sap_customer_company_db: str = ""
@@ -66,6 +67,7 @@ class Settings(BaseSettings):
             ("jwt_secret_file", "jwt_secret"),
             ("smtp_password_file", "smtp_password"),
             ("microsoft_client_secret_file", "microsoft_client_secret"),
+            ("gemini_api_key_file", "gemini_api_key"),
         ):
             path = getattr(self, file_field)
             if path:
