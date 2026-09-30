@@ -191,17 +191,17 @@ class ReportLabTechnicalReportGenerator:
                 "FieldLabel",
                 "BodyText",
                 fontName=BOLD_FONT,
-                fontSize=9.5,
-                leading=11.5,
-                textColor=BLACK,
+                fontSize=11.5,
+                leading=14,
+                textColor=colors.HexColor("#666666"),
             ),
             "FieldValue": style(
                 "FieldValue",
                 "BodyText",
                 fontName=REGULAR_FONT,
-                fontSize=9.5,
-                leading=11.5,
-                textColor=BLACK,
+                fontSize=11.5,
+                leading=14,
+                textColor=colors.HexColor("#666666"),
             ),
             "PhotoLabel": style(
                 "PhotoLabel",
@@ -302,6 +302,8 @@ class ReportLabTechnicalReportGenerator:
             parent=styles["FieldLabel"],
             textColor=colors.white,
             fontName=BOLD_FONT,
+            fontSize=11.5,
+            leading=14,
         )
         rows = [[Paragraph("Field", header_style), Paragraph("Value", header_style)]]
         rows.extend(
@@ -315,16 +317,17 @@ class ReportLabTechnicalReportGenerator:
         )
         commands = [
             ("BACKGROUND", (0, 0), (-1, 0), TEAL),
-            ("LINEBELOW", (0, 0), (-1, -1), 0.25, BORDER),
+            ("BOX", (0, 0), (-1, -1), 0.35, BORDER),
+            ("INNERGRID", (0, 0), (-1, -1), 0.35, BORDER),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 1.5 * mm),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 1.5 * mm),
-            ("TOPPADDING", (0, 0), (-1, -1), 1.15 * mm),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.15 * mm),
+            ("LEFTPADDING", (0, 0), (-1, -1), 2.0 * mm),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 2.0 * mm),
+            ("TOPPADDING", (0, 0), (-1, -1), 1.8 * mm),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.8 * mm),
         ]
         table = Table(
             rows,
-            colWidths=[67 * mm, 113.3 * mm],
+            colWidths=[79.5 * mm, 100.8 * mm],
             repeatRows=1,
         )
         table.setStyle(TableStyle(commands))
