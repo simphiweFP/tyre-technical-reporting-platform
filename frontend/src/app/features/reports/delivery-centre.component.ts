@@ -6,7 +6,7 @@ import {
   ReportDeliveryService,
 } from '../../core/delivery/report-delivery.service';
 import { DeliveryAttempt } from '../../shared/models/report.models';
-@Component({selector:'app-delivery-centre',imports:[CommonModule,FormsModule],templateUrl:'./delivery-centre.component.html',styleUrl:'./operations.component.scss'})
+@Component({selector:'app-delivery-centre',imports:[CommonModule,FormsModule],templateUrl:'./delivery-centre.component.html',styleUrl: './delivery-centre.component.scss'})
 export class DeliveryCentreComponent{
   private readonly delivery=inject(ReportDeliveryService);
   readonly items=signal<DeliveryAttempt[]>([]);
