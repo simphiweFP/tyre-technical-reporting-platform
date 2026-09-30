@@ -16,6 +16,8 @@ export class DeliveryCentreComponent{
   readonly message=signal('');
   readonly selected=signal<DeliveryDetail|null>(null);
   readonly detailsBusy=signal(false);
+  readonly followUpMessage=signal('');
+  readonly followUpBusy=signal(false);
 
   constructor(){void this.load()}
 
@@ -53,9 +55,25 @@ export class DeliveryCentreComponent{
     }
   }
 
-  closeDetails(){this.selected.set(null)}
+  closeDetails(){this.selected.set(null);this.followUpMessage.set('')}
 
   viewPdf(id:string){this.delivery.openDeliveryPdf(id)}
+
+  async sendFollowUp(id:string){
+    const message=this.followUpMessage().trim();
+    if(!message) return;
+    this.followUpBusy.set(true);
+    this.message.set('');
+    try{
+      await this.delivery.followUp(id,message);
+      this.message.set('Follow-up email sent in the original email thread.');
+      this.followUpMessage.set('');
+    }catch{
+      this.message.set('Follow-up email could not be sent.');
+    }finally{
+      this.followUpBusy.set(false);
+    }
+  }
 
   async remove(id:string){
     if(!window.confirm('Remove this delivery record from the active Delivery Centre? This is a soft delete.')) return;
