@@ -84,9 +84,13 @@
                       <button class="view-button" type="button" (click)="view(row.id)">
                         View
                       </button>
-                      @if (row.status === 'Failed' || row.status === 'Retrying') {
+                      @if (row.status === 'Sent') {
+                        <button class="follow-up-button" type="button" (click)="view(row.id)">
+                          Follow up
+                        </button>
+                      } @else if (row.status === 'Failed' || row.status === 'Retrying') {
                         <button class="retry-button" type="button" (click)="retry(row.id)">
-                          Resend
+                          Retry
                         </button>
                       }
                       <button class="delete-button" type="button" (click)="remove(row.id)">
@@ -177,9 +181,32 @@
         </section>
       }
 
+      @if (detail.status === 'Sent') {
+        <section class="follow-up-panel">
+          <label for="follow-up-message">Follow up on this email</label>
+          <textarea
+            id="follow-up-message"
+            rows="5"
+            [ngModel]="followUpMessage()"
+            (ngModelChange)="followUpMessage.set($event)"
+            placeholder="Type your follow-up message..."
+          ></textarea>
+          <small>The follow-up will be sent as a reply to the original email thread where supported.</small>
+        </section>
+      }
+
       <footer>
-        @if (detail.status === 'Failed' || detail.status === 'Retrying') {
-          <button type="button" class="retry-button" (click)="retry(detail.id)">Resend email</button>
+        @if (detail.status === 'Sent') {
+          <button
+            type="button"
+            class="follow-up-button"
+            [disabled]="!followUpMessage().trim() || followUpBusy()"
+            (click)="sendFollowUp(detail.id)"
+          >
+            {{ followUpBusy() ? 'Sending…' : 'Send follow-up' }}
+          </button>
+        } @else if (detail.status === 'Failed' || detail.status === 'Retrying') {
+          <button type="button" class="retry-button" (click)="retry(detail.id)">Retry email</button>
         }
         <button type="button" class="delete-button" (click)="remove(detail.id)">Soft delete</button>
       </footer>
