@@ -4,27 +4,8 @@ import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-microsoft-callback',
-  template: `<main class="callback">
-    <h1>Signing you in…</h1>
-    <p>{{ message() }}</p>
-  </main>`,
-  styles: [
-    `
-      .callback {
-        min-height: 100vh;
-        display: grid;
-        place-content: center;
-        text-align: center;
-        background: #f4f5f6;
-      }
-      .callback h1 {
-        font-size: 1.5rem;
-      }
-      .callback p {
-        color: #727a80;
-      }
-    `,
-  ],
+  templateUrl: './microsoft-callback.component.html',
+  styleUrl: './microsoft-callback.component.scss',
 })
 export class MicrosoftCallbackComponent {
   private readonly auth = inject(AuthService);
