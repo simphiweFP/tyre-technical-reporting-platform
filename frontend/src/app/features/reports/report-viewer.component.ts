@@ -7,7 +7,7 @@ import { AuthService } from '../../core/auth/auth.service';
   selector: 'app-report-viewer',
   imports: [FormsModule],
   templateUrl: './report-viewer.component.html',
-  styleUrl: './operations.component.scss',
+  styleUrl: './report-viewer.component.scss',
 })
 export class ReportViewerComponent {
   private readonly admin = inject(SystemAdminService);
