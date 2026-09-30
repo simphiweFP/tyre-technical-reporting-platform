@@ -308,7 +308,7 @@ def follow_up_delivery(
     user: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
 ):
     attempt = db.get(DeliveryAttempt, delivery_id)
-    if not attempt or (attempt.report_payload or {}).get("_deleted"):
+    if not attempt or attempt.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Delivery not found")
     if attempt.status != "Sent":
         raise HTTPException(status_code=409, detail="Follow-up is only available for sent emails")
@@ -387,7 +387,7 @@ def delivery_details(
     ),
 ):
     attempt = db.get(DeliveryAttempt, delivery_id)
-    if not attempt or (attempt.report_payload or {}).get("_deleted"):
+    if not attempt or attempt.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Delivery not found")
 
     record = db.scalar(
@@ -408,12 +408,10 @@ def delivery_details(
         "from": f"{settings.email_from_name} <{settings.email_from}>",
         "to": [attempt.recipient_email],
         "cc": attempt.cc,
-        "subject": f"Royal Tyres technical report {claim}",
-        "body": (
-            f"Please find the Royal Tyres technical report {claim} attached.\n\n"
-            "This is an automated delivery."
-        ),
-        "attachment_name": f"{claim}.pdf",
+        "subject": attempt.email_subject or f"Royal Tyres technical report {claim}",
+        "body": attempt.email_body or "",
+        "attachment_name": attempt.attachment_name or f"{claim}.pdf",
+        "attachment_sha256": attempt.sent_pdf_sha256,
         "status": attempt.status,
         "message_id": attempt.message_id,
         "error_message": attempt.error_message,
@@ -435,8 +433,22 @@ def delivery_pdf(
     from fastapi.responses import StreamingResponse
 
     attempt = db.get(DeliveryAttempt, delivery_id)
-    if not attempt or (attempt.report_payload or {}).get("_deleted"):
+    if not attempt or attempt.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Delivery not found")
+
+    if attempt.sent_pdf_base64:
+        import base64
+
+        pdf = base64.b64decode(attempt.sent_pdf_base64)
+        filename = attempt.attachment_name or f"{attempt.claim_reference}.pdf"
+        return StreamingResponse(
+            BytesIO(pdf),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'inline; filename="{filename}"',
+                "X-Content-SHA256": attempt.sent_pdf_sha256 or "",
+            },
+        )
 
     record = db.scalar(
         select(TechnicalReportRecord).where(
@@ -491,11 +503,7 @@ def soft_delete_delivery(
 
     from datetime import UTC, datetime
 
-    attempt.report_payload = {
-        **(attempt.report_payload or {}),
-        "_deleted": True,
-        "_deleted_at": datetime.now(UTC).isoformat(),
-    }
+    attempt.deleted_at = datetime.now(UTC)
     db.add(
         AuditEvent(
             actor_id=user.id,
@@ -529,14 +537,13 @@ def delivery_history(
             raise HTTPException(status_code=404, detail="Report not found")
     query = (
         select(DeliveryAttempt)
-        .where(DeliveryAttempt.claim_reference == claim_reference)
+        .where(
+            DeliveryAttempt.claim_reference == claim_reference,
+            DeliveryAttempt.deleted_at.is_(None),
+        )
         .order_by(DeliveryAttempt.created_at.desc())
     )
-    return [
-        item
-        for item in db.scalars(query).all()
-        if not (item.report_payload or {}).get("_deleted")
-    ]
+    return db.scalars(query).all()
 
 
 @router.get("/deliveries", response_model=DeliveryListResponse)
@@ -550,7 +557,11 @@ def list_deliveries(
         require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
     ),
 ):
-    statement = select(DeliveryAttempt).order_by(DeliveryAttempt.created_at.desc())
+    statement = (
+        select(DeliveryAttempt)
+        .where(DeliveryAttempt.deleted_at.is_(None))
+        .order_by(DeliveryAttempt.created_at.desc())
+    )
     if user.role == Role.REPORT_CAPTURER:
         owned_claims = select(TechnicalReportRecord.claim_reference).where(
             TechnicalReportRecord.created_by == user.id
@@ -564,11 +575,7 @@ def list_deliveries(
             DeliveryAttempt.claim_reference.ilike(term)
             | DeliveryAttempt.recipient_email.ilike(term)
         )
-    items = [
-        item
-        for item in db.scalars(statement).all()
-        if not (item.report_payload or {}).get("_deleted")
-    ]
+    items = db.scalars(statement).all()
     return DeliveryListResponse(items=items[offset : offset + limit], total=len(items))
 
 
