@@ -44,6 +44,14 @@ class DeliveryAttempt(Base):
     attempt_count: Mapped[int] = mapped_column(Integer, default=0)
     message_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    email_subject: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    email_body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    attachment_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    sent_pdf_base64: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sent_pdf_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     requested_by: Mapped[UUID] = mapped_column(ForeignKey("users.id"), index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
