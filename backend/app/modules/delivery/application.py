@@ -10,6 +10,11 @@ from backend.app.modules.auditing.infrastructure import AuditEvent
 from backend.app.modules.delivery.domain import EmailGateway, EmailMessage
 from backend.app.modules.delivery.infrastructure import DeliveryAttempt, Recipient
 from backend.app.modules.document_generation.application import GenerateTechnicalReport
+from backend.app.modules.reports.infrastructure import (
+    ReportImage,
+    TechnicalReportRecord,
+)
+
 PHOTO_LABELS = {
     "dot": "DOT",
     "serialNumber": "SERIAL NUMBER",
@@ -29,11 +34,6 @@ PHOTO_LABELS = {
     "vehicle": "VEHICLE",
 }
 
-from backend.app.modules.reports.infrastructure import (
-    ReportImage,
-    TechnicalReportRecord,
-)
-
 
 class ReportDeliveryService:
     def __init__(
@@ -52,7 +52,11 @@ class ReportDeliveryService:
         if attempt.status != "Sent":
             raise ValueError("Follow-up is only available for sent emails")
 
-        subject = f"Re: {attempt.email_subject or f'Royal Tyres technical report {attempt.claim_reference}'}"
+        original_subject = (
+            attempt.email_subject
+            or f"Royal Tyres technical report {attempt.claim_reference}"
+        )
+        subject = f"Re: {original_subject}"
         message = EmailMessage(
             subject=subject,
             body=body.strip(),
@@ -115,7 +119,6 @@ class ReportDeliveryService:
         if not attempt.sent_pdf_base64:
             return None
         return base64.b64decode(attempt.sent_pdf_base64)
-
 
     def deliver(self, attempt: DeliveryAttempt, actor_id) -> DeliveryAttempt:
         recipient = self.db.get(Recipient, attempt.recipient_id)
