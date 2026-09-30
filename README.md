@@ -22,8 +22,8 @@ The system avoids microservices, generic repositories for every entity and abstr
    - FastAPI, PostgreSQL, Alembic, JWT rotation, secure password hashing, roles, branches, seeds, tests and Docker Compose.
 2. `feat: build responsive technical report workflow`
    - Angular authentication, mobile-first guided capture, desktop-responsive workspace, drafts, photo handling, administration and search.
-3. `feat: add tyre data extraction and PDF reporting`
-   - Local OCR, confirmation workflow, validation, image compression and branded PDF generation.
+3. `feat: add AI-assisted tyre data extraction and PDF reporting`
+   - Gemini structured image analysis, operator verification, image compression and branded PDF generation.
 4. `feat: complete report delivery and audit tracking`
    - Third-party email delivery, retry, delivery history, audit trail, final tests and deployment documentation.
 5. `feat: make the reporting platform production ready`
@@ -76,17 +76,27 @@ Registration is public and offers two paths:
 
 Self-registered accounts receive the `pending` role and cannot access reports. An administrator must assign a branch and promote the account to Viewer, Report Capturer or Administrator. Configure `MICROSOFT_TENANT_ID`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` and `MICROSOFT_REDIRECT_URI` to enable Microsoft sign-in. Register the callback URL in the Entra application exactly as configured.
 
-## OCR-assisted capture and PDF generation
+## AI-assisted capture and PDF generation
 
-Phase 3 adds local Tesseract OCR for tyre markings, browser-side image compression and duplicate-image detection. OCR values are suggestions only: the technician or salesperson must confirm each extracted value before it is copied into the report. This avoids silent AI decisions and keeps the operator accountable for the final data.
+Captured or uploaded inspection images are compressed in the Angular client and sent to the authenticated FastAPI endpoint `POST /api/v1/reports/analyse-image`. The backend uses Gemini structured JSON output to extract tyre/vehicle values and an optional per-photo inspection comment. AI values are suggestions only: the technician or salesperson remains responsible for verifying the final report data.
 
-When all required fields and photographs are complete, the review screen generates a branded Royal Tyres PDF through the authenticated API. Install `tesseract-ocr` when running outside Docker.
+The guided capture flow is **Report details → Take photos → Tyre & vehicle → Preview**. Required fields and photos are validated by the API before submission. The generated Royal Tyres PDF uses the approved header/footer artwork, the technical-report field table, one evidence image per page and the stored AI comment when one exists.
+
+Configure Gemini only through deployment secrets or the local uncommitted `.env` file:
+
+```env
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3-flash-preview
+GEMINI_TIMEOUT_SECONDS=30
+# Optional production secret-file path:
+GEMINI_API_KEY_FILE=
+```
 
 ## Email delivery
 
-Administrators maintain approved third-party recipients. Technicians and salespeople select a recipient on the report review screen and send the generated PDF directly; there is no approval or rejection workflow. Every successful or failed attempt is recorded, failed attempts can be retried, and recipient changes and deliveries create audit events.
+Administrators maintain approved third-party recipients. Technicians and salespeople select a recipient in Preview and send the generated PDF directly; there is no approval or rejection workflow. The API attempts the first SMTP delivery immediately so users receive direct feedback. Failed/retrying attempts remain durable and can be processed again by the delivery worker.
 
-Delivery requests are stored before returning to the user. The `delivery-worker` service processes the durable queue, uses row locking to prevent two workers taking the same item and schedules automatic retries before marking a delivery failed. Docker Compose includes Mailpit for safe local email testing at `http://localhost:8025`.
+Every delivery stores an immutable snapshot of the email subject/body and exact PDF bytes plus SHA-256 hash. Delivery Centre therefore shows the historical attachment that was sent rather than regenerating a potentially changed report. Sent emails can be followed up with user-written text using standard reply-thread headers. Failed deliveries expose their SMTP error and can be retried. Soft-deleted delivery records remain in the database for audit history but are hidden from active lists. Docker Compose includes Mailpit for safe local email testing at `http://localhost:8025`.
 
 For local Docker development, leave:
 
@@ -134,7 +144,7 @@ Do not commit the real `.env` file or SMTP password. After restarting the API an
 
 The supplied Royal Tyres header and footer artwork is repeated on every generated PDF page. `ROYAL_TYRES_REPORT_HEADER_PATH` and `ROYAL_TYRES_REPORT_FOOTER_PATH` can replace the bundled artwork without a code change. Set `ROYAL_TYRES_COMPANY_DETAILS` and `ROYAL_TYRES_PDF_DISCLAIMER` to the approved business and legal wording.
 
-OCR values are always suggestions requiring operator confirmation. Parser fixtures cover common spacing and recognition noise. Before a production release, add consented and de-identified real tyre photographs to the documented OCR sample process, covering curved sidewalls, dirt, shadows, worn markings and supported brands.
+AI-extracted values are always suggestions requiring operator verification. Before a production release, validate Gemini extraction with consented/de-identified real tyre photographs covering curved sidewalls, dirt, shadows, worn markings, tread gauges and the supported photo categories.
 
 ## Backups and retention
 
@@ -168,3 +178,18 @@ Each backup includes a `SHA256SUMS` manifest. Run `sha256sum -c SHA256SUMS` befo
 ## Explicit exclusions
 
 No approval/rejection workflow, customer portal, payments, inventory, quotations, service booking, claim payout processing, chatbot, automated claim decisions or microservices.
+
+
+## Mobile device verification
+
+The Angular capture experience is mobile-first and responsive, but physical-device sign-off must still be completed before production. Verify at least one current Android device and one current iPhone using the deployed HTTPS environment. Test camera capture, gallery upload, permission prompts, image compression, offline/online transitions, long forms, tyre-position selection, PDF preview/download and email submission. Browser emulation is useful for layout checks but is not a substitute for real-device camera testing.
+
+## Production security notes
+
+- Keep `.env` and real credentials out of Git.
+- Prefer secret files or the deployment secret store for JWT, SMTP, Microsoft and Gemini credentials.
+- The API is the single owner of Alembic migrations at startup; Docker does not run a second migration command.
+- Use PostgreSQL in production and HTTPS at the reverse proxy.
+- Restrict CORS to the deployed Angular origin.
+- Review delivery/audit retention with the business before enabling automatic cleanup.
+- Run backend tests, Angular tests/build and container validation in CI on every change.
