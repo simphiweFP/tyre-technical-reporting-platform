@@ -198,6 +198,7 @@ export class ReportCaptureComponent implements OnDestroy {
 
   async refreshCustomers(): Promise<void> {
     if (this.customerRefreshBusy()) return;
+    this.alerts.loading('Refreshing customers…', 'Checking the latest SAP customer list.');
 
     const term = this.form.controls.customerName.value.trim();
     this.customerRefreshBusy.set(true);
@@ -245,6 +246,7 @@ export class ReportCaptureComponent implements OnDestroy {
         'Customer refresh could not reach SAP. You can still enter the customer name manually.',
       );
     } finally {
+      this.alerts.close();
       this.customerRefreshBusy.set(false);
     }
   }
@@ -256,7 +258,15 @@ export class ReportCaptureComponent implements OnDestroy {
   async saveDraft(): Promise<void> {
     const updated = this.currentReport();
     this.report.set(updated);
-    await this.workflow.saveNow(updated);
+    this.alerts.loading('Saving draft…', 'Keeping your current report progress safe.');
+    try {
+      await this.workflow.saveNow(updated);
+      this.alerts.close();
+      await this.alerts.success('Draft saved', `${updated.claimReference} was saved successfully.`);
+    } catch {
+      this.alerts.close();
+      await this.alerts.error('Draft not saved', 'The report draft could not be saved.');
+    }
   }
   photoFor(category: string): ReportPhoto | undefined {
     return this.report().photos.find((p) => p.category === category);
@@ -347,13 +357,26 @@ export class ReportCaptureComponent implements OnDestroy {
   }
   async removePhoto(category: string): Promise<void> {
     const photo = this.photoFor(category);
-    if (photo?.storageId) {
-      await this.workflow.deleteImage(this.report().id, photo.storageId);
-    } else {
-      await this.workflow.removeQueuedImage(this.report().id, category);
+    if (!photo) return;
+    if (!(await this.alerts.confirm(
+      'Remove photo?',
+      `${photo.label} will be removed from this technical report.`,
+      'Remove photo',
+      'warning',
+      true,
+    ))) return;
+    try {
+      if (photo.storageId) {
+        await this.workflow.deleteImage(this.report().id, photo.storageId);
+      } else {
+        await this.workflow.removeQueuedImage(this.report().id, category);
+      }
+      this.report.update((r) => ({ ...r, photos: r.photos.filter((p) => p.category !== category) }));
+      this.persist();
+      await this.alerts.success('Photo removed', `${photo.label} was removed successfully.`);
+    } catch {
+      await this.alerts.error('Photo not removed', 'The photo could not be removed.');
     }
-    this.report.update((r) => ({ ...r, photos: r.photos.filter((p) => p.category !== category) }));
-    this.persist();
   }
   private applyOcrResult(ai: {
     brand: string;
@@ -482,9 +505,14 @@ export class ReportCaptureComponent implements OnDestroy {
       const current = this.currentReport();
       this.report.set(current);
       await this.workflow.saveNow(current);
+      this.alerts.loading('Generating PDF…', 'Building the Royal Tyres technical report.');
       await this.workflow.downloadPdf(current);
+      this.alerts.close();
+      await this.alerts.success('PDF ready', `${current.claimReference} was generated successfully.`);
     } catch {
+      this.alerts.close();
       this.captureMessage.set('PDF generation failed. Check the API connection and try again.');
+      await this.alerts.error('PDF failed', 'The technical report PDF could not be generated.');
     } finally {
       this.pdfBusy.set(false);
     }
@@ -538,7 +566,12 @@ export class ReportCaptureComponent implements OnDestroy {
       this.submitting.set(false);
     }
   }
-  startAnotherReport(): void {
+  async startAnotherReport(): Promise<void> {
+    if (!(await this.alerts.confirm(
+      'Start another report?',
+      'A new blank technical report will be opened.',
+      'Start new report',
+    ))) return;
     void this.router.navigate(['/reports/new']).then(() => window.location.reload());
   }
   private async loadCustomerSuggestions(term: string): Promise<void> {
