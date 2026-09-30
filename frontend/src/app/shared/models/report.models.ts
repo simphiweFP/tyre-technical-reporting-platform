@@ -84,6 +84,7 @@ export interface ReportPhoto {
   byteSize: number;
   sha256: string;
   storageId?: string;
+  aiComment?: string;
 }
 export interface ReportRecipient {
   id: string;
@@ -139,5 +140,6 @@ export interface TechnicalReport {
   vehicleMileage: string;
   goodsTransported: string;
   notes: string;
+  photoComments: Record<string, string>;
   photos: ReportPhoto[];
 }
