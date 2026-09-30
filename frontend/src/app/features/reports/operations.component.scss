@@ -622,3 +622,254 @@ td a {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+
+.delivery-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.view-button,
+.delete-button {
+  height: 29px;
+  border: 1px solid #cbd7e5;
+  border-radius: 4px;
+  padding: 0 11px;
+  background: #fff;
+  color: #17365e;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.view-button:hover {
+  border-color: #0872d3;
+  color: #0872d3;
+  background: #f4f9ff;
+}
+
+.delete-button {
+  border-color: #efb7be;
+  color: #b51529;
+  background: #fff8f9;
+}
+
+.delete-button:hover {
+  border-color: #c7192c;
+  color: #fff;
+  background: #c7192c;
+}
+
+.detail-link {
+  border: 0;
+  padding: 0;
+  color: #0871ce;
+  background: transparent;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.detail-link.error-link {
+  color: #b51529;
+}
+
+.delivery-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #0f172a80;
+}
+
+.delivery-detail-modal {
+  width: min(100%, 720px);
+  max-height: min(88vh, 780px);
+  overflow: auto;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 24px 70px #00000035;
+}
+
+.delivery-detail-modal > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 24px 17px;
+  border-bottom: 1px solid #e1e7ef;
+}
+
+.delivery-detail-modal h2 {
+  margin: 4px 0;
+  color: #0a2148;
+  font-size: 18px;
+}
+
+.delivery-detail-modal header p {
+  margin: 0;
+  color: #60738f;
+  font-size: 10px;
+}
+
+.detail-kicker {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: 12px;
+  color: #17365e;
+  background: #edf3fa;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: #748198;
+  font-size: 23px;
+  cursor: pointer;
+}
+
+.email-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin: 18px 24px;
+  border: 1px solid #dce4ed;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #dce4ed;
+}
+
+.email-meta > div {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  background: #fff;
+}
+
+.email-meta small,
+.email-body small,
+.attachment-card small,
+.delivery-error-box small {
+  color: #697a92;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.email-meta strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #17365e;
+  font-size: 10px;
+}
+
+.email-body,
+.delivery-error-box {
+  margin: 0 24px 16px;
+  padding: 14px;
+  border: 1px solid #dce4ed;
+  border-radius: 6px;
+  background: #fbfcfe;
+}
+
+.email-body p {
+  margin: 9px 0 0;
+  white-space: pre-line;
+  color: #233a5d;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.attachment-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 24px 16px;
+  padding: 13px 14px;
+  border: 1px solid #dce4ed;
+  border-radius: 6px;
+}
+
+.attachment-card > div {
+  display: grid;
+  gap: 4px;
+}
+
+.attachment-card strong {
+  color: #17365e;
+  font-size: 10px;
+}
+
+.attachment-card button {
+  height: 31px;
+  border: 1px solid #0872d3;
+  border-radius: 4px;
+  padding: 0 12px;
+  color: #0872d3;
+  background: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.delivery-error-box {
+  border-color: #f0c8ce;
+  background: #fff8f9;
+}
+
+.delivery-error-box pre {
+  margin: 9px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #8f1d2d;
+  font: 10px/1.5 monospace;
+}
+
+.delivery-detail-modal > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 24px 22px;
+  border-top: 1px solid #e4eaf1;
+}
+
+@media(max-width:600px) {
+  .delivery-actions {
+    min-width: 220px;
+  }
+
+  .delivery-detail-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .delivery-detail-modal {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .email-meta {
+    grid-template-columns: 1fr;
+    margin-inline: 14px;
+  }
+
+  .email-body,
+  .attachment-card,
+  .delivery-error-box {
+    margin-inline: 14px;
+  }
+
+  .delivery-detail-modal > header,
+  .delivery-detail-modal > footer {
+    padding-inline: 16px;
+  }
+}
