@@ -74,6 +74,7 @@ def process_due_deliveries() -> tuple[int, int]:
         due = db.scalars(
             select(DeliveryAttempt)
             .where(
+                DeliveryAttempt.deleted_at.is_(None),
                 or_(
                     (
                         DeliveryAttempt.status.in_(("Pending", "Retrying"))
