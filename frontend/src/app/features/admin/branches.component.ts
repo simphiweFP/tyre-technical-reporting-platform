@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Branch, UserAdminService } from '../../core/admin/user-admin.service';
+import { SweetAlertService } from '../../core/ui/sweet-alert.service';
 @Component({
   selector: 'app-branches',
   imports: [FormsModule],
@@ -10,6 +11,7 @@ import { Branch, UserAdminService } from '../../core/admin/user-admin.service';
 })
 export class BranchesComponent {
   private readonly admin = inject(UserAdminService);
+  private readonly alerts = inject(SweetAlertService);
   readonly branches = signal<Branch[]>([]);
   readonly query = signal('');
   readonly showForm = signal(false);
@@ -52,15 +54,34 @@ export class BranchesComponent {
       );
       this.showForm.set(false);
       this.notice.set(`Branch ${saved.code} saved successfully.`);
+      await this.alerts.success('Branch saved', `${saved.name} (${saved.code}) is ready to use.`);
     } catch (error) {
-      this.dialogError.set(this.errorMessage(error, 'The branch could not be saved.'));
+      const message = this.errorMessage(error, 'The branch could not be saved.');
+      this.dialogError.set(message);
+      await this.alerts.error('Branch not saved', message);
     } finally {
       this.saving.set(false);
     }
   }
   async toggle(item: Branch) {
-    const updated = await this.admin.updateBranch(item.id, { is_active: !item.is_active });
-    this.branches.update((x) => x.map((b) => (b.id === updated.id ? updated : b)));
+    const action = item.is_active ? 'disable' : 'enable';
+    if (!(await this.alerts.confirm(
+      `${item.is_active ? 'Disable' : 'Enable'} branch?`,
+      `${item.name} will be ${action}d for new report activity.`,
+      item.is_active ? 'Disable branch' : 'Enable branch',
+      'warning',
+      item.is_active,
+    ))) return;
+    try {
+      const updated = await this.admin.updateBranch(item.id, { is_active: !item.is_active });
+      this.branches.update((x) => x.map((b) => (b.id === updated.id ? updated : b)));
+      await this.alerts.success(
+        updated.is_active ? 'Branch enabled' : 'Branch disabled',
+        `${updated.name} was updated successfully.`,
+      );
+    } catch (error) {
+      await this.alerts.error('Branch not updated', this.errorMessage(error, 'The branch status could not be changed.'));
+    }
   }
   private async load() {
     try {
