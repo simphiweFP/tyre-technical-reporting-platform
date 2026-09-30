@@ -8,6 +8,25 @@ from backend.app.modules.auditing.infrastructure import AuditEvent
 from backend.app.modules.delivery.domain import EmailGateway, EmailMessage
 from backend.app.modules.delivery.infrastructure import DeliveryAttempt, Recipient
 from backend.app.modules.document_generation.application import GenerateTechnicalReport
+PHOTO_LABELS = {
+    "dot": "DOT",
+    "serialNumber": "SERIAL NUMBER",
+    "entireTyreDot": "ENTIRE TYRE (sw DOT)",
+    "entireTyreOpposite": "ENTIRE TYRE (sw opposite DOT)",
+    "issue1": "ISSUE 1",
+    "issue2": "ISSUE 2",
+    "bead1": "BEAD 1",
+    "bead2": "BEAD 2",
+    "fullView": "FULL VIEW",
+    "internalCarcass1": "INTERNAL CARCASS 1",
+    "internalCarcass2": "INTERNAL CARCASS 2",
+    "treadDepth1": "TREAD DEPTH 1",
+    "treadDepth2": "TREAD DEPTH 2",
+    "treadDepth3": "TREAD DEPTH 3",
+    "treadPattern": "TREAD PATTERN",
+    "vehicle": "VEHICLE",
+}
+
 from backend.app.modules.reports.infrastructure import (
     ReportImage,
     TechnicalReportRecord,
@@ -44,7 +63,10 @@ class ReportDeliveryService:
                 "photos": [
                     {
                         "category": image.category,
-                        "label": image.category.replace("_", " ").title(),
+                        "label": PHOTO_LABELS.get(
+                            image.category,
+                            image.category.replace("_", " ").title(),
+                        ),
                         "previewUrl": (
                             f"data:{image.content_type};base64,{image.base64_data}"
                         ),
