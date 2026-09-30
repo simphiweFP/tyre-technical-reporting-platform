@@ -63,3 +63,7 @@ class DeliveryResponse(BaseModel):
 class DeliveryListResponse(BaseModel):
     items: list[DeliveryResponse]
     total: int
+
+
+class FollowUpRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=5000)
