@@ -18,6 +18,7 @@ from backend.app.modules.delivery.schemas import (
     DeliveryListResponse,
     DeliveryRequest,
     DeliveryResponse,
+    FollowUpRequest,
     RecipientCreate,
     RecipientResponse,
     RecipientUpdate,
@@ -297,6 +298,84 @@ def retry_delivery(
     db.commit()
     db.refresh(attempt)
     return _service(db).deliver(attempt, user.id)
+
+
+@router.post("/deliveries/{delivery_id}/follow-up")
+def follow_up_delivery(
+    delivery_id: UUID,
+    request: FollowUpRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
+):
+    attempt = db.get(DeliveryAttempt, delivery_id)
+    if not attempt or (attempt.report_payload or {}).get("_deleted"):
+        raise HTTPException(status_code=404, detail="Delivery not found")
+    if attempt.status != "Sent":
+        raise HTTPException(status_code=409, detail="Follow-up is only available for sent emails")
+
+    record = db.scalar(
+        select(TechnicalReportRecord).where(
+            TechnicalReportRecord.claim_reference == attempt.claim_reference
+        )
+    )
+    if user.role == Role.REPORT_CAPTURER and (
+        not record or record.created_by != user.id
+    ):
+        raise HTTPException(status_code=404, detail="Delivery not found")
+
+    settings = get_settings()
+    subject = f"Re: Royal Tyres technical report {attempt.claim_reference}"
+    message = EmailMessage(
+        subject=subject,
+        body=request.message.strip(),
+        to=(attempt.recipient_email,),
+        cc=tuple(attempt.cc),
+        in_reply_to=attempt.message_id,
+        references=attempt.message_id,
+    )
+
+    try:
+        message_id = SmtpEmailGateway(settings).send(message)
+    except Exception as exc:
+        db.add(
+            AuditEvent(
+                actor_id=user.id,
+                action="report.email_follow_up_failed",
+                entity_type="delivery_attempt",
+                entity_id=str(attempt.id),
+                details={
+                    "claim_reference": attempt.claim_reference,
+                    "recipient": attempt.recipient_email,
+                    "error": str(exc)[:500],
+                },
+            )
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=502,
+            detail=f"Follow-up email failed: {exc}",
+        ) from exc
+
+    db.add(
+        AuditEvent(
+            actor_id=user.id,
+            action="report.email_follow_up_sent",
+            entity_type="delivery_attempt",
+            entity_id=str(attempt.id),
+            details={
+                "claim_reference": attempt.claim_reference,
+                "recipient": attempt.recipient_email,
+                "message_id": message_id,
+                "in_reply_to": attempt.message_id,
+            },
+        )
+    )
+    db.commit()
+    return {
+        "message": "Follow-up email sent",
+        "message_id": message_id,
+        "in_reply_to": attempt.message_id,
+    }
 
 
 @router.get("/deliveries/{delivery_id}/details")
