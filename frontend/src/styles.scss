@@ -195,3 +195,49 @@ h3 {
     width: 100%;
   }
 }
+
+
+/* SweetAlert2 - Royal Tyres */
+.royal-swal {
+  border-radius: 16px !important;
+  padding: 24px !important;
+  font-family: 'DM Sans', Arial, sans-serif !important;
+}
+
+.royal-swal .swal2-title {
+  color: #0a2148 !important;
+  font-family: 'Manrope', Arial, sans-serif !important;
+  font-size: 1.35rem !important;
+}
+
+.royal-swal .swal2-html-container,
+.royal-swal .swal2-content {
+  color: #687078 !important;
+  font-size: 0.95rem !important;
+}
+
+.royal-swal-confirm,
+.royal-swal-cancel {
+  min-width: 120px !important;
+  min-height: 42px !important;
+  border-radius: 8px !important;
+  font-weight: 800 !important;
+}
+
+@media (max-width: 560px) {
+  .royal-swal {
+    width: calc(100% - 24px) !important;
+    padding: 20px 16px !important;
+  }
+
+  .royal-swal .swal2-actions {
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  .royal-swal-confirm,
+  .royal-swal-cancel {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+  }
+}
