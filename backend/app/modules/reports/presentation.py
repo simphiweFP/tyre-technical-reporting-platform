@@ -6,12 +6,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
+from PIL import Image as PillowImage
+from PIL import UnidentifiedImageError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.core.database import get_db
 from backend.app.modules.auditing.infrastructure import AuditEvent
-from backend.app.modules.branches.infrastructure import Branch
 from backend.app.modules.document_generation.application import GenerateTechnicalReport
 from backend.app.modules.document_generation.infrastructure import (
     ReportLabTechnicalReportGenerator,
@@ -20,6 +21,19 @@ from backend.app.modules.document_generation.schemas import TechnicalReportPdfRe
 from backend.app.modules.identity.dependencies import require_roles
 from backend.app.modules.identity.domain import Role
 from backend.app.modules.identity.infrastructure import User
+from backend.app.modules.media.application import (
+    ALLOWED_IMAGE_TYPES,
+    MAX_IMAGE_BYTES,
+    AnalyseInspectionImage,
+    GeminiAnalysisFailed,
+    InspectionImageTooLarge,
+    InvalidInspectionImage,
+)
+from backend.app.modules.reports.application import TechnicalReportService
+from backend.app.modules.reports.customer_lookup import (
+    customer_suggestions,
+    refresh_customer_cache,
+)
 from backend.app.modules.reports.infrastructure import (
     ReportImage,
     TechnicalReportRecord,
@@ -35,18 +49,6 @@ from backend.app.modules.reports.schemas import (
     ReportValidationResponse,
 )
 from backend.app.modules.reports.validation import validate_report
-from backend.app.modules.media.application import (
-    AnalyseInspectionImage,
-    GeminiAnalysisFailed,
-    InspectionImageTooLarge,
-    InvalidInspectionImage,
-    MAX_IMAGE_BYTES,
-)
-from backend.app.modules.reports.application import TechnicalReportService
-from backend.app.modules.reports.customer_lookup import (
-    customer_suggestions,
-    refresh_customer_cache,
-)
 
 router = APIRouter(prefix="/reports", tags=["Technical reports"])
 
@@ -345,10 +347,6 @@ def generate_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{request.filename}"'},
     )
-
-
-def _as_utc(value: datetime) -> datetime:
-    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
 def _required_record(report_id: UUID, db: Session) -> TechnicalReportRecord:
