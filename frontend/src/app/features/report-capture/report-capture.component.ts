@@ -297,6 +297,13 @@ export class ReportCaptureComponent implements OnDestroy {
       };
       await this.store.saveNow(current);
       const stored = await this.store.uploadImage(current.id, category, optimized.blob, file.name);
+
+      try {
+        const ai = await this.intelligence.analyseImage(optimized.blob, file.name);
+        this.applyOcrResult(ai);
+      } catch {
+        // Keep the captured image even when AI extraction is unavailable.
+      }
       if (stored) {
         this.report.update((r) => ({
           ...r,
@@ -322,6 +329,47 @@ export class ReportCaptureComponent implements OnDestroy {
     this.report.update((r) => ({ ...r, photos: r.photos.filter((p) => p.category !== category) }));
     this.persist();
   }
+  private applyOcrResult(ai: {
+    brand: string;
+    size: string;
+    pattern: string;
+    dot: string;
+    serialNumber: string;
+    vehicleMakeModel: string;
+    rtd: string;
+    comment: string;
+  }): void {
+    const patch: Record<string, string> = {};
+
+    if (ai.brand && !this.form.controls.brand.value.trim()) patch['brand'] = ai.brand;
+    if (ai.size && !this.form.controls.rimSize.value.trim()) patch['rimSize'] = ai.size;
+    if (ai.pattern && !this.form.controls.pattern.value.trim()) patch['pattern'] = ai.pattern;
+    if (ai.dot && !this.form.controls.dot.value.trim()) patch['dot'] = ai.dot;
+
+    if (ai.serialNumber && !this.form.controls.serialNumber.value.trim()) {
+      patch['serialNumber'] = ai.serialNumber;
+    }
+
+    if (ai.vehicleMakeModel && !this.form.controls.vehicleMakeModel.value.trim()) {
+      patch['vehicleMakeModel'] = ai.vehicleMakeModel;
+    }
+
+    if (ai.rtd && !this.form.controls.remainingTreadDepth.value.trim()) {
+      patch['remainingTreadDepth'] = ai.rtd;
+    }
+
+    if (ai.comment && !this.form.controls.notes.value.trim()) {
+      patch['notes'] = ai.comment;
+    }
+
+    if (Object.keys(patch).length) {
+      this.form.patchValue(patch);
+      this.captureMessage.set(
+        'Photo saved. AI filled the fields it could read; please verify them.',
+      );
+    }
+  }
+
   photoIcon(category: string): string {
     if (category.startsWith('tread')) return '▥';
     if (category === 'vehicle') return '▰';
