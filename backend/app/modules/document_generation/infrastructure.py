@@ -207,8 +207,8 @@ class ReportLabTechnicalReportGenerator:
                 "PhotoLabel",
                 "BodyText",
                 fontName=BOLD_FONT,
-                fontSize=14,
-                leading=17,
+                fontSize=9,
+                leading=11,
                 textColor=BLACK,
                 alignment=TA_LEFT,
             ),
@@ -216,8 +216,8 @@ class ReportLabTechnicalReportGenerator:
                 "PhotoComment",
                 "BodyText",
                 fontName=REGULAR_FONT,
-                fontSize=10,
-                leading=13,
+                fontSize=7.5,
+                leading=9.5,
                 textColor=BLACK,
                 alignment=TA_LEFT,
             ),
@@ -355,10 +355,10 @@ class ReportLabTechnicalReportGenerator:
                     or ""
                 ).strip()
 
-                # Keep the image large like the reference document, but reserve
-                # enough vertical room for the AI comment on the same page.
-                max_image_height = 132 * mm if comment else 150 * mm
-                scale = min((120 * mm) / width, max_image_height / height)
+                # Match the supplied Royal Tyres reference document: evidence
+                # images are approximately 75 mm wide and keep their aspect ratio.
+                # Comments sit directly beneath the image when available.
+                scale = min((75 * mm) / width, (112 * mm) / height)
                 picture = Image(
                     image_source, width=width * scale, height=height * scale
                 )
@@ -367,13 +367,13 @@ class ReportLabTechnicalReportGenerator:
                 page_items = [
                     PageBreak(),
                     Paragraph(escape(name.upper()), styles["PhotoLabel"]),
-                    Spacer(1, 4 * mm),
+                    Spacer(1, 3 * mm),
                     picture,
                 ]
                 if comment:
                     page_items.extend(
                         [
-                            Spacer(1, 3 * mm),
+                            Spacer(1, 1.5 * mm),
                             Paragraph(escape(comment), styles["PhotoComment"]),
                         ]
                     )
