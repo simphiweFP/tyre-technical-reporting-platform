@@ -115,7 +115,11 @@ class ReportLabTechnicalReportGenerator:
             ]
         )
         styles = self._styles()
-        story = [self._details_table(report, styles, self._all_fields())]
+        story = [
+            Paragraph("Tyre Claim Technical Report", styles["TitleRT"]),
+            Spacer(1, 7 * mm),
+            self._details_table(report, styles, self._all_fields()),
+        ]
         story.extend(self._photos(report, styles))
         document.build(story)
         return output.getvalue()
