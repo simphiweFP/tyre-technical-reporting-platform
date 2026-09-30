@@ -96,7 +96,7 @@ export class ReportCaptureComponent implements OnDestroy {
   );
   readonly duplicateWarning = computed(() => {
     const current = this.form.getRawValue();
-    const duplicate = this.store
+    const duplicate = this.workflow
       .reports()
       .find(
         (item) =>
