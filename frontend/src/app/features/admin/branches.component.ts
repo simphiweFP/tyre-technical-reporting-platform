@@ -6,7 +6,7 @@ import { Branch, UserAdminService } from '../../core/admin/user-admin.service';
   selector: 'app-branches',
   imports: [FormsModule],
   templateUrl: './branches.component.html',
-  styleUrl: './admin.component.scss',
+  styleUrl: './branches.component.scss',
 })
 export class BranchesComponent {
   private readonly admin = inject(UserAdminService);
