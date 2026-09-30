@@ -51,7 +51,7 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly deliveryStatus = signal('Pending');
   readonly deliveryEmail = signal('');
   readonly validationErrors = signal<Record<string, string>>({});
-  readonly stepLabels = ['Report details', 'Take photos', 'Tyre & vehicle', 'Review'];
+  readonly stepLabels = ['Report details', 'Take photos', 'Tyre & vehicle'];
   readonly photoCategories = PHOTO_CATEGORIES;
   readonly requiredCount = PHOTO_CATEGORIES.filter((p) => p.required).length;
   readonly report = signal<TechnicalReport>(this.loadReport());
@@ -140,11 +140,13 @@ export class ReportCaptureComponent implements OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   async next(): Promise<void> {
-    if (this.step() < 3) {
+    if (this.step() < 2) {
       await this.goTo(this.step() + 1);
       return;
     }
-    if (!this.confirmed() || !(await this.validateStep(3))) return;
+
+    if (!(await this.validateStep(3))) return;
+
     this.captureMessage.set('');
     this.submitting.set(true);
     try {
@@ -438,9 +440,6 @@ export class ReportCaptureComponent implements OnDestroy {
       { label: 'DOT', value: values.dot || 'Not captured' },
       { label: 'Serial number', value: values.serialNumber || 'Not captured' },
     ];
-  }
-  toggleConfirmed(event: Event): void {
-    this.confirmed.set((event.target as HTMLInputElement).checked);
   }
   async sendReport(): Promise<void> {
     if (!this.offline.online()) {
