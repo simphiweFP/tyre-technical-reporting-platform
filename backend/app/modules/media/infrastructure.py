@@ -123,17 +123,19 @@ brand, size, pattern, dot, serialNumber, vehicleMakeModel, rtd, comment
             f"{settings.gemini_model}:generateContent"
         )
         payload = {
-            "contents": {
-                "parts": [
-                    {
-                        "inlineData": {
-                            "data": base64.b64encode(content).decode("ascii"),
-                            "mimeType": mime_type,
-                        }
-                    },
-                    {"text": self.PROMPT},
-                ]
-            },
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "inlineData": {
+                                "data": base64.b64encode(content).decode("ascii"),
+                                "mimeType": mime_type,
+                            }
+                        },
+                        {"text": self.PROMPT},
+                    ]
+                }
+            ],
             "generationConfig": {
                 "responseMimeType": "application/json",
                 "responseSchema": self.RESPONSE_SCHEMA,
