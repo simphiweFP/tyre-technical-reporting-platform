@@ -1,6 +1,9 @@
+from datetime import UTC, datetime
+from io import BytesIO
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -30,7 +33,7 @@ from backend.app.modules.document_generation.infrastructure import (
 from backend.app.modules.identity.dependencies import require_roles
 from backend.app.modules.identity.domain import Role
 from backend.app.modules.identity.infrastructure import User
-from backend.app.modules.reports.infrastructure import TechnicalReportRecord
+from backend.app.modules.reports.infrastructure import ReportImage, TechnicalReportRecord
 
 router = APIRouter(tags=["Report delivery"])
 
@@ -281,8 +284,6 @@ def retry_delivery(
         raise HTTPException(
             status_code=409, detail="Only failed deliveries can be retried"
         )
-    from datetime import UTC, datetime
-
     attempt.status = "Pending"
     attempt.next_attempt_at = datetime.now(UTC)
     attempt.error_message = None
@@ -337,6 +338,7 @@ def follow_up_delivery(
         "in_reply_to": attempt.message_id,
     }
 
+
 @router.get("/deliveries/{delivery_id}/details")
 def delivery_details(
     delivery_id: UUID,
@@ -388,9 +390,6 @@ def delivery_pdf(
         require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
     ),
 ):
-    from io import BytesIO
-    from fastapi.responses import StreamingResponse
-
     attempt = db.get(DeliveryAttempt, delivery_id)
     if not attempt or attempt.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Delivery not found")
@@ -416,8 +415,6 @@ def delivery_pdf(
         raise HTTPException(status_code=404, detail="Report not found")
     if user.role == Role.REPORT_CAPTURER and record.created_by != user.id:
         raise HTTPException(status_code=404, detail="Delivery not found")
-
-    from backend.app.modules.reports.infrastructure import ReportImage
 
     images = db.scalars(
         select(ReportImage)
