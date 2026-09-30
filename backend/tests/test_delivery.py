@@ -62,7 +62,7 @@ def save_report(client, headers, claim_reference):
     assert response.status_code == 200
 
 
-def test_report_delivery_is_queued_and_visible_in_history(client):
+def test_report_delivery_is_sent_and_visible_in_history(client):
     headers = auth_headers(client)
     recipient = create_recipient(client, headers)
     save_report(client, headers, "TR-2026-0042")
@@ -76,8 +76,8 @@ def test_report_delivery_is_queued_and_visible_in_history(client):
         },
     )
     assert response.status_code == 200
-    assert response.json()["status"] == "Pending"
-    assert response.json()["message_id"] is None
+    assert response.json()["status"] == "Sent"
+    assert response.json()["message_id"]
     assert response.json()["cc"] == ["manager@example.co.za", "audit@example.co.za"]
     history = client.get("/api/v1/reports/TR-2026-0042/deliveries", headers=headers)
     assert history.status_code == 200
@@ -141,8 +141,8 @@ def test_failed_delivery_can_be_requeued(client):
         f"/api/v1/reports/deliveries/{queued['id']}/retry", headers=headers
     )
     assert retried.status_code == 200
-    assert retried.json()["status"] == "Pending"
-    assert retried.json()["attempt_count"] == 0
+    assert retried.json()["status"] == "Sent"
+    assert retried.json()["attempt_count"] >= 2
 
 
 def test_viewer_cannot_manage_recipients(client):
@@ -174,6 +174,10 @@ def test_delivery_worker_claims_and_processes_due_items(client, monkeypatch):
     session_override = app.dependency_overrides[get_db]()
     db = next(session_override)
     testing_session = sessionmaker(bind=db.bind, expire_on_commit=False)
+    attempt_id = UUID(queued["id"])
+    attempt = db.get(DeliveryAttempt, attempt_id)
+    attempt.status = "Pending"
+    db.commit()
     session_override.close()
 
     class Gateway:
@@ -195,3 +199,29 @@ def test_delivery_worker_claims_and_processes_due_items(client, monkeypatch):
     worker.update_heartbeat(processed=1)
     response = client.get("/api/v1/admin/operations", headers=headers)
     assert response.json()["delivery_worker"] == "healthy"
+
+
+
+def test_sent_delivery_keeps_immutable_pdf_snapshot(client):
+    headers = auth_headers(client)
+    recipient = create_recipient(client, headers)
+    save_report(client, headers, "TR-SNAPSHOT")
+    sent = client.post(
+        "/api/v1/reports/deliver",
+        headers=headers,
+        json={
+            "recipient_id": recipient["id"],
+            "report": {"claimReference": "TR-SNAPSHOT"},
+        },
+    )
+    assert sent.status_code == 200
+    delivery_id = sent.json()["id"]
+
+    details = client.get(f"/api/v1/deliveries/{delivery_id}/details", headers=headers)
+    assert details.status_code == 200
+    assert details.json()["attachment_sha256"]
+
+    pdf = client.get(f"/api/v1/deliveries/{delivery_id}/pdf", headers=headers)
+    assert pdf.status_code == 200
+    assert pdf.content.startswith(b"%PDF")
+    assert pdf.headers["x-content-sha256"] == details.json()["attachment_sha256"]
