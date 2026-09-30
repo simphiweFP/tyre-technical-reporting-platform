@@ -921,3 +921,220 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+
+.tyre-position-picker > span {
+  display: block;
+  margin-bottom: 7px;
+  color: #273343;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.tyre-position-trigger {
+  width: 100%;
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 24px 1fr 18px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 13px;
+  border: 1px solid #cdd2d7;
+  border-radius: 7px;
+  color: #25303c;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tyre-position-trigger i {
+  color: #8b9299;
+  font-style: normal;
+  font-size: 16px;
+}
+
+.tyre-position-trigger strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tyre-position-trigger b {
+  color: #8e949a;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.tyre-position-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: #0f172a66;
+}
+
+.tyre-position-modal {
+  width: min(100%, 510px);
+  border: 2px solid #111;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 18px 50px #00000035;
+  overflow: hidden;
+}
+
+.tyre-position-modal > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 24px 14px;
+}
+
+.tyre-position-modal h2 {
+  margin: 0;
+  color: #121a2a;
+  font-size: 20px;
+}
+
+.tyre-position-modal > header button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  color: #7d8590;
+  background: transparent;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.vehicle-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px 20px 24px;
+}
+
+.vehicle-tabs button {
+  min-width: 74px;
+  height: 40px;
+  padding: 0 16px;
+  border: 2px solid #1d2738;
+  background: #fff;
+  color: #263244;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.vehicle-tabs button.active {
+  border-color: #3f5af4;
+  color: #fff;
+  background: #3f5af4;
+}
+
+.axle-diagram {
+  margin: 0 24px 24px;
+  padding: 32px 18px;
+  border: 1px solid #d3d7de;
+  border-radius: 8px;
+  background: #f5f6f8;
+}
+
+.axle-row {
+  display: grid;
+  grid-template-columns: 54px 24px minmax(90px, 1fr) 24px;
+  align-items: center;
+  gap: 8px;
+  min-height: 60px;
+}
+
+.axle-row.dual {
+  grid-template-columns: 54px 49px minmax(90px, 1fr) 49px;
+}
+
+.axle-label {
+  color: #4f5d72;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.axle-bar {
+  height: 11px;
+  background: #566273;
+  border-radius: 1px;
+}
+
+.dual-wheel {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3px;
+}
+
+.wheel {
+  width: 21px;
+  height: 56px;
+  padding: 0;
+  border: 1px solid #c6ccd4;
+  border-radius: 4px;
+  background: #111827;
+  box-shadow: 0 1px 2px #00000022;
+  cursor: pointer;
+}
+
+.wheel:hover,
+.wheel:focus-visible {
+  outline: 3px solid #3f5af433;
+}
+
+.wheel.selected {
+  outline: 3px solid #3f5af4;
+  background: #3f5af4;
+}
+
+.car-row {
+  grid-template-columns: 54px 24px minmax(90px, 1fr) 24px;
+}
+
+@media (max-width: 520px) {
+  .tyre-position-modal-backdrop {
+    padding: 12px;
+  }
+
+  .tyre-position-modal > header {
+    padding: 18px 18px 10px;
+  }
+
+  .tyre-position-modal h2 {
+    font-size: 18px;
+  }
+
+  .vehicle-tabs {
+    gap: 10px;
+    padding-inline: 14px;
+  }
+
+  .vehicle-tabs button {
+    min-width: 0;
+    flex: 1;
+    padding-inline: 8px;
+  }
+
+  .axle-diagram {
+    margin: 0 14px 18px;
+    padding: 24px 10px;
+  }
+
+  .axle-row,
+  .axle-row.dual {
+    grid-template-columns: 50px 46px minmax(54px, 1fr) 46px;
+    gap: 5px;
+  }
+
+  .car-row {
+    grid-template-columns: 50px 22px minmax(54px, 1fr) 22px;
+  }
+
+  .wheel {
+    width: 20px;
+    height: 52px;
+  }
+}
