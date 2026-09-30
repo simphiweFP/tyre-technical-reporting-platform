@@ -1,3 +1,4 @@
+import httpx
 import base64
 import hashlib
 from datetime import UTC, date, datetime, time
@@ -38,6 +39,7 @@ from backend.app.modules.reports.schemas import (
     ReportValidationResponse,
 )
 from backend.app.modules.reports.validation import validate_report
+from backend.app.modules.media.infrastructure import GeminiTyreExtractor
 from backend.app.modules.reports.customer_lookup import (
     customer_suggestions,
     load_json_customers,
@@ -129,6 +131,43 @@ async def refresh_customers(
             status_code=502,
             detail=f"Customer refresh failed: {exc}",
         ) from exc
+
+
+@router.post("/analyse-image")
+async def analyse_image_with_ai(
+    image: UploadFile = File(...),
+    _: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
+):
+    if image.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail="Only JPEG, PNG and WebP images are supported",
+        )
+
+    content = await image.read(MAX_IMAGE_BYTES + 1)
+    if len(content) > MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="The image exceeds the 8 MB limit")
+
+    try:
+        PillowImage.open(BytesIO(content)).verify()
+    except (UnidentifiedImageError, OSError) as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="The uploaded file is not a valid image",
+        ) from exc
+
+    try:
+        return await GeminiTyreExtractor().analyse(
+            content,
+            image.content_type or "image/jpeg",
+        )
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Gemini OCR request failed with HTTP {exc.response.status_code}",
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.get("/analytics/summary", response_model=AnalyticsResponse)
