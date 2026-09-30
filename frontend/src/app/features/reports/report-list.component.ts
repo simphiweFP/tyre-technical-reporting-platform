@@ -6,6 +6,7 @@ import { Branch, UserAdminService } from '../../core/admin/user-admin.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { ReportStore } from '../../core/data/report.store';
 import { ReportStatus } from '../../shared/models/report.models';
+import { SweetAlertService } from '../../core/ui/sweet-alert.service';
 
 @Component({
   selector: 'app-report-list',
@@ -19,6 +20,7 @@ export class ReportListComponent {
   private readonly admin = inject(UserAdminService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly alerts = inject(SweetAlertService);
   readonly query = signal(this.route.snapshot.queryParamMap.get('q') ?? '');
   readonly status = signal('');
   readonly branch = signal('');
@@ -102,8 +104,20 @@ export class ReportListComponent {
   }
 
   async archiveReport(id: string): Promise<void> {
-    await this.store.archive(id);
-    await this.load();
+    if (!(await this.alerts.confirm(
+      'Archive technical report?',
+      'The report will be removed from the active claims list but kept for audit history.',
+      'Archive report',
+      'warning',
+      true,
+    ))) return;
+    try {
+      await this.store.archive(id);
+      await this.load();
+      await this.alerts.success('Report archived', 'The report was moved to Archived claims.');
+    } catch {
+      await this.alerts.error('Archive failed', 'The report could not be archived.');
+    }
   }
 
   count(status?: ReportStatus): number {
