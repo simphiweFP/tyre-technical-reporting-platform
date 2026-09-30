@@ -44,9 +44,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: rm -f package-lock.json && npm install --prefer-online --fetch-retries=5 --fetch-retry-mintimeout=10000 --fetch-retry-maxtimeout=60000
+      - run: npm install --legacy-peer-deps --prefer-online --cache /tmp/npm-cache --fetch-retries=5 --fetch-retry-mintimeout=10000 --fetch-retry-maxtimeout=60000
       - run: npm test -- --watch=false
       - run: npm run build
 
