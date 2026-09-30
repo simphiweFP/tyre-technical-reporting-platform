@@ -310,8 +310,6 @@ def follow_up_delivery(
     attempt = db.get(DeliveryAttempt, delivery_id)
     if not attempt or attempt.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Delivery not found")
-    if attempt.status != "Sent":
-        raise HTTPException(status_code=409, detail="Follow-up is only available for sent emails")
 
     record = db.scalar(
         select(TechnicalReportRecord).where(
@@ -323,60 +321,21 @@ def follow_up_delivery(
     ):
         raise HTTPException(status_code=404, detail="Delivery not found")
 
-    settings = get_settings()
-    subject = f"Re: Royal Tyres technical report {attempt.claim_reference}"
-    message = EmailMessage(
-        subject=subject,
-        body=request.message.strip(),
-        to=(attempt.recipient_email,),
-        cc=tuple(attempt.cc),
-        in_reply_to=attempt.message_id,
-        references=attempt.message_id,
-    )
-
     try:
-        message_id = SmtpEmailGateway(settings).send(message)
+        message_id = _service(db).follow_up(attempt, user.id, request.message)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as exc:
-        db.add(
-            AuditEvent(
-                actor_id=user.id,
-                action="report.email_follow_up_failed",
-                entity_type="delivery_attempt",
-                entity_id=str(attempt.id),
-                details={
-                    "claim_reference": attempt.claim_reference,
-                    "recipient": attempt.recipient_email,
-                    "error": str(exc)[:500],
-                },
-            )
-        )
-        db.commit()
         raise HTTPException(
             status_code=502,
             detail=f"Follow-up email failed: {exc}",
         ) from exc
 
-    db.add(
-        AuditEvent(
-            actor_id=user.id,
-            action="report.email_follow_up_sent",
-            entity_type="delivery_attempt",
-            entity_id=str(attempt.id),
-            details={
-                "claim_reference": attempt.claim_reference,
-                "recipient": attempt.recipient_email,
-                "message_id": message_id,
-                "in_reply_to": attempt.message_id,
-            },
-        )
-    )
-    db.commit()
     return {
         "message": "Follow-up email sent",
         "message_id": message_id,
         "in_reply_to": attempt.message_id,
     }
-
 
 @router.get("/deliveries/{delivery_id}/details")
 def delivery_details(
@@ -436,13 +395,11 @@ def delivery_pdf(
     if not attempt or attempt.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Delivery not found")
 
-    if attempt.sent_pdf_base64:
-        import base64
-
-        pdf = base64.b64decode(attempt.sent_pdf_base64)
+    snapshot = _service(db).snapshot_pdf(attempt)
+    if snapshot is not None:
         filename = attempt.attachment_name or f"{attempt.claim_reference}.pdf"
         return StreamingResponse(
-            BytesIO(pdf),
+            BytesIO(snapshot),
             media_type="application/pdf",
             headers={
                 "Content-Disposition": f'inline; filename="{filename}"',
@@ -500,20 +457,7 @@ def soft_delete_delivery(
     attempt = db.get(DeliveryAttempt, delivery_id)
     if not attempt:
         raise HTTPException(status_code=404, detail="Delivery not found")
-
-    from datetime import UTC, datetime
-
-    attempt.deleted_at = datetime.now(UTC)
-    db.add(
-        AuditEvent(
-            actor_id=user.id,
-            action="report.email_soft_deleted",
-            entity_type="delivery_attempt",
-            entity_id=str(attempt.id),
-            details={"claim_reference": attempt.claim_reference},
-        )
-    )
-    db.commit()
+    _service(db).soft_delete(attempt, user.id)
 
 
 @router.get(
