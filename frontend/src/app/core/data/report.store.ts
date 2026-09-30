@@ -447,6 +447,7 @@ export class ReportStore {
 
   private mapReport(item: ServerReport): TechnicalReport {
     this.serverUpdatedAt.set(item.id, item.updated_at);
+    const photoComments = item.report.photoComments ?? {};
     const photos: ReportPhoto[] = (item.report.photos ?? []).map((photo) => ({
       category: photo.category,
       name: photo.original_name,
@@ -457,9 +458,11 @@ export class ReportStore {
       byteSize: photo.byte_size,
       sha256: photo.sha256,
       storageId: photo.id,
+      aiComment: photoComments[photo.category] ?? '',
     }));
     return {
       ...item.report,
+      photoComments,
       id: item.id,
       createdAt: item.created_at,
       updatedAt: item.updated_at,
