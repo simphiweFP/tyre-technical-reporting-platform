@@ -347,11 +347,6 @@ class ReportLabTechnicalReportGenerator:
                     with PillowImage.open(image_source) as source:
                         width, height = source.size
                     image_source.seek(0)
-                scale = min((120 * mm) / width, (150 * mm) / height)
-                picture = Image(
-                    image_source, width=width * scale, height=height * scale
-                )
-                picture.hAlign = "LEFT"
                 name = str(photo.get("label") or photo.get("category", "Photo"))
                 comment = str(
                     photo.get("comment")
@@ -359,6 +354,16 @@ class ReportLabTechnicalReportGenerator:
                     or (report.get("photoComments") or {}).get(photo.get("category"))
                     or ""
                 ).strip()
+
+                # Keep the image large like the reference document, but reserve
+                # enough vertical room for the AI comment on the same page.
+                max_image_height = 132 * mm if comment else 150 * mm
+                scale = min((120 * mm) / width, max_image_height / height)
+                picture = Image(
+                    image_source, width=width * scale, height=height * scale
+                )
+                picture.hAlign = "LEFT"
+
                 page_items = [
                     PageBreak(),
                     Paragraph(escape(name.upper()), styles["PhotoLabel"]),
