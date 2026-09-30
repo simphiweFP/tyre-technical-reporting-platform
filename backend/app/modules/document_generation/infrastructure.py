@@ -347,7 +347,7 @@ class ReportLabTechnicalReportGenerator:
                     with PillowImage.open(image_source) as source:
                         width, height = source.size
                     image_source.seek(0)
-                scale = min((75 * mm) / width, (112 * mm) / height)
+                scale = min((120 * mm) / width, (150 * mm) / height)
                 picture = Image(
                     image_source, width=width * scale, height=height * scale
                 )
