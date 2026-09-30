@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Branch, UserAdminService } from '../../core/admin/user-admin.service';
 import { ReportDeliveryService } from '../../core/delivery/report-delivery.service';
+import { SweetAlertService } from '../../core/ui/sweet-alert.service';
 import { REPORT_CATEGORIES, ReportRecipient } from '../../shared/models/report.models';
 
 interface RecipientFormState {
@@ -24,6 +25,7 @@ interface RecipientFormState {
 export class RecipientsComponent {
   private readonly delivery = inject(ReportDeliveryService);
   private readonly admin = inject(UserAdminService);
+  private readonly alerts = inject(SweetAlertService);
   readonly showForm = signal(false);
   readonly query = signal('');
   readonly recipients = signal<ReportRecipient[]>([]);
@@ -108,18 +110,43 @@ export class RecipientsComponent {
       );
       this.showForm.set(false);
       this.notice.set(`Recipient rule for ${saved.email} saved successfully.`);
+      await this.alerts.success('Recipient saved', `${saved.email} is configured for report delivery.`);
     } catch (error) {
-      this.dialogError.set(this.errorMessage(error, 'The recipient rule could not be saved.'));
+      const message = this.errorMessage(error, 'The recipient rule could not be saved.');
+      this.dialogError.set(message);
+      await this.alerts.error('Recipient not saved', message);
     } finally {
       this.saving.set(false);
     }
   }
   async toggle(item: ReportRecipient) {
-    const r = await this.delivery.setRecipientStatus(item.id, !item.is_active);
-    this.recipients.update((x) => x.map((i) => (i.id === r.id ? r : i)));
+    if (!(await this.alerts.confirm(
+      item.is_active ? 'Disable recipient?' : 'Enable recipient?',
+      `${item.email} will ${item.is_active ? 'stop' : 'start'} appearing as a delivery option.`,
+      item.is_active ? 'Disable' : 'Enable',
+      'warning',
+      item.is_active,
+    ))) return;
+    try {
+      const r = await this.delivery.setRecipientStatus(item.id, !item.is_active);
+      this.recipients.update((x) => x.map((i) => (i.id === r.id ? r : i)));
+      await this.alerts.success(r.is_active ? 'Recipient enabled' : 'Recipient disabled', `${r.email} was updated successfully.`);
+    } catch {
+      await this.alerts.error('Recipient not updated', 'The recipient status could not be changed.');
+    }
   }
   async test(item: ReportRecipient) {
-    this.notice.set((await this.delivery.testRecipient(item.id)).message);
+    if (!(await this.alerts.confirm('Send test email?', `A test message will be sent to ${item.email}.`, 'Send test'))) return;
+    this.alerts.loading('Sending test…', 'Checking the configured recipient and SMTP delivery.');
+    try {
+      const result = await this.delivery.testRecipient(item.id);
+      this.alerts.close();
+      this.notice.set(result.message);
+      await this.alerts.success('Test email sent', result.message);
+    } catch {
+      this.alerts.close();
+      await this.alerts.error('Test failed', 'The test email could not be delivered.');
+    }
   }
   addCc(): boolean {
     const addresses = this.ccDraft()
