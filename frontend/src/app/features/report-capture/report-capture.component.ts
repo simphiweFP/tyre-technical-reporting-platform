@@ -1,4 +1,5 @@
 import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { debounceTime, Subject, takeUntil } from 'rxjs';
@@ -299,10 +300,26 @@ export class ReportCaptureComponent implements OnDestroy {
       const stored = await this.store.uploadImage(current.id, category, optimized.blob, file.name);
 
       try {
+        this.captureMessage.set('Photo saved. Reading tyre details with AI…');
         const ai = await this.intelligence.analyseImage(optimized.blob, file.name);
         this.applyOcrResult(ai);
-      } catch {
-        // Keep the captured image even when AI extraction is unavailable.
+
+        if (!Object.values(ai).some((value) => value.trim())) {
+          this.captureMessage.set(
+            'Photo saved, but AI could not read any tyre or vehicle details from this image.',
+          );
+        }
+      } catch (error) {
+        const detail =
+          error instanceof HttpErrorResponse
+            ? (typeof error.error?.detail === 'string'
+                ? error.error.detail
+                : `AI request failed (HTTP ${error.status || 'network'}).`)
+            : 'AI image analysis failed.';
+
+        this.captureMessage.set(
+          `Photo saved, but AI could not populate the fields: ${detail}`,
+        );
       }
       if (stored) {
         this.report.update((r) => ({
