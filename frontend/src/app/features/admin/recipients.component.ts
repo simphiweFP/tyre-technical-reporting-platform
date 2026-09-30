@@ -19,7 +19,7 @@ interface RecipientFormState {
   selector: 'app-recipients',
   imports: [FormsModule],
   templateUrl: './recipients.component.html',
-  styleUrl: './admin.component.scss',
+  styleUrl: './recipients.component.scss',
 })
 export class RecipientsComponent {
   private readonly delivery = inject(ReportDeliveryService);
