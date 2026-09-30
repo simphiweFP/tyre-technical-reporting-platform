@@ -8,6 +8,23 @@ import {
   TechnicalReport,
 } from '../../shared/models/report.models';
 
+export interface DeliveryDetail {
+  id: string;
+  claim_reference: string;
+  from: string;
+  to: string[];
+  cc: string[];
+  subject: string;
+  body: string;
+  attachment_name: string;
+  status: string;
+  message_id: string | null;
+  error_message: string | null;
+  attempt_count: number;
+  created_at: string;
+  last_attempt_at: string;
+}
+
 export interface RecipientInput {
   company: string;
   contact_name: string;
@@ -92,6 +109,28 @@ export class ReportDeliveryService {
         `${environment.apiUrl}/reports/deliveries/${deliveryId}/retry`,
         null,
       ),
+    );
+  }
+
+  deliveryDetails(deliveryId: string): Promise<DeliveryDetail> {
+    return firstValueFrom(
+      this.http.get<DeliveryDetail>(
+        `${environment.apiUrl}/deliveries/${deliveryId}/details`,
+      ),
+    );
+  }
+
+  openDeliveryPdf(deliveryId: string): void {
+    window.open(
+      `${environment.apiUrl}/deliveries/${deliveryId}/pdf`,
+      '_blank',
+      'noopener',
+    );
+  }
+
+  softDeleteDelivery(deliveryId: string): Promise<void> {
+    return firstValueFrom(
+      this.http.delete<void>(`${environment.apiUrl}/deliveries/${deliveryId}`),
     );
   }
 }
