@@ -56,3 +56,18 @@ def client(tmp_path):
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+
+@pytest.fixture(autouse=True)
+def fake_smtp(monkeypatch):
+    from backend.app.modules.delivery import presentation as delivery_presentation
+
+    class FakeGateway:
+        def __init__(self, _settings):
+            pass
+
+        def send(self, _message):
+            return "<test-message@royaltyres.local>"
+
+    monkeypatch.setattr(delivery_presentation, "SmtpEmailGateway", FakeGateway)
