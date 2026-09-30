@@ -10,7 +10,10 @@ from backend.app.modules.branches.infrastructure import Branch
 from backend.app.modules.identity.domain import Role
 from backend.app.modules.identity.infrastructure import User
 from backend.app.modules.reports.customer_lookup import load_json_customers
-from backend.app.modules.reports.infrastructure import ReportImage, TechnicalReportRecord
+from backend.app.modules.reports.infrastructure import (
+    ReportImage,
+    TechnicalReportRecord,
+)
 from backend.app.modules.reports.schemas import (
     AnalyticsResponse,
     ImageResponse,
@@ -151,7 +154,8 @@ class TechnicalReportService:
 
         if date_from:
             statement = statement.where(
-                TechnicalReportRecord.created_at >= datetime.combine(date_from, time.min)
+                TechnicalReportRecord.created_at
+                >= datetime.combine(date_from, time.min)
             )
         if date_to:
             statement = statement.where(
@@ -297,4 +301,8 @@ class TechnicalReportService:
 
     @staticmethod
     def as_utc(value: datetime) -> datetime:
-        return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+        return (
+            value.replace(tzinfo=UTC)
+            if value.tzinfo is None
+            else value.astimezone(UTC)
+        )
