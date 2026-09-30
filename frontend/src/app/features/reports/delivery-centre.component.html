@@ -66,15 +66,33 @@
                       >● {{ row.status }}</span
                     >
                   </td>
-                  <td>{{ row.error_message || 'Attempt ' + row.attempt_count }}</td>
-                  <td>
-                    @if (row.status === 'Failed' || row.status === 'Retrying') {
-                      <button class="retry-button" type="button" (click)="retry(row.id)">
-                        Retry
+                  <td class="details-cell">
+                    @if (row.error_message) {
+                      <button class="detail-link error-link" type="button" (click)="view(row.id)">
+                        View error
+                      </button>
+                    } @else if (row.status === 'Sent') {
+                      <button class="detail-link" type="button" (click)="view(row.id)">
+                        View sent email
                       </button>
                     } @else {
-                      <span class="no-action">—</span>
+                      Attempt {{ row.attempt_count }}
                     }
+                  </td>
+                  <td>
+                    <div class="delivery-actions">
+                      <button class="view-button" type="button" (click)="view(row.id)">
+                        View
+                      </button>
+                      @if (row.status === 'Failed' || row.status === 'Retrying') {
+                        <button class="retry-button" type="button" (click)="retry(row.id)">
+                          Resend
+                        </button>
+                      }
+                      <button class="delete-button" type="button" (click)="remove(row.id)">
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               } @empty {
@@ -118,3 +136,53 @@
     </aside>
   </div>
 </section>
+
+
+@if (selected(); as detail) {
+  <div class="delivery-detail-backdrop" (click)="closeDetails()">
+    <section class="delivery-detail-modal" (click)="$event.stopPropagation()">
+      <header>
+        <div>
+          <span class="detail-kicker">{{ detail.status }}</span>
+          <h2>{{ detail.subject }}</h2>
+          <p>{{ detail.claim_reference }}</p>
+        </div>
+        <button type="button" class="modal-close" (click)="closeDetails()">×</button>
+      </header>
+
+      <div class="email-meta">
+        <div><small>From</small><strong>{{ detail.from }}</strong></div>
+        <div><small>To</small><strong>{{ detail.to.join(', ') }}</strong></div>
+        <div><small>CC</small><strong>{{ detail.cc.length ? detail.cc.join(', ') : 'None' }}</strong></div>
+        <div><small>Message ID</small><strong>{{ detail.message_id || 'Not available' }}</strong></div>
+      </div>
+
+      <section class="email-body">
+        <small>Email body</small>
+        <p>{{ detail.body }}</p>
+      </section>
+
+      <section class="attachment-card">
+        <div>
+          <small>Attachment</small>
+          <strong>{{ detail.attachment_name }}</strong>
+        </div>
+        <button type="button" (click)="viewPdf(detail.id)">View PDF</button>
+      </section>
+
+      @if (detail.error_message) {
+        <section class="delivery-error-box">
+          <small>Delivery error</small>
+          <pre>{{ detail.error_message }}</pre>
+        </section>
+      }
+
+      <footer>
+        @if (detail.status === 'Failed' || detail.status === 'Retrying') {
+          <button type="button" class="retry-button" (click)="retry(detail.id)">Resend email</button>
+        }
+        <button type="button" class="delete-button" (click)="remove(detail.id)">Soft delete</button>
+      </footer>
+    </section>
+  </div>
+}
