@@ -565,7 +565,7 @@
           <button
             type="button"
             class="primary-action"
-            [disabled]="submitting()"
+            [disabled]="!selectedRecipient() || submitting()"
             (click)="sendFromPreview()"
           >
             ✉ &nbsp; {{ submitting() ? 'Sending…' : 'Send report' }}
