@@ -91,6 +91,12 @@ class Settings(BaseSettings):
             errors.append("ALLOWED_ORIGINS must not contain localhost")
         if self.public_app_url.startswith("http://"):
             errors.append("PUBLIC_APP_URL must use HTTPS")
+        if "*" in self.cors_origins:
+            errors.append("ALLOWED_ORIGINS must not use a wildcard in production")
+        if self.smtp_username and not self.smtp_password:
+            errors.append("SMTP_PASSWORD must be configured when SMTP_USERNAME is set")
+        if not self.gemini_api_key:
+            errors.append("GEMINI_API_KEY must be configured for AI image analysis")
         if errors:
             raise RuntimeError("Unsafe production configuration: " + "; ".join(errors))
 
