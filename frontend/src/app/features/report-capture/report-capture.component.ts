@@ -386,10 +386,6 @@ export class ReportCaptureComponent implements OnDestroy {
       patch['remainingTreadDepth'] = ai.rtd;
     }
 
-    if (ai.comment && !this.form.controls.notes.value.trim()) {
-      patch['notes'] = ai.comment;
-    }
-
     if (ai.comment) {
       this.report.update((current) => ({
         ...current,
