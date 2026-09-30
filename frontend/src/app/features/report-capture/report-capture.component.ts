@@ -38,6 +38,8 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly customerRefreshBusy = signal(false);
   readonly customerRefreshMessage = signal('');
   readonly customerDropdownOpen = signal(false);
+  readonly tyrePositionModalOpen = signal(false);
+  readonly tyreVehicleType = signal<'Car' | 'Horse' | 'Trailer'>('Horse');
   readonly readonlyView = computed(() => this.auth.hasRole('viewer'));
   readonly recipients = signal<ReportRecipient[]>([]);
   readonly selectedRecipient = signal('');
@@ -392,6 +394,34 @@ export class ReportCaptureComponent implements OnDestroy {
         'Photo saved. AI filled the fields it could read; please verify them.',
       );
     }
+  }
+
+  openTyrePositionModal(): void {
+    const current = this.form.controls.tyrePosition.value;
+    if (current.startsWith('Car - ')) this.tyreVehicleType.set('Car');
+    else if (current.startsWith('Trailer - ')) this.tyreVehicleType.set('Trailer');
+    else this.tyreVehicleType.set('Horse');
+    this.tyrePositionModalOpen.set(true);
+  }
+
+  closeTyrePositionModal(): void {
+    this.tyrePositionModalOpen.set(false);
+  }
+
+  selectTyreVehicleType(type: 'Car' | 'Horse' | 'Trailer'): void {
+    this.tyreVehicleType.set(type);
+  }
+
+  selectTyrePosition(position: string): void {
+    const value = `${this.tyreVehicleType()} - ${position}`;
+    this.form.controls.tyrePosition.setValue(value);
+    this.tyrePositionModalOpen.set(false);
+    this.persist();
+  }
+
+  isTyrePosition(position: string): boolean {
+    return this.form.controls.tyrePosition.value ===
+      `${this.tyreVehicleType()} - ${position}`;
   }
 
   photoIcon(category: string): string {
