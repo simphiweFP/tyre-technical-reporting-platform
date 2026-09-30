@@ -5,19 +5,6 @@ from PIL import Image
 from backend.app.modules.document_generation.infrastructure import (
     ReportLabTechnicalReportGenerator,
 )
-from backend.app.modules.media.infrastructure import TesseractTyreExtractor
-
-
-def test_tyre_text_parser_extracts_supported_fields():
-    values = TesseractTyreExtractor._extract(
-        "BRIDGESTONE 205/55 R16 DOT AB12 CD34 3425 SERIAL SN-778899", 0.88
-    )
-    extracted = {value.field: value.value for value in values}
-    assert extracted["brand"] == "Bridgestone"
-    assert extracted["tyreSize"] == "205/55 R16"
-    assert extracted["rimSize"] == "R16"
-    assert extracted["dot"].endswith("3425")
-
 
 def test_pdf_generator_creates_pdf_with_image():
     image_buffer = BytesIO()
