@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
+import { SweetAlertService } from '../ui/sweet-alert.service';
 
 @Component({
   selector: 'app-shell',
@@ -14,6 +15,7 @@ import { AuthService } from '../auth/auth.service';
 export class AppShellComponent {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly alerts = inject(SweetAlertService);
   readonly menuOpen = signal(false);
   readonly profileOpen = signal(false);
   readonly search = signal('');
@@ -49,9 +51,10 @@ export class AppShellComponent {
   toggleProfile(): void {
     this.profileOpen.update((open) => !open);
   }
-  logout(): void {
+  async logout(): Promise<void> {
     this.profileOpen.set(false);
     this.menuOpen.set(false);
+    if (!(await this.alerts.confirm('Sign out?', 'You will need to sign in again to continue working.', 'Sign out', 'warning'))) return;
     this.auth.logout();
   }
   runSearch(): void {
