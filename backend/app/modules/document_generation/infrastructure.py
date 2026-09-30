@@ -207,8 +207,8 @@ class ReportLabTechnicalReportGenerator:
                 "PhotoLabel",
                 "BodyText",
                 fontName=BOLD_FONT,
-                fontSize=9,
-                leading=11,
+                fontSize=11.5,
+                leading=14,
                 textColor=BLACK,
                 alignment=TA_LEFT,
             ),
@@ -216,8 +216,8 @@ class ReportLabTechnicalReportGenerator:
                 "PhotoComment",
                 "BodyText",
                 fontName=REGULAR_FONT,
-                fontSize=7.5,
-                leading=9.5,
+                fontSize=9.5,
+                leading=12,
                 textColor=BLACK,
                 alignment=TA_LEFT,
             ),
@@ -355,10 +355,11 @@ class ReportLabTechnicalReportGenerator:
                     or ""
                 ).strip()
 
-                # Match the supplied Royal Tyres reference document: evidence
-                # images are approximately 75 mm wide and keep their aspect ratio.
-                # Comments sit directly beneath the image when available.
-                scale = min((75 * mm) / width, (112 * mm) / height)
+                # Match the larger evidence-page layout used in the supplied
+                # reference: keep the image prominent while leaving room for the
+                # AI comment beneath it on the same page.
+                max_image_height = 132 * mm if comment else 142 * mm
+                scale = min((105 * mm) / width, max_image_height / height)
                 picture = Image(
                     image_source, width=width * scale, height=height * scale
                 )
@@ -373,7 +374,7 @@ class ReportLabTechnicalReportGenerator:
                 if comment:
                     page_items.extend(
                         [
-                            Spacer(1, 1.5 * mm),
+                            Spacer(1, 2.5 * mm),
                             Paragraph(escape(comment), styles["PhotoComment"]),
                         ]
                     )
