@@ -23,7 +23,7 @@ const emptyUser = (): UserForm => ({
   selector: 'app-users',
   imports: [FormsModule],
   templateUrl: './users.component.html',
-  styleUrl: './admin.component.scss',
+  styleUrl: './users.component.scss',
 })
 export class UsersComponent {
   private readonly admin = inject(UserAdminService);
