@@ -299,7 +299,7 @@ export class ReportCaptureComponent implements OnDestroy {
         try {
           this.captureMessage.set('Reading tyre and vehicle details with AI…');
           const ai = await this.intelligence.analyseImage(optimized.blob, file.name);
-          this.applyOcrResult(ai);
+          this.applyOcrResult(ai, category);
 
           if (!Object.values(ai).some((value) => value.trim())) {
             this.captureMessage.set(
@@ -366,7 +366,7 @@ export class ReportCaptureComponent implements OnDestroy {
     vehicleMakeModel: string;
     rtd: string;
     comment: string;
-  }): void {
+  }, category: string): void {
     const patch: Record<string, string> = {};
 
     if (ai.brand && !this.form.controls.brand.value.trim()) patch['brand'] = ai.brand;
@@ -390,10 +390,26 @@ export class ReportCaptureComponent implements OnDestroy {
       patch['notes'] = ai.comment;
     }
 
+    if (ai.comment) {
+      this.report.update((current) => ({
+        ...current,
+        photoComments: {
+          ...(current.photoComments ?? {}),
+          [category]: ai.comment,
+        },
+        photos: current.photos.map((photo) =>
+          photo.category === category ? { ...photo, aiComment: ai.comment } : photo,
+        ),
+      }));
+    }
+
     if (Object.keys(patch).length) {
       this.form.patchValue(patch);
+    }
+
+    if (Object.keys(patch).length || ai.comment) {
       this.captureMessage.set(
-        'Photo saved. AI filled the fields it could read; please verify them.',
+        'Photo saved. AI filled the fields it could read and added an image comment; please verify them.',
       );
     }
   }
