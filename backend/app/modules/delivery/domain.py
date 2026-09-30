@@ -10,6 +10,8 @@ class EmailMessage:
     cc: tuple[str, ...]
     attachment_name: str | None = None
     attachment: bytes | None = None
+    in_reply_to: str | None = None
+    references: str | None = None
 
 
 class EmailGateway(Protocol):
