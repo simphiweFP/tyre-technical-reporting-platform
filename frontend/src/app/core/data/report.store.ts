@@ -381,6 +381,7 @@ export class ReportStore {
       vehicleMileage: '',
       goodsTransported: '',
       notes: '',
+      photoComments: {},
       photos: [],
     };
   }
