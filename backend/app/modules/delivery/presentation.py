@@ -33,7 +33,10 @@ from backend.app.modules.document_generation.infrastructure import (
 from backend.app.modules.identity.dependencies import require_roles
 from backend.app.modules.identity.domain import Role
 from backend.app.modules.identity.infrastructure import User
-from backend.app.modules.reports.infrastructure import ReportImage, TechnicalReportRecord
+from backend.app.modules.reports.infrastructure import (
+    ReportImage,
+    TechnicalReportRecord,
+)
 
 router = APIRouter(tags=["Report delivery"])
 
