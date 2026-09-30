@@ -115,7 +115,9 @@ async def fetch_sap_customers() -> list[dict[str, Any]]:
     if settings.sap_customer_company_db:
         params["companyDb"] = settings.sap_customer_company_db
 
-    async with httpx.AsyncClient(timeout=settings.sap_customer_timeout_seconds) as client:
+    async with httpx.AsyncClient(
+        timeout=settings.sap_customer_timeout_seconds
+    ) as client:
         response = await client.get(
             settings.sap_customer_endpoint,
             params=params,
