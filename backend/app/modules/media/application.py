@@ -42,7 +42,9 @@ class AnalyseInspectionImage:
         try:
             PillowImage.open(BytesIO(content)).verify()
         except (UnidentifiedImageError, OSError) as exc:
-            raise InvalidInspectionImage("The uploaded file is not a valid image") from exc
+            raise InvalidInspectionImage(
+                "The uploaded file is not a valid image"
+            ) from exc
 
         try:
             return await self.extractor.analyse(content, mime_type)
