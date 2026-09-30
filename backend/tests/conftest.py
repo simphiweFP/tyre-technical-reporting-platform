@@ -1,6 +1,9 @@
 import os
 
-os.environ["DATABASE_URL"] = "sqlite:///./test_tyres.db"
+os.environ["DATABASE_URL"] = os.environ.get(
+    "TEST_DATABASE_URL",
+    "sqlite:///./test_tyres.db",
+)
 os.environ["JWT_SECRET"] = "test-secret-that-is-long-enough-for-tests"
 os.environ["ENVIRONMENT"] = "test"
 
@@ -19,9 +22,15 @@ from backend.app.modules.identity.infrastructure import User
 
 @pytest.fixture()
 def client(tmp_path):
-    engine = create_engine(
-        f"sqlite:///{tmp_path / 'test.db'}", connect_args={"check_same_thread": False}
-    )
+    test_database_url = os.environ.get("TEST_DATABASE_URL")
+    if test_database_url:
+        engine = create_engine(test_database_url, pool_pre_ping=True)
+        Base.metadata.drop_all(engine)
+    else:
+        engine = create_engine(
+            f"sqlite:///{tmp_path / 'test.db'}",
+            connect_args={"check_same_thread": False},
+        )
     TestingSession = sessionmaker(bind=engine, expire_on_commit=False)
     Base.metadata.create_all(engine)
     with TestingSession() as db:
@@ -56,6 +65,9 @@ def client(tmp_path):
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+    if test_database_url:
+        Base.metadata.drop_all(engine)
+    engine.dispose()
 
 
 
