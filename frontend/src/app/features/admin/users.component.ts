@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Branch, ManagedUser, UserAdminService } from '../../core/admin/user-admin.service';
 import { UserRole } from '../../shared/models/auth.models';
+import { SweetAlertService } from '../../core/ui/sweet-alert.service';
 
 interface UserForm {
   email: string;
@@ -27,6 +28,7 @@ const emptyUser = (): UserForm => ({
 })
 export class UsersComponent {
   private readonly admin = inject(UserAdminService);
+  private readonly alerts = inject(SweetAlertService);
   readonly showForm = signal(false);
   readonly editing = signal<ManagedUser | null>(null);
   readonly query = signal('');
@@ -88,6 +90,7 @@ export class UsersComponent {
         });
         this.replace(updated);
         this.notice.set(`${updated.full_name} was updated.`);
+        await this.alerts.success('User updated', `${updated.full_name}'s access details were saved.`);
       } else {
         const created = await this.admin.create({
           email,
@@ -98,20 +101,42 @@ export class UsersComponent {
         });
         this.users.update((users) => [...users, created]);
         this.notice.set(`User created. Temporary password: ${created.temporary_password}`);
+        await this.alerts.info('User created', `Temporary password for ${created.full_name}: ${created.temporary_password}`);
       }
       this.showForm.set(false);
     } catch (error) {
-      this.error.set(this.errorMessage(error, 'The user could not be saved.'));
+      const message = this.errorMessage(error, 'The user could not be saved.');
+      this.error.set(message);
+      await this.alerts.error('User not saved', message);
     } finally {
       this.saving.set(false);
     }
   }
   async toggle(user: ManagedUser): Promise<void> {
-    this.replace(await this.admin.update(user.id, { is_active: !user.is_active }));
+    if (!(await this.alerts.confirm(
+      user.is_active ? 'Disable user?' : 'Enable user?',
+      `${user.full_name} will ${user.is_active ? 'lose' : 'regain'} access to the platform.`,
+      user.is_active ? 'Disable user' : 'Enable user',
+      'warning',
+      user.is_active,
+    ))) return;
+    try {
+      const updated = await this.admin.update(user.id, { is_active: !user.is_active });
+      this.replace(updated);
+      await this.alerts.success(updated.is_active ? 'User enabled' : 'User disabled', `${updated.full_name}'s access was updated.`);
+    } catch {
+      await this.alerts.error('User not updated', 'The user status could not be changed.');
+    }
   }
   async reset(user: ManagedUser): Promise<void> {
-    const result = await this.admin.resetPassword(user.id);
-    this.notice.set(`Temporary password for ${user.full_name}: ${result.temporary_password}`);
+    if (!(await this.alerts.confirm('Reset password?', `Create a new temporary password for ${user.full_name}?`, 'Reset password', 'warning'))) return;
+    try {
+      const result = await this.admin.resetPassword(user.id);
+      this.notice.set(`Temporary password for ${user.full_name}: ${result.temporary_password}`);
+      await this.alerts.info('Password reset', `Temporary password for ${user.full_name}: ${result.temporary_password}`);
+    } catch {
+      await this.alerts.error('Reset failed', 'A temporary password could not be created.');
+    }
   }
   private async load(): Promise<void> {
     try {
