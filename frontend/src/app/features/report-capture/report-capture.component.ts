@@ -291,36 +291,43 @@ export class ReportCaptureComponent implements OnDestroy {
         ...r,
         photos: [...r.photos.filter((p) => p.category !== category), photo],
       }));
+      if (this.offline.online()) {
+        try {
+          this.captureMessage.set('Reading tyre and vehicle details with AI…');
+          const ai = await this.intelligence.analyseImage(optimized.blob, file.name);
+          this.applyOcrResult(ai);
+
+          if (!Object.values(ai).some((value) => value.trim())) {
+            this.captureMessage.set(
+              'AI could not read any tyre or vehicle details from this image.',
+            );
+          }
+        } catch (error) {
+          const detail =
+            error instanceof HttpErrorResponse
+              ? (typeof error.error?.detail === 'string'
+                  ? error.error.detail
+                  : `AI request failed (HTTP ${error.status || 'network'}).`)
+              : 'AI image analysis failed.';
+
+          this.captureMessage.set(
+            `AI could not populate the fields: ${detail}`,
+          );
+        }
+      } else {
+        this.captureMessage.set(
+          'Photo captured offline. AI field extraction will be available when connected.',
+        );
+      }
+
       const current = {
         ...this.report(),
         ...this.form.getRawValue(),
         updatedAt: new Date().toISOString(),
       };
+      this.report.set(current);
       await this.store.saveNow(current);
       const stored = await this.store.uploadImage(current.id, category, optimized.blob, file.name);
-
-      try {
-        this.captureMessage.set('Photo saved. Reading tyre details with AI…');
-        const ai = await this.intelligence.analyseImage(optimized.blob, file.name);
-        this.applyOcrResult(ai);
-
-        if (!Object.values(ai).some((value) => value.trim())) {
-          this.captureMessage.set(
-            'Photo saved, but AI could not read any tyre or vehicle details from this image.',
-          );
-        }
-      } catch (error) {
-        const detail =
-          error instanceof HttpErrorResponse
-            ? (typeof error.error?.detail === 'string'
-                ? error.error.detail
-                : `AI request failed (HTTP ${error.status || 'network'}).`)
-            : 'AI image analysis failed.';
-
-        this.captureMessage.set(
-          `Photo saved, but AI could not populate the fields: ${detail}`,
-        );
-      }
       if (stored) {
         this.report.update((r) => ({
           ...r,
