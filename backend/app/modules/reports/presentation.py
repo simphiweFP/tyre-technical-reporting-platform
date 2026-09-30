@@ -1,12 +1,12 @@
 import base64
 import hashlib
-from datetime import UTC, date, datetime, time
+from datetime import date
 from io import BytesIO
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.core.database import get_db
@@ -27,7 +27,6 @@ from backend.app.modules.reports.infrastructure import (
 from backend.app.modules.reports.schemas import (
     AnalyticsResponse,
     ImageResponse,
-    ReferenceOption,
     ReportListResponse,
     ReportReferenceDataResponse,
     ReportResponse,
@@ -43,9 +42,9 @@ from backend.app.modules.media.application import (
     InvalidInspectionImage,
     MAX_IMAGE_BYTES,
 )
+from backend.app.modules.reports.application import TechnicalReportService
 from backend.app.modules.reports.customer_lookup import (
     customer_suggestions,
-    load_json_customers,
     refresh_customer_cache,
 )
 
@@ -68,45 +67,7 @@ def report_reference_data(
         require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
     ),
 ):
-    branches = db.scalars(
-        select(Branch).where(Branch.is_active.is_(True)).order_by(Branch.name)
-    ).all()
-    records_query = select(TechnicalReportRecord).where(
-        TechnicalReportRecord.archived.is_(False)
-    )
-    if user.role == Role.REPORT_CAPTURER:
-        records_query = records_query.where(TechnicalReportRecord.created_by == user.id)
-    records = db.scalars(records_query).all()
-
-    def report_values(field: str) -> list[str]:
-        return sorted(
-            {
-                str(record.report_data.get(field) or "").strip()
-                for record in records
-                if str(record.report_data.get(field) or "").strip()
-            }
-        )
-
-    brands = sorted(
-        set(report_values("brand"))
-        | {"Bridgestone", "Continental", "Dunlop", "Goodyear", "Hankook", "Michelin"}
-    )
-    return ReportReferenceDataResponse(
-        branches=[
-            ReferenceOption(value=branch.code, label=branch.name) for branch in branches
-        ],
-        customers=load_json_customers() or report_values("customerName"),
-        categories=["Manufacturing", "Road hazard", "Service related"],
-        brands=brands,
-        patterns=report_values("pattern"),
-        tyre_positions=[
-            "Front left",
-            "Front right",
-            "Rear left",
-            "Rear right",
-            "Spare",
-        ],
-    )
+    return TechnicalReportService(db).reference_data(user)
 
 
 @router.get("/customers", response_model=list[str])
@@ -158,37 +119,7 @@ def analytics_summary(
         require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
     ),
 ):
-    records_query = select(TechnicalReportRecord).where(
-        TechnicalReportRecord.archived.is_(False)
-    )
-    if user.role == Role.REPORT_CAPTURER:
-        records_query = records_query.where(TechnicalReportRecord.created_by == user.id)
-    records = db.scalars(records_query).all()
-
-    def group(attribute: str) -> dict[str, int]:
-        result: dict[str, int] = {}
-        for record in records:
-            value = str(getattr(record, attribute) or "Unspecified")
-            result[value] = result.get(value, 0) + 1
-        return dict(sorted(result.items(), key=lambda item: (-item[1], item[0])))
-
-    by_month: dict[str, int] = {}
-    for record in records:
-        month = record.created_at.strftime("%Y-%m")
-        by_month[month] = by_month.get(month, 0) + 1
-    return AnalyticsResponse(
-        total=len(records),
-        drafts=sum(record.status == "Draft" for record in records),
-        completed=sum(
-            record.status in {"Submitted", "Email Sent"} for record in records
-        ),
-        email_failed=sum(record.status == "Email Failed" for record in records),
-        by_status=group("status"),
-        by_branch=group("branch_name"),
-        by_brand=group("tyre_brand"),
-        by_category=group("category"),
-        by_month=dict(sorted(by_month.items())),
-    )
+    return TechnicalReportService(db).analytics(user)
 
 
 @router.get("/records", response_model=ReportListResponse)
@@ -207,66 +138,17 @@ def list_reports(
         require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
     ),
 ):
-    statement = select(TechnicalReportRecord).order_by(
-        TechnicalReportRecord.updated_at.desc()
-    )
-    if user.role == Role.REPORT_CAPTURER:
-        statement = statement.where(TechnicalReportRecord.created_by == user.id)
-    if archived_only:
-        statement = statement.where(TechnicalReportRecord.archived.is_(True))
-    elif not include_archived:
-        statement = statement.where(TechnicalReportRecord.archived.is_(False))
-    if branch:
-        matched_branch = db.scalar(
-            select(Branch).where(or_(Branch.code == branch, Branch.name == branch))
-        )
-        branch_values = {branch}
-        if matched_branch:
-            branch_values.update({matched_branch.code, matched_branch.name})
-        statement = statement.where(
-            TechnicalReportRecord.branch_name.in_(branch_values)
-        )
-    if date_from:
-        statement = statement.where(
-            TechnicalReportRecord.created_at >= datetime.combine(date_from, time.min)
-        )
-    if date_to:
-        statement = statement.where(
-            TechnicalReportRecord.created_at <= datetime.combine(date_to, time.max)
-        )
-    records = db.scalars(statement).all()
-    if query.strip():
-        term = query.strip().casefold()
-
-        def matches(record: TechnicalReportRecord) -> bool:
-            data = record.report_data or {}
-            values = (
-                record.claim_reference,
-                record.customer_name,
-                record.invoice_number,
-                record.serial_number,
-                record.tyre_brand,
-                data.get("dot"),
-                data.get("pattern"),
-                data.get("vehicleMakeModel"),
-            )
-            return any(term in str(value or "").casefold() for value in values)
-
-        records = [record for record in records if matches(record)]
-    status_counts: dict[str, int] = {}
-    for record in records:
-        status_counts[record.status] = status_counts.get(record.status, 0) + 1
-    matching_total = len(records)
-    if report_status:
-        records = [record for record in records if record.status == report_status]
-    total = len(records)
-    return ReportListResponse(
-        items=[
-            _report_response(record, db) for record in records[offset : offset + limit]
-        ],
-        total=total,
-        matching_total=matching_total,
-        status_counts=status_counts,
+    return TechnicalReportService(db).list_reports(
+        user,
+        query=query,
+        report_status=report_status,
+        branch=branch,
+        date_from=date_from,
+        date_to=date_to,
+        include_archived=include_archived,
+        archived_only=archived_only,
+        offset=offset,
+        limit=limit,
     )
 
 
@@ -279,8 +161,8 @@ def get_report(
     ),
 ):
     record = _required_record(report_id, db)
-    _ensure_report_access(record, user)
-    return _report_response(record, db)
+    TechnicalReportService.ensure_access(record, user)
+    return TechnicalReportService(db).response(record)
 
 
 @router.put("/records/{report_id}", response_model=ReportResponse)
@@ -290,65 +172,7 @@ def upsert_report(
     db: Session = Depends(get_db),
     user: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
 ):
-    data = request.report
-    if data.get("status") != "Draft":
-        errors = validate_report(data, 3)
-        if errors:
-            raise HTTPException(status_code=422, detail={"fields": errors})
-    record = db.get(TechnicalReportRecord, report_id)
-    created = record is None
-    if record:
-        _ensure_report_access(record, user)
-    if (
-        record
-        and request.expected_updated_at
-        and _as_utc(record.updated_at) != _as_utc(request.expected_updated_at)
-    ):
-        raise HTTPException(
-            status_code=409,
-            detail="Report changed on the server while this device was offline",
-        )
-    if created:
-        duplicate = db.scalar(
-            select(TechnicalReportRecord).where(
-                TechnicalReportRecord.claim_reference
-                == str(data.get("claimReference", ""))
-            )
-        )
-        if duplicate:
-            raise HTTPException(
-                status_code=409, detail="Claim reference already exists"
-            )
-        record = TechnicalReportRecord(
-            id=report_id,
-            claim_reference=str(data.get("claimReference") or report_id),
-            created_by=user.id,
-        )
-    record.status = str(data.get("status") or "Draft")
-    record.customer_name = str(data.get("customerName") or "")
-    record.invoice_number = str(data.get("customerInvoiceNumber") or "")
-    record.serial_number = str(data.get("serialNumber") or "")
-    record.tyre_brand = str(data.get("brand") or "")
-    record.category = str(data.get("category") or "")
-    record.branch_name = str(data.get("branch") or "")
-    record.report_data = {**data, "photos": []}
-    record.updated_at = datetime.now(UTC)
-    db.add(record)
-    db.add(
-        AuditEvent(
-            actor_id=user.id,
-            action="report.created" if created else "report.updated",
-            entity_type="technical_report",
-            entity_id=str(report_id),
-            details={
-                "claim_reference": record.claim_reference,
-                "status": record.status,
-            },
-        )
-    )
-    db.commit()
-    db.refresh(record)
-    return _report_response(record, db)
+    return TechnicalReportService(db).upsert(report_id, request, user)
 
 
 @router.post("/records/{report_id}/archive", status_code=status.HTTP_204_NO_CONTENT)
@@ -384,7 +208,7 @@ async def upload_report_image(
     user: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
 ):
     record = _required_record(report_id, db)
-    _ensure_report_access(record, user)
+    TechnicalReportService.ensure_access(record, user)
     if image.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(
             status_code=415, detail="Only JPEG, PNG and WebP images are supported"
@@ -458,7 +282,7 @@ def download_report_image(
     ),
 ):
     record = _required_record(report_id, db)
-    _ensure_report_access(record, user)
+    TechnicalReportService.ensure_access(record, user)
     image = db.get(ReportImage, image_id)
     if not image or image.report_id != report_id:
         raise HTTPException(status_code=404, detail="Image not found")
@@ -489,7 +313,7 @@ def delete_report_image(
     user: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
 ):
     record = _required_record(report_id, db)
-    _ensure_report_access(record, user)
+    TechnicalReportService.ensure_access(record, user)
     image = db.get(ReportImage, image_id)
     if not image or image.report_id != report_id:
         raise HTTPException(status_code=404, detail="Image not found")
@@ -534,34 +358,5 @@ def _required_record(report_id: UUID, db: Session) -> TechnicalReportRecord:
     return record
 
 
-def _ensure_report_access(record: TechnicalReportRecord, user: User) -> None:
-    if user.role == Role.REPORT_CAPTURER and record.created_by != user.id:
-        raise HTTPException(status_code=404, detail="Report not found")
-
-
 def _required_report(report_id: UUID, db: Session) -> ReportResponse:
-    return _report_response(_required_record(report_id, db), db)
-
-
-def _report_response(record: TechnicalReportRecord, db: Session) -> ReportResponse:
-    images = db.scalars(
-        select(ReportImage)
-        .where(ReportImage.report_id == record.id)
-        .order_by(ReportImage.captured_at)
-    ).all()
-    return ReportResponse(
-        id=record.id,
-        report={
-            **record.report_data,
-            "id": str(record.id),
-            "claimReference": record.claim_reference,
-            "status": record.status,
-            "photos": [
-                ImageResponse.model_validate(image).model_dump(mode="json")
-                for image in images
-            ],
-        },
-        archived=record.archived,
-        created_at=record.created_at,
-        updated_at=record.updated_at,
-    )
+    return TechnicalReportService(db).response(_required_record(report_id, db))
