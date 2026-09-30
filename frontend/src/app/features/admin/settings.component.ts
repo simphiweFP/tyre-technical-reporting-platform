@@ -6,7 +6,7 @@ import { OfflineDataService } from '../../core/offline/offline-data.service';
   selector: 'app-settings',
   imports: [DatePipe],
   templateUrl: './settings.component.html',
-  styleUrl: './admin.component.scss',
+  styleUrl: './settings.component.scss',
 })
 export class SettingsComponent {
   readonly offline = inject(OfflineDataService);
