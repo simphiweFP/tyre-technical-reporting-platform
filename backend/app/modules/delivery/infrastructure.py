@@ -1,6 +1,7 @@
 import smtplib
 from datetime import UTC, datetime
 from email.message import EmailMessage as SmtpMessage
+from email.utils import make_msgid
 from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
@@ -64,6 +65,11 @@ class SmtpEmailGateway:
         email["Subject"] = message.subject
         email["From"] = f"{self.settings.email_from_name} <{self.settings.email_from}>"
         email["To"] = ", ".join(message.to)
+        email["Message-ID"] = make_msgid()
+        if message.in_reply_to:
+            email["In-Reply-To"] = message.in_reply_to
+        if message.references:
+            email["References"] = message.references
         if message.cc:
             email["Cc"] = ", ".join(message.cc)
         email.set_content(message.body)
@@ -84,4 +90,4 @@ class SmtpEmailGateway:
             if self.settings.smtp_username:
                 client.login(self.settings.smtp_username, self.settings.smtp_password)
             client.send_message(email)
-        return email["Message-ID"] or f"smtp-{uuid4()}"
+        return str(email["Message-ID"])
