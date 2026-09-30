@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     sap_customer_timeout_seconds: float = 8.0
     sap_api_key_header: str = "X-API-Key"
     sap_api_key: str = ""
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-3-flash-preview"
+    gemini_timeout_seconds: float = 30.0
 
     @property
     def cors_origins(self) -> list[str]:
