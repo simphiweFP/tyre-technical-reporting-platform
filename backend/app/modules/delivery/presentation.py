@@ -284,6 +284,7 @@ def retry_delivery(
 
     attempt.status = "Pending"
     attempt.next_attempt_at = datetime.now(UTC)
+    attempt.error_message = None
     db.add(
         AuditEvent(
             actor_id=user.id,
@@ -295,7 +296,137 @@ def retry_delivery(
     )
     db.commit()
     db.refresh(attempt)
-    return attempt
+    return _service(db).deliver(attempt, user.id)
+
+
+@router.get("/deliveries/{delivery_id}/details")
+def delivery_details(
+    delivery_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(
+        require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
+    ),
+):
+    attempt = db.get(DeliveryAttempt, delivery_id)
+    if not attempt or (attempt.report_payload or {}).get("_deleted"):
+        raise HTTPException(status_code=404, detail="Delivery not found")
+
+    record = db.scalar(
+        select(TechnicalReportRecord).where(
+            TechnicalReportRecord.claim_reference == attempt.claim_reference
+        )
+    )
+    if user.role == Role.REPORT_CAPTURER and (
+        not record or record.created_by != user.id
+    ):
+        raise HTTPException(status_code=404, detail="Delivery not found")
+
+    settings = get_settings()
+    claim = attempt.claim_reference
+    return {
+        "id": str(attempt.id),
+        "claim_reference": claim,
+        "from": f"{settings.email_from_name} <{settings.email_from}>",
+        "to": [attempt.recipient_email],
+        "cc": attempt.cc,
+        "subject": f"Royal Tyres technical report {claim}",
+        "body": (
+            f"Please find the Royal Tyres technical report {claim} attached.\n\n"
+            "This is an automated delivery."
+        ),
+        "attachment_name": f"{claim}.pdf",
+        "status": attempt.status,
+        "message_id": attempt.message_id,
+        "error_message": attempt.error_message,
+        "attempt_count": attempt.attempt_count,
+        "created_at": attempt.created_at,
+        "last_attempt_at": attempt.last_attempt_at,
+    }
+
+
+@router.get("/deliveries/{delivery_id}/pdf")
+def delivery_pdf(
+    delivery_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(
+        require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
+    ),
+):
+    from io import BytesIO
+    from fastapi.responses import StreamingResponse
+
+    attempt = db.get(DeliveryAttempt, delivery_id)
+    if not attempt or (attempt.report_payload or {}).get("_deleted"):
+        raise HTTPException(status_code=404, detail="Delivery not found")
+
+    record = db.scalar(
+        select(TechnicalReportRecord).where(
+            TechnicalReportRecord.claim_reference == attempt.claim_reference
+        )
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Report not found")
+    if user.role == Role.REPORT_CAPTURER and record.created_by != user.id:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+
+    from backend.app.modules.reports.infrastructure import ReportImage
+
+    images = db.scalars(
+        select(ReportImage)
+        .where(ReportImage.report_id == record.id)
+        .order_by(ReportImage.captured_at)
+    ).all()
+    comments = record.report_data.get("photoComments") or {}
+    report = {
+        **record.report_data,
+        "photos": [
+            {
+                "category": image.category,
+                "label": image.category.replace("_", " ").title(),
+                "previewUrl": (
+                    f"data:{image.content_type};base64,{image.base64_data}"
+                ),
+                "comment": str(comments.get(image.category) or ""),
+            }
+            for image in images
+        ],
+    }
+    pdf = GenerateTechnicalReport(ReportLabTechnicalReportGenerator()).execute(report)
+    filename = f"{attempt.claim_reference}.pdf"
+    return StreamingResponse(
+        BytesIO(pdf),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
+
+
+@router.delete("/deliveries/{delivery_id}", status_code=status.HTTP_204_NO_CONTENT)
+def soft_delete_delivery(
+    delivery_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(Role.ADMINISTRATOR)),
+):
+    attempt = db.get(DeliveryAttempt, delivery_id)
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+
+    from datetime import UTC, datetime
+
+    attempt.report_payload = {
+        **(attempt.report_payload or {}),
+        "_deleted": True,
+        "_deleted_at": datetime.now(UTC).isoformat(),
+    }
+    db.add(
+        AuditEvent(
+            actor_id=user.id,
+            action="report.email_soft_deleted",
+            entity_type="delivery_attempt",
+            entity_id=str(attempt.id),
+            details={"claim_reference": attempt.claim_reference},
+        )
+    )
+    db.commit()
 
 
 @router.get(
@@ -322,7 +453,11 @@ def delivery_history(
         .where(DeliveryAttempt.claim_reference == claim_reference)
         .order_by(DeliveryAttempt.created_at.desc())
     )
-    return db.scalars(query).all()
+    return [
+        item
+        for item in db.scalars(query).all()
+        if not (item.report_payload or {}).get("_deleted")
+    ]
 
 
 @router.get("/deliveries", response_model=DeliveryListResponse)
@@ -350,7 +485,11 @@ def list_deliveries(
             DeliveryAttempt.claim_reference.ilike(term)
             | DeliveryAttempt.recipient_email.ilike(term)
         )
-    items = db.scalars(statement).all()
+    items = [
+        item
+        for item in db.scalars(statement).all()
+        if not (item.report_payload or {}).get("_deleted")
+    ]
     return DeliveryListResponse(items=items[offset : offset + limit], total=len(items))
 
 
