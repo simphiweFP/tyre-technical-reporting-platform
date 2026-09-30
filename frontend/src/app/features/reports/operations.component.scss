@@ -873,3 +873,73 @@ td a {
     padding-inline: 16px;
   }
 }
+
+
+.follow-up-button {
+  height: 29px;
+  border: 1px solid #0872d3;
+  border-radius: 4px;
+  padding: 0 12px;
+  color: #0872d3;
+  background: #f5faff;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.follow-up-button:hover:not(:disabled) {
+  color: #fff;
+  background: #0872d3;
+}
+
+.follow-up-button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.follow-up-panel {
+  display: grid;
+  gap: 8px;
+  margin: 0 24px 16px;
+  padding: 14px;
+  border: 1px solid #dce4ed;
+  border-radius: 6px;
+  background: #f8fbff;
+}
+
+.follow-up-panel label {
+  color: #17365e;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.follow-up-panel textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 10px 11px;
+  border: 1px solid #cbd7e5;
+  border-radius: 5px;
+  outline: 0;
+  resize: vertical;
+  color: #17365e;
+  background: #fff;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.follow-up-panel textarea:focus {
+  border-color: #0872d3;
+  box-shadow: 0 0 0 2px #0872d318;
+}
+
+.follow-up-panel small {
+  color: #697a92;
+  font-size: 9px;
+}
+
+@media(max-width:600px) {
+  .follow-up-panel {
+    margin-inline: 14px;
+  }
+}
