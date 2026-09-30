@@ -13,7 +13,7 @@ import {
 @Component({
   selector: 'app-report-detail',
   templateUrl: './report-detail.component.html',
-  styleUrl: './operations.component.scss',
+  styleUrl: './report-detail.component.scss',
 })
 export class ReportDetailComponent {
   private readonly route = inject(ActivatedRoute);
