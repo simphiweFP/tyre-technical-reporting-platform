@@ -8,6 +8,7 @@ import { ReportReferenceData, ReportStore } from '../../core/data/report.store';
 import { ReportDeliveryService } from '../../core/delivery/report-delivery.service';
 import { ReportIntelligenceService } from '../../core/media/report-intelligence.service';
 import { OfflineDataService } from '../../core/offline/offline-data.service';
+import { SweetAlertService } from '../../core/ui/sweet-alert.service';
 import {
   PHOTO_CATEGORIES,
   ReportPhoto,
@@ -29,6 +30,7 @@ export class ReportCaptureComponent implements OnDestroy {
   private readonly intelligence = inject(ReportIntelligenceService);
   private readonly delivery = inject(ReportDeliveryService);
   readonly offline = inject(OfflineDataService);
+  private readonly alerts = inject(SweetAlertService);
   private readonly destroy$ = new Subject<void>();
   private readonly customerSearch$ = new Subject<string>();
   readonly step = signal(0);
@@ -496,20 +498,42 @@ export class ReportCaptureComponent implements OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   async sendFromPreview(): Promise<void> {
-    if (!this.selectedRecipient()) {
-      this.captureMessage.set(
-        'No active report recipient is configured for this branch and category. Contact an administrator.',
+    const recipientId = this.selectedRecipient();
+    if (!recipientId) {
+      await this.alerts.error(
+        'Recipient required',
+        'Select an email recipient before sending the report.',
       );
       return;
     }
+
+    const recipient = this.recipients().find((item) => item.id === recipientId);
+    const confirmed = await this.alerts.confirmReportSend(
+      recipient?.email ?? 'Selected recipient',
+      this.report().claimReference,
+    );
+    if (!confirmed) return;
+
     this.submitting.set(true);
     this.captureMessage.set('');
+    this.alerts.sending();
+
     try {
       await this.sendReport();
+      this.alerts.close();
+      await this.alerts.success(
+        'Report sent',
+        `${this.report().claimReference} was sent successfully to ${this.deliveryEmail() || recipient?.email || 'the selected recipient'}.`,
+      );
       this.previewMode.set(false);
       this.successMode.set(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
+      this.alerts.close();
+      await this.alerts.error(
+        'Report not sent',
+        'The report could not be delivered. Check the email configuration or Delivery Centre for the error.',
+      );
       this.captureMessage.set(
         'The report could not be sent. Check the API connection and try again.',
       );
