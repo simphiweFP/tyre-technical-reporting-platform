@@ -128,6 +128,15 @@ export class ReportDeliveryService {
     );
   }
 
+  followUp(deliveryId: string, message: string): Promise<{ message: string; message_id: string; in_reply_to: string | null }> {
+    return firstValueFrom(
+      this.http.post<{ message: string; message_id: string; in_reply_to: string | null }>(
+        `${environment.apiUrl}/deliveries/${deliveryId}/follow-up`,
+        { message },
+      ),
+    );
+  }
+
   softDeleteDelivery(deliveryId: string): Promise<void> {
     return firstValueFrom(
       this.http.delete<void>(`${environment.apiUrl}/deliveries/${deliveryId}`),
