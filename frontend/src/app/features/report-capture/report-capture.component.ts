@@ -4,11 +4,10 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { debounceTime, Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
-import { ReportReferenceData, ReportStore } from '../../core/data/report.store';
-import { ReportDeliveryService } from '../../core/delivery/report-delivery.service';
-import { ReportIntelligenceService } from '../../core/media/report-intelligence.service';
+import { ReportReferenceData } from '../../core/data/report.store';
 import { OfflineDataService } from '../../core/offline/offline-data.service';
 import { SweetAlertService } from '../../core/ui/sweet-alert.service';
+import { ReportCaptureFacade } from './report-capture.facade';
 import {
   PHOTO_CATEGORIES,
   ReportPhoto,
@@ -25,10 +24,8 @@ export class ReportCaptureComponent implements OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  readonly store = inject(ReportStore);
+  private readonly workflow = inject(ReportCaptureFacade);
   private readonly auth = inject(AuthService);
-  private readonly intelligence = inject(ReportIntelligenceService);
-  private readonly delivery = inject(ReportDeliveryService);
   readonly offline = inject(OfflineDataService);
   private readonly alerts = inject(SweetAlertService);
   private readonly destroy$ = new Subject<void>();
@@ -153,7 +150,7 @@ export class ReportCaptureComponent implements OnDestroy {
     try {
       const ready = { ...this.currentReport(), status: 'Ready to Submit' as const };
       this.report.set(ready);
-      await this.store.saveNow(ready);
+      await this.workflow.saveNow(ready);
       await this.loadDeliveryData();
       this.previewMode.set(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -207,8 +204,8 @@ export class ReportCaptureComponent implements OnDestroy {
     this.customerRefreshMessage.set('');
 
     try {
-      const result = await this.store.refreshCustomers();
-      const data = await this.store.referenceData();
+      const result = await this.workflow.refreshCustomers();
+      const data = await this.workflow.referenceData();
       this.referenceData.set(data);
 
       const matches = term
@@ -259,7 +256,7 @@ export class ReportCaptureComponent implements OnDestroy {
   async saveDraft(): Promise<void> {
     const updated = this.currentReport();
     this.report.set(updated);
-    await this.store.saveNow(updated);
+    await this.workflow.saveNow(updated);
   }
   photoFor(category: string): ReportPhoto | undefined {
     return this.report().photos.find((p) => p.category === category);
@@ -271,7 +268,7 @@ export class ReportCaptureComponent implements OnDestroy {
     input.value = '';
     this.captureMessage.set('');
     try {
-      const optimized = await this.intelligence.optimize(file);
+      const optimized = await this.workflow.optimizeImage(file);
       const duplicate = this.report().photos.find(
         (photo) => photo.sha256 === optimized.sha256 && photo.category !== category,
       );
@@ -299,7 +296,7 @@ export class ReportCaptureComponent implements OnDestroy {
       if (this.offline.online()) {
         try {
           this.captureMessage.set('Reading tyre and vehicle details with AI…');
-          const ai = await this.intelligence.analyseImage(optimized.blob, file.name);
+          const ai = await this.workflow.analyseImage(optimized.blob, file.name);
           this.applyOcrResult(ai, category);
 
           if (!Object.values(ai).some((value) => value.trim())) {
@@ -331,8 +328,8 @@ export class ReportCaptureComponent implements OnDestroy {
         updatedAt: new Date().toISOString(),
       };
       this.report.set(current);
-      await this.store.saveNow(current);
-      const stored = await this.store.uploadImage(current.id, category, optimized.blob, file.name);
+      await this.workflow.saveNow(current);
+      const stored = await this.workflow.uploadImage(current.id, category, optimized.blob, file.name);
       if (stored) {
         this.report.update((r) => ({
           ...r,
@@ -351,9 +348,9 @@ export class ReportCaptureComponent implements OnDestroy {
   async removePhoto(category: string): Promise<void> {
     const photo = this.photoFor(category);
     if (photo?.storageId) {
-      await this.store.deleteImage(this.report().id, photo.storageId);
+      await this.workflow.deleteImage(this.report().id, photo.storageId);
     } else {
-      await this.store.removeQueuedImage(this.report().id, category);
+      await this.workflow.removeQueuedImage(this.report().id, category);
     }
     this.report.update((r) => ({ ...r, photos: r.photos.filter((p) => p.category !== category) }));
     this.persist();
@@ -462,14 +459,14 @@ export class ReportCaptureComponent implements OnDestroy {
     if (!(await this.validateStep(3)) || !this.selectedRecipient()) return;
     const current = this.currentReport();
     this.report.set(current);
-    await this.store.saveNow(current);
-    const result = await this.delivery.deliver(this.report(), this.selectedRecipient());
+    await this.workflow.saveNow(current);
+    const result = await this.workflow.deliver(this.report(), this.selectedRecipient());
     const updated = {
       ...this.report(),
       status: result.status === 'Sent' ? ('Email Sent' as const) : ('Submitted' as const),
     };
     this.report.set(updated);
-    await this.store.saveNow(updated);
+    await this.workflow.saveNow(updated);
     this.deliveryStatus.set(result.status);
     this.deliveryEmail.set(result.recipient_email);
   }
@@ -484,8 +481,8 @@ export class ReportCaptureComponent implements OnDestroy {
     try {
       const current = this.currentReport();
       this.report.set(current);
-      await this.store.saveNow(current);
-      await this.intelligence.downloadPdf(current);
+      await this.workflow.saveNow(current);
+      await this.workflow.downloadPdf(current);
     } catch {
       this.captureMessage.set('PDF generation failed. Check the API connection and try again.');
     } finally {
@@ -547,7 +544,7 @@ export class ReportCaptureComponent implements OnDestroy {
   private async loadCustomerSuggestions(term: string): Promise<void> {
     this.customerLookupBusy.set(true);
     try {
-      const customers = await this.store.customerSuggestions(term);
+      const customers = await this.workflow.customerSuggestions(term);
       if (this.form.controls.customerName.value.trim() !== term) return;
 
       this.customerMatches.set(customers.slice(0, 20));
@@ -563,7 +560,7 @@ export class ReportCaptureComponent implements OnDestroy {
   private async loadDeliveryData(): Promise<void> {
     try {
       const current = this.currentReport();
-      const recipients = await this.delivery.recipients(true, current.branch, current.category);
+      const recipients = await this.workflow.recipients(current);
       this.recipients.set(recipients);
       if (!this.selectedRecipient() && recipients.length) {
         this.selectedRecipient.set(recipients[0].id);
@@ -575,7 +572,7 @@ export class ReportCaptureComponent implements OnDestroy {
   }
   private async loadReferenceData(): Promise<void> {
     try {
-      const data = await this.store.referenceData();
+      const data = await this.workflow.referenceData();
       this.referenceData.set(data);
       const current = this.form.controls.branch.value;
       const matching = data.branches.find(
@@ -593,7 +590,7 @@ export class ReportCaptureComponent implements OnDestroy {
   private async validateStep(step: number): Promise<boolean> {
     this.persist();
     try {
-      const result = await this.store.validate(this.currentReport(), step);
+      const result = await this.workflow.validate(this.currentReport(), step);
       this.validationErrors.set(result.errors);
       if (result.valid) {
         this.captureMessage.set('');
@@ -619,12 +616,12 @@ export class ReportCaptureComponent implements OnDestroy {
   }
   private loadReport(): TechnicalReport {
     const id = this.route.snapshot.paramMap.get('id');
-    if (!id) return this.store.create();
-    return this.store.get(id) ?? { ...this.store.create(), id };
+    if (!id) return this.workflow.createReport();
+    return this.workflow.getLocalReport(id) ?? { ...this.workflow.createReport(), id };
   }
   private async loadServerReport(): Promise<void> {
     try {
-      const loaded = await this.store.loadOne(this.report().id);
+      const loaded = await this.workflow.loadReport(this.report().id);
       this.report.set(loaded);
       this.form.patchValue(loaded, { emitEvent: false });
       this.form.controls.salesperson.setValue(this.auth.user()?.full_name ?? '', {
@@ -640,7 +637,7 @@ export class ReportCaptureComponent implements OnDestroy {
     const updated = { ...this.report(), ...value, updatedAt: new Date().toISOString() };
     this.report.set(updated);
     try {
-      this.store.save(updated);
+      this.workflow.save(updated);
     } catch {}
   }
   private currentReport(): TechnicalReport {
