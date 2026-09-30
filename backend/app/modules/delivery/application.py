@@ -38,6 +38,7 @@ class ReportDeliveryService:
                 .where(ReportImage.report_id == report_record.id)
                 .order_by(ReportImage.captured_at)
             ).all()
+            photo_comments = report_record.report_data.get("photoComments") or {}
             report = {
                 **report_record.report_data,
                 "photos": [
@@ -47,6 +48,7 @@ class ReportDeliveryService:
                         "previewUrl": (
                             f"data:{image.content_type};base64,{image.base64_data}"
                         ),
+                        "comment": str(photo_comments.get(image.category) or ""),
                     }
                     for image in images
                 ],
