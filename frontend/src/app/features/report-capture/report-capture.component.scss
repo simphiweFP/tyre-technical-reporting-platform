@@ -69,15 +69,17 @@ select {
 .wizard-progress {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  padding: 18px 14px 14px;
-  border-bottom: 1px solid #e7e9eb;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(100%, 860px);
+  margin: 0 auto;
+  padding: 18px 20px 16px;
+  border-bottom: 0;
 }
 .wizard-progress:before {
   position: absolute;
   top: 32px;
-  left: 13%;
-  right: 13%;
+  left: 16.666%;
+  right: 16.666%;
   height: 2px;
   content: '';
   background: #d6dade;
@@ -796,11 +798,14 @@ h1 {
   }
 
   .wizard-progress {
-    padding: 20px clamp(56px, 10vw, 190px) 16px;
+    width: min(100%, 980px);
+  padding: 22px 28px 18px;
   }
 
   .wizard-progress:before {
-    top: 37px;
+    top: 39px;
+    left: 16.666%;
+    right: 16.666%;
   }
 
   .wizard-progress span {
@@ -1158,4 +1163,41 @@ h1 {
 .other-info-field textarea:focus {
   border-color: #be1e2d;
   box-shadow: 0 0 0 2px #be1e2d18;
+}
+
+
+.wizard-progress button.complete,
+.wizard-progress button.active {
+  color: #c7192c;
+}
+
+.wizard-progress button.complete span {
+  border-color: #c7192c;
+  color: #c7192c;
+  background: #fff;
+}
+
+@media (max-width: 520px) {
+  .wizard-progress {
+    width: 100%;
+    padding: 14px 10px 12px;
+  }
+
+  .wizard-progress:before {
+    top: 28px;
+    left: 16.666%;
+    right: 16.666%;
+  }
+
+  .wizard-progress span {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  .wizard-progress small {
+    min-height: 0;
+    font-size: 8.5px;
+    line-height: 1.2;
+  }
 }
