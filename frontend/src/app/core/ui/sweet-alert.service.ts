@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
 
+type SweetAlertIcon = 'success' | 'error' | 'warning' | 'info' | 'question';
+
 declare const Swal: {
   fire(options: Record<string, unknown>): Promise<{ isConfirmed: boolean }>;
   showLoading(): void;
@@ -8,6 +10,33 @@ declare const Swal: {
 
 @Injectable({ providedIn: 'root' })
 export class SweetAlertService {
+  async confirm(
+    title: string,
+    text: string,
+    confirmButtonText = 'Continue',
+    icon: SweetAlertIcon = 'question',
+    danger = false,
+  ): Promise<boolean> {
+    const result = await Swal.fire({
+      title,
+      text,
+      icon,
+      showCancelButton: true,
+      confirmButtonText,
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      focusCancel: danger,
+      confirmButtonColor: danger ? '#d71920' : '#2f3398',
+      cancelButtonColor: '#667085',
+      customClass: {
+        popup: 'royal-swal',
+        confirmButton: 'royal-swal-confirm',
+        cancelButton: 'royal-swal-cancel',
+      },
+    });
+    return result.isConfirmed;
+  }
+
   async confirmReportSend(recipient: string, claimReference: string): Promise<boolean> {
     const result = await Swal.fire({
       title: 'Send technical report?',
@@ -20,8 +49,7 @@ export class SweetAlertService {
       confirmButtonText: 'Send report',
       cancelButtonText: 'Not yet',
       reverseButtons: true,
-      focusCancel: true,
-      confirmButtonColor: '#d71920',
+      confirmButtonColor: '#2f3398',
       cancelButtonColor: '#667085',
       customClass: {
         popup: 'royal-swal',
@@ -32,7 +60,7 @@ export class SweetAlertService {
     return result.isConfirmed;
   }
 
-  sending(title = 'Sending report…', text = 'Please wait while the report is being delivered.'): void {
+  loading(title: string, text: string): void {
     void Swal.fire({
       title,
       text,
@@ -42,6 +70,13 @@ export class SweetAlertService {
       didOpen: () => Swal.showLoading(),
       customClass: { popup: 'royal-swal' },
     });
+  }
+
+  sending(
+    title = 'Sending report…',
+    text = 'Please wait while the report is being delivered.',
+  ): void {
+    this.loading(title, text);
   }
 
   close(): void {
@@ -54,6 +89,28 @@ export class SweetAlertService {
       text,
       icon: 'success',
       confirmButtonText: 'Done',
+      confirmButtonColor: '#2f3398',
+      customClass: { popup: 'royal-swal' },
+    });
+  }
+
+  info(title: string, text: string): Promise<{ isConfirmed: boolean }> {
+    return Swal.fire({
+      title,
+      text,
+      icon: 'info',
+      confirmButtonText: 'OK',
+      confirmButtonColor: '#2f3398',
+      customClass: { popup: 'royal-swal' },
+    });
+  }
+
+  warning(title: string, text: string): Promise<{ isConfirmed: boolean }> {
+    return Swal.fire({
+      title,
+      text,
+      icon: 'warning',
+      confirmButtonText: 'OK',
       confirmButtonColor: '#d71920',
       customClass: { popup: 'royal-swal' },
     });
