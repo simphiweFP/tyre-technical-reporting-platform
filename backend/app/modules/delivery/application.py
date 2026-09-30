@@ -43,6 +43,80 @@ class ReportDeliveryService:
         self.gateway = gateway
         self.generator = generator
 
+    def follow_up(
+        self,
+        attempt: DeliveryAttempt,
+        actor_id,
+        body: str,
+    ) -> str:
+        if attempt.status != "Sent":
+            raise ValueError("Follow-up is only available for sent emails")
+
+        subject = f"Re: {attempt.email_subject or f'Royal Tyres technical report {attempt.claim_reference}'}"
+        message = EmailMessage(
+            subject=subject,
+            body=body.strip(),
+            to=(attempt.recipient_email,),
+            cc=tuple(attempt.cc),
+            in_reply_to=attempt.message_id,
+            references=attempt.message_id,
+        )
+        try:
+            message_id = self.gateway.send(message)
+        except Exception as exc:
+            self.db.add(
+                AuditEvent(
+                    actor_id=actor_id,
+                    action="report.email_follow_up_failed",
+                    entity_type="delivery_attempt",
+                    entity_id=str(attempt.id),
+                    details={
+                        "claim_reference": attempt.claim_reference,
+                        "recipient": attempt.recipient_email,
+                        "error": str(exc)[:500],
+                    },
+                )
+            )
+            self.db.commit()
+            raise
+
+        self.db.add(
+            AuditEvent(
+                actor_id=actor_id,
+                action="report.email_follow_up_sent",
+                entity_type="delivery_attempt",
+                entity_id=str(attempt.id),
+                details={
+                    "claim_reference": attempt.claim_reference,
+                    "recipient": attempt.recipient_email,
+                    "message_id": message_id,
+                    "in_reply_to": attempt.message_id,
+                },
+            )
+        )
+        self.db.commit()
+        return message_id
+
+    def soft_delete(self, attempt: DeliveryAttempt, actor_id) -> None:
+        attempt.deleted_at = datetime.now(UTC)
+        self.db.add(
+            AuditEvent(
+                actor_id=actor_id,
+                action="report.email_soft_deleted",
+                entity_type="delivery_attempt",
+                entity_id=str(attempt.id),
+                details={"claim_reference": attempt.claim_reference},
+            )
+        )
+        self.db.commit()
+
+    @staticmethod
+    def snapshot_pdf(attempt: DeliveryAttempt) -> bytes | None:
+        if not attempt.sent_pdf_base64:
+            return None
+        return base64.b64decode(attempt.sent_pdf_base64)
+
+
     def deliver(self, attempt: DeliveryAttempt, actor_id) -> DeliveryAttempt:
         recipient = self.db.get(Recipient, attempt.recipient_id)
         if not recipient or not recipient.is_active:
