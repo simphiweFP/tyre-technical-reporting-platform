@@ -213,11 +213,19 @@
                 ><input formControlName="inspectedPressure" placeholder="e.g. 100" />
               </label>
               <label class="mock-field compact">
-                <span>Inspected location</span><i>●</i
-                ><input formControlName="inspectedLocation" placeholder="Enter inspected location" />
+                <span>Inspected location</span><i>●</i>
+                <select formControlName="inspectedLocation">
+                  <option value="">Select inspected location</option>
+                  <option value="RTCPHX">RTCPHX</option>
+                  <option value="RTCUMG">RTCUMG</option>
+                  <option value="RTCJHB">RTCJHB</option>
+                  <option value="Customer">Customer</option>
+                  <option value="Breakdown">Breakdown</option>
+                </select>
+                <b>›</b>
               </label>
               <label class="mock-field compact">
-                <span>Returned with rim?</span><i>⊗</i>
+                <span>Returned with Rim?</span><i>⊗</i>
                 <select formControlName="returnedWithRim">
                   <option [ngValue]="null">Select option</option>
                   <option [ngValue]="true">Yes</option>
