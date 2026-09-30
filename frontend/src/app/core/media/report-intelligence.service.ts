@@ -4,6 +4,17 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { TechnicalReport } from '../../shared/models/report.models';
 
+export interface GeminiOcrResult {
+  brand: string;
+  size: string;
+  pattern: string;
+  dot: string;
+  serialNumber: string;
+  vehicleMakeModel: string;
+  rtd: string;
+  comment: string;
+}
+
 export interface OptimizedImage {
   blob: Blob;
   previewUrl: string;
@@ -36,6 +47,17 @@ export class ReportIntelligenceService {
       .join('');
     const previewUrl = await this.asDataUrl(blob);
     return { blob, previewUrl, sha256 };
+  }
+
+  async analyseImage(blob: Blob, filename = 'inspection.jpg'): Promise<GeminiOcrResult> {
+    const body = new FormData();
+    body.append('image', blob, filename);
+    return firstValueFrom(
+      this.http.post<GeminiOcrResult>(
+        `${environment.apiUrl}/reports/analyse-image`,
+        body,
+      ),
+    );
   }
 
   async downloadPdf(report: TechnicalReport): Promise<void> {
