@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.core.database import Base
@@ -52,4 +52,23 @@ class PasswordResetToken(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     used_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+
+
+
+class RTAuthSession(Base):
+    __tablename__ = "rt_auth_sessions"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    session_token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    csrf_token_hash: Mapped[str] = mapped_column(String(64))
+    refresh_token: Mapped[str] = mapped_column(Text)
+    roles: Mapped[list] = mapped_column(JSON, default=list)
+    companies: Mapped[list] = mapped_column(JSON, default=list)
+    warehouses: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
     )
