@@ -57,6 +57,11 @@ export class UserAdminService {
       this.http.patch<Branch>(`${environment.apiUrl}/auth/branches/${id}`, changes),
     );
   }
+  deleteBranch(id: string): Promise<void> {
+    return firstValueFrom(
+      this.http.delete<void>(`${environment.apiUrl}/auth/branches/${id}`),
+    );
+  }
   create(input: UserInput): Promise<ManagedUser & { temporary_password: string }> {
     return firstValueFrom(
       this.http.post<ManagedUser & { temporary_password: string }>(
@@ -76,6 +81,11 @@ export class UserAdminService {
         `${environment.apiUrl}/auth/users/${id}/reset-password`,
         null,
       ),
+    );
+  }
+  deleteUser(id: string): Promise<void> {
+    return firstValueFrom(
+      this.http.delete<void>(`${environment.apiUrl}/auth/users/${id}`),
     );
   }
 }
