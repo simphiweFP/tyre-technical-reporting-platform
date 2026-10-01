@@ -38,7 +38,12 @@ export class DashboardComponent {
 
   pendingOffline(): number {
     const stats = this.store.offline.stats();
-    return stats.pendingReports + stats.pendingPhotos + stats.pendingDeletions;
+    return (
+      stats.pendingReports +
+      stats.pendingPhotos +
+      stats.pendingDeletions +
+      stats.pendingDeliveries
+    );
   }
 
   sectionProgress(report: TechnicalReport): number {
