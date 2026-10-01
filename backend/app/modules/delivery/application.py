@@ -36,6 +36,40 @@ PHOTO_LABELS = {
 }
 
 
+def _delivery_error_message(exc: Exception, recipient_email: str) -> str:
+    if isinstance(exc, smtplib.SMTPRecipientsRefused):
+        details = exc.recipients.get(recipient_email) or next(
+            iter(exc.recipients.values()),
+            None,
+        )
+        smtp_detail = ""
+        if details:
+            code, message = details
+            if isinstance(message, bytes):
+                message = message.decode("utf-8", errors="replace")
+            smtp_detail = f" SMTP {code}: {message}"
+        return (
+            f"The recipient email address {recipient_email} could not receive the message."
+            f"{smtp_detail}"
+        )
+
+    if isinstance(exc, smtplib.SMTPDataError):
+        return (
+            f"The mail server rejected the message for {recipient_email}. "
+            f"SMTP {exc.smtp_code}: "
+            f"{exc.smtp_error.decode('utf-8', errors='replace') if isinstance(exc.smtp_error, bytes) else exc.smtp_error}"
+        )
+
+    if isinstance(exc, smtplib.SMTPSenderRefused):
+        return (
+            "The sending mailbox was rejected by the mail server. "
+            f"SMTP {exc.smtp_code}: "
+            f"{exc.smtp_error.decode('utf-8', errors='replace') if isinstance(exc.smtp_error, bytes) else exc.smtp_error}"
+        )
+
+    return str(exc)[:1000] or exc.__class__.__name__
+
+
 class ReportDeliveryService:
     def __init__(
         self, db: Session, gateway: EmailGateway, generator: GenerateTechnicalReport
@@ -219,7 +253,10 @@ class ReportDeliveryService:
                 if attempt.attempt_count < settings.max_delivery_attempts
                 else "Failed"
             )
-            attempt.error_message = str(exc)[:1000]
+            attempt.error_message = _delivery_error_message(
+                exc,
+                recipient.email,
+            )[:1000]
             attempt.next_attempt_at = datetime.now(UTC) + timedelta(
                 minutes=settings.delivery_retry_minutes * attempt.attempt_count
             )
