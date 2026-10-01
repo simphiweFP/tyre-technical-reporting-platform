@@ -155,7 +155,6 @@ export class ReportStore {
         .set('branch', search.branch ?? '')
         .set('include_archived', false)
         .set('archived_only', search.archived ?? false)
-        .set('mine_only', true)
         .set('offset', search.offset ?? 0)
         .set('limit', search.limit ?? 20);
       if (search.dateFrom) params = params.set('date_from', search.dateFrom);
@@ -287,10 +286,7 @@ export class ReportStore {
 
   analytics(): Promise<ReportAnalytics> {
     return firstValueFrom(
-      this.http.get<ReportAnalytics>(
-        `${environment.apiUrl}/reports/analytics/summary`,
-        { params: { mine_only: true } },
-      ),
+      this.http.get<ReportAnalytics>(`${environment.apiUrl}/reports/analytics/summary`),
     );
   }
 
