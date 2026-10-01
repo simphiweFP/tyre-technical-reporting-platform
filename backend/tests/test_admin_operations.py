@@ -247,8 +247,10 @@ def test_recipient_rules_are_applied_to_claim_delivery(client):
         headers=headers,
         json={"recipient_id": recipient["id"], "report": report, "cc": []},
     )
-    assert rejected.status_code == 422
-    assert "branch" in rejected.json()["detail"].lower()
+    assert rejected.status_code == 200
+    body = rejected.json()
+    assert body["status"] == "Failed"
+    assert "branch" in (body["error_message"] or "").lower()
 
 
 def test_audit_viewer_reads_real_events(client):
