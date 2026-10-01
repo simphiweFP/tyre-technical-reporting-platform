@@ -88,9 +88,12 @@ export class SweetAlertService {
       title,
       text,
       icon: 'success',
-      confirmButtonText: 'Done',
-      confirmButtonColor: '#2f3398',
-      customClass: { popup: 'royal-swal' },
+      showConfirmButton: false,
+      timer: 1800,
+      timerProgressBar: true,
+      allowOutsideClick: true,
+      allowEscapeKey: true,
+      customClass: { popup: 'royal-swal royal-swal-auto' },
     });
   }
 
