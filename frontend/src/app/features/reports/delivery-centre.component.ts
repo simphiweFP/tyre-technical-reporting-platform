@@ -91,7 +91,7 @@ export class DeliveryCentreComponent{
     try{
       await this.delivery.followUp(id,message);
       this.alerts.close();
-      this.message.set('Follow-up email sent in the original email thread.');
+      this.message.set('');
       this.followUpMessage.set('');
       this.selected.set(await this.delivery.deliveryDetails(id));
       await this.alerts.success('Follow-up sent','Your message was sent successfully.');
@@ -122,6 +122,10 @@ export class DeliveryCentreComponent{
       this.message.set('Delivery record could not be removed.');
       await this.alerts.error('Delete failed','The delivery record could not be removed.');
     }
+  }
+
+  deliveryStatusLabel(status: string): string {
+    return status === 'Sent' ? 'Accepted' : status;
   }
 
   clear(){this.query.set('');this.status.set('');void this.load()}
