@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnDestroy, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -113,6 +113,16 @@ export class ReportCaptureComponent implements OnDestroy {
       : '';
   });
   constructor() {
+    effect(() => {
+      const result = this.offline.lastDeliveryResult();
+      if (!result || result.claimReference !== this.report().claimReference) return;
+      this.deliveryStatus.set(result.status);
+      this.deliveryEmail.set(result.recipientEmail);
+      if (result.status === 'Sent') {
+        this.report.update((report) => ({ ...report, status: 'Email Sent' }));
+      }
+    });
+
     if (this.readonlyView()) this.form.disable({ emitEvent: false });
     this.form.controls.salesperson.setValue(this.auth.user()?.full_name ?? '', {
       emitEvent: false,
@@ -503,24 +513,46 @@ export class ReportCaptureComponent implements OnDestroy {
       { label: 'Serial number', value: values.serialNumber || 'Not captured' },
     ];
   }
-  async sendReport(): Promise<void> {
-    if (!this.offline.online()) {
-      this.captureMessage.set('Sending is unavailable offline. The report is saved locally and will sync when you reconnect.');
-      return;
+  async sendReport(): Promise<'Queued' | string> {
+    if (!(await this.validateStep(3)) || !this.hasSelectedRecipient()) {
+      throw new Error('The report is not ready to send.');
     }
-    if (!(await this.validateStep(3)) || !this.selectedRecipient()) return;
-    const current = this.currentReport();
+
+    const recipient = this.recipients().find(
+      (item) => item.id === this.selectedRecipient(),
+    );
+    if (!recipient) throw new Error('The selected recipient is not available.');
+
+    const current = {
+      ...this.currentReport(),
+      status: 'Submitted' as const,
+    };
     this.report.set(current);
     await this.workflow.saveNow(current);
-    const result = await this.workflow.deliver(this.report(), this.selectedRecipient());
+
+    if (!this.offline.online()) {
+      await this.workflow.queueDelivery(
+        current,
+        recipient.id,
+        recipient.email,
+      );
+      this.deliveryStatus.set('Queued');
+      this.deliveryEmail.set(recipient.email);
+      return 'Queued';
+    }
+
+    const result = await this.workflow.deliver(current, recipient.id);
     const updated = {
       ...this.report(),
-      status: result.status === 'Sent' ? ('Email Sent' as const) : ('Submitted' as const),
+      status: result.status === 'Sent'
+        ? ('Email Sent' as const)
+        : ('Submitted' as const),
     };
     this.report.set(updated);
     await this.workflow.saveNow(updated);
     this.deliveryStatus.set(result.status);
     this.deliveryEmail.set(result.recipient_email);
+    return result.status;
   }
   async downloadPdf(): Promise<void> {
     if (!this.offline.online()) {
@@ -573,12 +605,19 @@ export class ReportCaptureComponent implements OnDestroy {
     this.alerts.sending();
 
     try {
-      await this.sendReport();
+      const status = await this.sendReport();
       this.alerts.close();
-      await this.alerts.success(
-        'Report sent',
-        `${this.report().claimReference} was sent successfully to ${this.deliveryEmail() || recipient?.email || 'the selected recipient'}.`,
-      );
+      if (status === 'Queued') {
+        await this.alerts.success(
+          'Report queued',
+          `${this.report().claimReference} is saved on this device and will send automatically when the connection returns.`,
+        );
+      } else if (status === 'Sent') {
+        await this.alerts.success(
+          'Report accepted',
+          `${this.report().claimReference} was accepted by the mail server for ${this.deliveryEmail() || recipient?.email || 'the selected recipient'}.`,
+        );
+      }
       this.previewMode.set(false);
       this.successMode.set(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
