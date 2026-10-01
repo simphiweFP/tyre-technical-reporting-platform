@@ -7,28 +7,10 @@ export const routes: Routes = [
     path: 'login',
     loadComponent: () => import('./features/auth/login.component').then((m) => m.LoginComponent),
   },
-  {
-    path: 'register',
-    loadComponent: () =>
-      import('./features/auth/register.component').then((m) => m.RegisterComponent),
-  },
-  {
-    path: 'forgot-password',
-    loadComponent: () =>
-      import('./features/auth/forgot-password.component').then((m) => m.ForgotPasswordComponent),
-  },
-  {
-    path: 'reset-password',
-    loadComponent: () =>
-      import('./features/auth/reset-password.component').then((m) => m.ResetPasswordComponent),
-  },
-  {
-    path: 'auth/callback',
-    loadComponent: () =>
-      import('./features/auth/microsoft-callback.component').then(
-        (m) => m.MicrosoftCallbackComponent,
-      ),
-  },
+  { path: 'register', redirectTo: 'login', pathMatch: 'full' },
+  { path: 'forgot-password', redirectTo: 'login', pathMatch: 'full' },
+  { path: 'reset-password', redirectTo: 'login', pathMatch: 'full' },
+  { path: 'auth/callback', redirectTo: 'dashboard', pathMatch: 'full' },
   {
     path: '',
     component: AppShellComponent,
