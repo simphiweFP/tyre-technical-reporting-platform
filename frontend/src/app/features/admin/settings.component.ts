@@ -22,13 +22,17 @@ export class SettingsComponent {
       return;
     }
     this.message.set('');
-    this.alerts.loading('Syncing…', 'Uploading pending reports and photos.');
+    this.alerts.loading('Syncing…', 'Uploading pending reports, photos and queued emails.');
     await this.offline.syncNow();
     this.alerts.close();
     const stats = this.offline.stats();
     const resultMessage = stats.conflicts
       ? `${stats.conflicts} report conflict(s) need review before they can sync.`
-      : stats.pendingReports + stats.pendingPhotos + stats.pendingDeletions === 0
+      : stats.pendingReports +
+            stats.pendingPhotos +
+            stats.pendingDeletions +
+            stats.pendingDeliveries ===
+          0
         ? 'All offline changes are synced.'
         : 'Some offline changes are still waiting to sync.';
     this.message.set(resultMessage);
