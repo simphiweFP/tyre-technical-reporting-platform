@@ -46,13 +46,13 @@ export class SystemAdminService {
   auditEvents(
     query = '',
     days = 7,
-    actorId = '',
+    actor = '',
     action = '',
   ) {
     return firstValueFrom(
       this.http.get<{ items: AuditEvent[]; total: number }>(
         `${environment.apiUrl}/admin/audit-events`,
-        { params: { query, days, actor_id: actorId, action } },
+        { params: { query, days, actor, action } },
       ),
     );
   }
