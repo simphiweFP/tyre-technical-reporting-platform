@@ -120,12 +120,20 @@ export class ReportDeliveryService {
     );
   }
 
-  openDeliveryPdf(deliveryId: string): void {
-    window.open(
-      `${environment.apiUrl}/deliveries/${deliveryId}/pdf`,
-      '_blank',
-      'noopener',
+  async openDeliveryPdf(deliveryId: string): Promise<void> {
+    const blob = await firstValueFrom(
+      this.http.get(
+        `${environment.apiUrl}/deliveries/${deliveryId}/pdf`,
+        { responseType: 'blob' },
+      ),
     );
+    const url = URL.createObjectURL(blob);
+    const opened = window.open(url, '_blank', 'noopener');
+    if (!opened) {
+      URL.revokeObjectURL(url);
+      throw new Error('The browser blocked the PDF preview window.');
+    }
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
   followUp(deliveryId: string, message: string): Promise<{ message: string; message_id: string; in_reply_to: string | null }> {
