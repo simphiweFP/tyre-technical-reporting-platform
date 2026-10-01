@@ -58,7 +58,7 @@ export class AppShellComponent {
     if (!(await this.alerts.confirm('Sign out?', 'You will need to sign in again to continue working.', 'Sign out', 'warning'))) return;
     this.auth.logout();
   }
-  searchChanged(value: string): void {
+  onSearchChanged(value: string): void {
     this.search.set(value);
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => this.runSearch(), 300);
