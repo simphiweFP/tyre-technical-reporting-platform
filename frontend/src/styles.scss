@@ -241,3 +241,12 @@ h3 {
     min-width: 0 !important;
   }
 }
+
+
+/* Auto-dismiss SweetAlert success state: never show action buttons. */
+.royal-swal-auto .swal2-actions,
+.royal-swal-auto .swal2-confirm,
+.royal-swal-auto .swal2-cancel,
+.royal-swal-auto .swal2-deny {
+  display: none !important;
+}
