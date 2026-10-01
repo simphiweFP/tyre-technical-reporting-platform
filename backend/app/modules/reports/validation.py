@@ -49,19 +49,10 @@ def validate_report(report: dict[str, Any], step: int = 3) -> dict[str, str]:
             "remainingTreadDepth": "Remaining tread depth is required.",
             "inspectedPressure": "Inspected pressure is required.",
             "inspectedLocation": "Inspected location is required.",
-            "fittedLoose": "Select whether the tyre is fitted or loose.",
-            "claimCode": "Claim code or description is required.",
-            "tyreMileage": "Tyre mileage is required.",
-            "natureOfRepair": "Nature of repair is required.",
-            "goodsTransported": "Goods transported is required.",
-            "vehicleMakeModel": "Vehicle make/model is required.",
-            "vehicleMileage": "Vehicle mileage is required.",
             "tyrePosition": "Tyre position is required.",
         }
         for field, message in required_text.items():
             if not str(report.get(field) or "").strip():
                 errors[field] = message
 
-        if report.get("returnedWithRim") is None:
-            errors["returnedWithRim"] = "Select whether the tyre was returned with a rim."
     return errors
