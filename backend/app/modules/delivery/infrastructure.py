@@ -52,6 +52,7 @@ class DeliveryAttempt(Base):
     attachment_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     sent_pdf_base64: Mapped[str | None] = mapped_column(Text, nullable=True)
     sent_pdf_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    follow_ups: Mapped[list] = mapped_column(JSON, default=list)
     deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
     )
