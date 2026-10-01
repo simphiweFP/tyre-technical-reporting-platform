@@ -12,8 +12,8 @@
   <section class="filter-card">
     <label class="wide-search"
       >⌕<input
-        [(ngModel)]="query"
-        (keyup.enter)="load(true)"
+        [ngModel]="query()"
+        (ngModelChange)="searchChanged($event)"
         placeholder="Search by claim ref, customer, DOT or serial..."
     /></label>
     <div class="filter-grid">
