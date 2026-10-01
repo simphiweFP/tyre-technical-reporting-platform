@@ -44,6 +44,7 @@ export class ReportViewerComponent {
     this.items().filter((item) => item.action.includes('archive')).length,
   );
   readonly isCapturer = computed(() => this.auth.hasRole('report_capturer'));
+  private searchTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
     void this.load();
@@ -63,6 +64,12 @@ export class ReportViewerComponent {
     } catch {
       this.message.set('Audit activity could not be loaded.');
     }
+  }
+
+  searchChanged(value: string): void {
+    this.query.set(value);
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => void this.load(), 300);
   }
 
   clearFilters(): void {
