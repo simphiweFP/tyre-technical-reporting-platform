@@ -70,11 +70,7 @@
                       <button class="view-button" type="button" (click)="view(row.id)">
                         View
                       </button>
-                      @if (row.status === 'Sent') {
-                        <button class="follow-up-button" type="button" (click)="view(row.id)">
-                          Follow up
-                        </button>
-                      } @else if (row.status === 'Failed' || row.status === 'Retrying') {
+                      @if (row.status === 'Failed' || row.status === 'Retrying') {
                         <button class="retry-button" type="button" (click)="retry(row.id)">
                           Retry
                         </button>
