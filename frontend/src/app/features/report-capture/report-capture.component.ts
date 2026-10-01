@@ -42,6 +42,9 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly readonlyView = computed(() => this.auth.hasRole('viewer'));
   readonly recipients = signal<ReportRecipient[]>([]);
   readonly selectedRecipient = signal('');
+  readonly hasSelectedRecipient = computed(() =>
+    this.recipients().some((recipient) => recipient.id === this.selectedRecipient()),
+  );
   readonly confirmed = signal(false);
   readonly submitting = signal(false);
   readonly pdfBusy = signal(false);
@@ -524,7 +527,7 @@ export class ReportCaptureComponent implements OnDestroy {
   }
   async sendFromPreview(): Promise<void> {
     const recipientId = this.selectedRecipient();
-    if (!recipientId) {
+    if (!this.hasSelectedRecipient()) {
       await this.alerts.error(
         'Recipient required',
         'Select an email recipient before sending the report.',
@@ -595,8 +598,11 @@ export class ReportCaptureComponent implements OnDestroy {
       const current = this.currentReport();
       const recipients = await this.workflow.recipients(current);
       this.recipients.set(recipients);
-      if (!this.selectedRecipient() && recipients.length) {
-        this.selectedRecipient.set(recipients[0].id);
+
+      // Recipient selection must always be an explicit user choice.
+      // Clear stale selections when branch/category changes or no longer matches.
+      if (!recipients.some((recipient) => recipient.id === this.selectedRecipient())) {
+        this.selectedRecipient.set('');
       }
     } catch {
       this.recipients.set([]);
