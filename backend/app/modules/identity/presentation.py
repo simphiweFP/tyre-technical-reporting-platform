@@ -223,21 +223,29 @@ def create_branch(
     actor: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
     code = request.code.strip().upper()
-    if db.scalar(
-        select(Branch).where(Branch.code == code, Branch.deleted_at.is_(None))
-    ):
+    branch = db.scalar(select(Branch).where(Branch.code == code))
+    if branch and branch.deleted_at is None:
         raise HTTPException(status_code=409, detail="Branch code already exists")
-    branch = Branch(
-        code=code,
-        name=request.name.strip(),
-        routing_email=str(request.routing_email or "").lower(),
-    )
-    db.add(branch)
-    db.flush()
+
+    restored = branch is not None
+    if restored:
+        branch.name = request.name.strip()
+        branch.routing_email = str(request.routing_email or "").lower()
+        branch.is_active = True
+        branch.deleted_at = None
+    else:
+        branch = Branch(
+            code=code,
+            name=request.name.strip(),
+            routing_email=str(request.routing_email or "").lower(),
+        )
+        db.add(branch)
+        db.flush()
+
     db.add(
         AuditEvent(
             actor_id=actor.id,
-            action="branch.created",
+            action="branch.restored" if restored else "branch.created",
             entity_type="branch",
             entity_id=str(branch.id),
             details={"code": code},
@@ -328,30 +336,45 @@ def create_user(
 ):
     if request.role not in {role.value for role in Role}:
         raise HTTPException(status_code=422, detail="Invalid role")
-    if db.scalar(
-        select(User).where(
-            User.email == str(request.email).lower(),
-            User.deleted_at.is_(None),
-        )
-    ):
+    email = str(request.email).lower()
+    user = db.scalar(select(User).where(User.email == email))
+    if user and user.deleted_at is None:
         raise HTTPException(status_code=409, detail="Email already exists")
-    if request.branch_id and not db.get(Branch, request.branch_id):
-        raise HTTPException(status_code=422, detail="Branch not found")
+
+    if request.branch_id:
+        branch = db.get(Branch, request.branch_id)
+        if not branch or branch.deleted_at is not None:
+            raise HTTPException(status_code=422, detail="Branch not found")
+
     temporary_password = secrets.token_urlsafe(12) + "A1!"
-    user = User(
-        email=str(request.email).lower(),
-        full_name=request.full_name.strip(),
-        job_title=request.job_title,
-        password_hash=hash_password(temporary_password),
-        role=request.role,
-        branch_id=request.branch_id,
-    )
-    db.add(user)
-    db.flush()
+    restored = user is not None
+    if restored:
+        user.full_name = request.full_name.strip()
+        user.job_title = request.job_title
+        user.password_hash = hash_password(temporary_password)
+        user.role = request.role
+        user.branch_id = request.branch_id
+        user.is_active = True
+        user.deleted_at = None
+        user.external_provider = None
+        user.external_subject = None
+        _revoke_sessions(user.id, db)
+    else:
+        user = User(
+            email=email,
+            full_name=request.full_name.strip(),
+            job_title=request.job_title,
+            password_hash=hash_password(temporary_password),
+            role=request.role,
+            branch_id=request.branch_id,
+        )
+        db.add(user)
+        db.flush()
+
     db.add(
         AuditEvent(
             actor_id=actor.id,
-            action="user.created",
+            action="user.restored" if restored else "user.created",
             entity_type="user",
             entity_id=str(user.id),
             details={"email": user.email, "role": user.role},
