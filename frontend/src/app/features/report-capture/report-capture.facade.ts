@@ -96,6 +96,14 @@ export class ReportCaptureFacade {
     return this.delivery.deliver(report, recipientId);
   }
 
+  queueDelivery(
+    report: TechnicalReport,
+    recipientId: string,
+    recipientEmail: string,
+  ): Promise<void> {
+    return this.store.offline.queueDelivery(report, recipientId, recipientEmail);
+  }
+
   downloadPdf(report: TechnicalReport): Promise<void> {
     return this.intelligence.downloadPdf(report);
   }
