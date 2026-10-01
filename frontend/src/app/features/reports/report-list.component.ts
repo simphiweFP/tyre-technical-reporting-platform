@@ -34,6 +34,7 @@ export class ReportListComponent {
   readonly canCapture = computed(() => this.auth.hasRole('administrator', 'report_capturer'));
   readonly canArchive = computed(() => this.auth.hasRole('administrator'));
   readonly pageCount = computed(() => Math.max(1, Math.ceil(this.store.total() / this.pageSize)));
+  private searchTimer?: ReturnType<typeof setTimeout>;
 
   constructor() {
     void this.initialise();
@@ -67,6 +68,12 @@ export class ReportListComponent {
     } catch {
       this.message.set('Claims could not be loaded. Check the API connection.');
     }
+  }
+
+  searchChanged(value: string): void {
+    this.query.set(value);
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => void this.load(true), 300);
   }
 
   selectStatus(value: string): void {
