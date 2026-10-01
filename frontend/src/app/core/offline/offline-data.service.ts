@@ -64,6 +64,11 @@ export class OfflineDataService {
   readonly online = signal(typeof navigator === 'undefined' ? true : navigator.onLine);
   readonly syncing = signal(false);
   readonly stats = signal<OfflineStats>(EMPTY_STATS);
+  readonly lastDeliveryResult = signal<{
+    claimReference: string;
+    recipientEmail: string;
+    status: string;
+  } | null>(null);
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -294,13 +299,13 @@ export class OfflineDataService {
               cc: [],
             }),
           );
-          if (result.status === 'Sent') {
-            await this.remove('deliveries', item.key);
-            syncedAnything = true;
-          } else {
-            item.error = `Delivery is ${result.status}. The server will continue retrying.`;
-            await this.put('deliveries', item);
-          }
+          await this.remove('deliveries', item.key);
+          this.lastDeliveryResult.set({
+            claimReference: item.claimReference,
+            recipientEmail: item.recipientEmail,
+            status: result.status,
+          });
+          syncedAnything = true;
         } catch (error) {
           item.error = 'Email delivery is waiting for the next sync.';
           await this.put('deliveries', item);
