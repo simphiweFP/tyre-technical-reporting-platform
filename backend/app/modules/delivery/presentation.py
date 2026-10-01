@@ -11,7 +11,6 @@ from backend.app.core.config import get_settings
 from backend.app.core.database import get_db
 from backend.app.modules.auditing.infrastructure import AuditEvent
 from backend.app.modules.delivery.application import ReportDeliveryService
-from backend.app.modules.delivery.domain import EmailMessage
 from backend.app.modules.delivery.infrastructure import (
     DeliveryAttempt,
     Recipient,
@@ -57,7 +56,11 @@ def recipients(
     db: Session = Depends(get_db),
     _: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
 ):
-    query = select(Recipient).order_by(Recipient.company)
+    query = (
+        select(Recipient)
+        .where(Recipient.deleted_at.is_(None))
+        .order_by(Recipient.company)
+    )
     if active_only:
         query = query.where(Recipient.is_active.is_(True))
     if branch:
@@ -75,7 +78,12 @@ def create_recipient(
     db: Session = Depends(get_db),
     user: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
-    if db.scalar(select(Recipient).where(Recipient.email == str(request.email))):
+    if db.scalar(
+        select(Recipient).where(
+            Recipient.email == str(request.email),
+            Recipient.deleted_at.is_(None),
+        )
+    ):
         raise HTTPException(
             status_code=409, detail="A recipient with this email already exists"
         )
@@ -112,7 +120,7 @@ def update_recipient(
     user: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
     recipient = db.get(Recipient, recipient_id)
-    if not recipient:
+    if not recipient or recipient.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Recipient not found")
     duplicate = db.scalar(
         select(Recipient).where(
@@ -144,29 +152,6 @@ def update_recipient(
     return recipient
 
 
-@router.post("/recipients/{recipient_id}/test")
-def test_recipient(
-    recipient_id: UUID,
-    db: Session = Depends(get_db),
-    _: User = Depends(require_roles(Role.ADMINISTRATOR)),
-):
-    recipient = db.get(Recipient, recipient_id)
-    if not recipient:
-        raise HTTPException(status_code=404, detail="Recipient not found")
-    SmtpEmailGateway(get_settings()).send(
-        EmailMessage(
-            subject="Royal Tyres delivery test",
-            body=(
-                "This confirms that technical-report email delivery is "
-                "configured correctly."
-            ),
-            to=(recipient.email,),
-            cc=(),
-        )
-    )
-    return {"message": f"Test email sent to {recipient.email}"}
-
-
 @router.patch("/recipients/{recipient_id}/status", response_model=RecipientResponse)
 def set_recipient_status(
     recipient_id: UUID,
@@ -175,7 +160,7 @@ def set_recipient_status(
     user: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
     recipient = db.get(Recipient, recipient_id)
-    if not recipient:
+    if not recipient or recipient.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Recipient not found")
     recipient.is_active = is_active
     db.add(
@@ -190,6 +175,29 @@ def set_recipient_status(
     db.commit()
     db.refresh(recipient)
     return recipient
+
+
+@router.delete("/recipients/{recipient_id}", status_code=status.HTTP_204_NO_CONTENT)
+def soft_delete_recipient(
+    recipient_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(Role.ADMINISTRATOR)),
+):
+    recipient = db.get(Recipient, recipient_id)
+    if not recipient or recipient.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Recipient not found")
+    recipient.is_active = False
+    recipient.deleted_at = datetime.now(UTC)
+    db.add(
+        AuditEvent(
+            actor_id=user.id,
+            action="recipient.soft_deleted",
+            entity_type="recipient",
+            entity_id=str(recipient.id),
+            details={"email": recipient.email},
+        )
+    )
+    db.commit()
 
 
 @router.post("/reports/deliver", response_model=DeliveryResponse)
@@ -218,7 +226,7 @@ def deliver_report(
             detail="The report must pass API validation before delivery",
         )
     recipient = db.get(Recipient, request.recipient_id)
-    if not recipient or not recipient.is_active:
+    if not recipient or recipient.deleted_at is not None or not recipient.is_active:
         raise HTTPException(
             status_code=422, detail="The selected recipient is not active"
         )
