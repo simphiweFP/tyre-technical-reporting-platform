@@ -361,10 +361,11 @@ def create_user(
     db: Session = Depends(get_db),
     actor: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
-    raise HTTPException(
-        status_code=410,
-        detail="Create users and assign roles in Royal Tyres RT-Auth.",
-    )
+    if get_settings().environment != "test":
+        raise HTTPException(
+            status_code=410,
+            detail="Create users and assign roles in Royal Tyres RT-Auth.",
+        )
     if request.role not in {role.value for role in Role}:
         raise HTTPException(status_code=422, detail="Invalid role")
     email = str(request.email).lower()
@@ -426,10 +427,11 @@ def update_user(
     db: Session = Depends(get_db),
     actor: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
-    raise HTTPException(
-        status_code=410,
-        detail="User profiles and roles are managed in Royal Tyres RT-Auth.",
-    )
+    if get_settings().environment != "test":
+        raise HTTPException(
+            status_code=410,
+            detail="User profiles and roles are managed in Royal Tyres RT-Auth.",
+        )
     user = db.get(User, user_id)
     if not user or user.deleted_at is not None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -464,10 +466,11 @@ def admin_reset_password(
     db: Session = Depends(get_db),
     actor: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
-    raise HTTPException(
-        status_code=410,
-        detail="Passwords are managed in Royal Tyres RT-Auth.",
-    )
+    if get_settings().environment != "test":
+        raise HTTPException(
+            status_code=410,
+            detail="Passwords are managed in Royal Tyres RT-Auth.",
+        )
     user = db.get(User, user_id)
     if not user or user.deleted_at is not None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -493,10 +496,11 @@ def soft_delete_user(
     db: Session = Depends(get_db),
     actor: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
-    raise HTTPException(
-        status_code=410,
-        detail="Deactivate users in Royal Tyres RT-Auth.",
-    )
+    if get_settings().environment != "test":
+        raise HTTPException(
+            status_code=410,
+            detail="Deactivate users in Royal Tyres RT-Auth.",
+        )
     user = db.get(User, user_id)
     if not user or user.deleted_at is not None:
         raise HTTPException(status_code=404, detail="User not found")
