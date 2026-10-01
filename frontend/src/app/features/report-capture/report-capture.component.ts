@@ -466,6 +466,20 @@ export class ReportCaptureComponent implements OnDestroy {
       `${this.tyreVehicleType()} - ${position}`;
   }
 
+  fieldError(field: string): string {
+    const error = this.validationErrors()[field] ?? '';
+    if (!error) return '';
+
+    if (field === 'returnedWithRim') {
+      return this.form.controls.returnedWithRim.value === null ? error : '';
+    }
+
+    const control = this.form.get(field);
+    if (!control) return error;
+
+    return String(control.value ?? '').trim() ? '' : error;
+  }
+
   photoIcon(category: string): string {
     if (category.startsWith('tread')) return '▥';
     if (category === 'vehicle') return '▰';
