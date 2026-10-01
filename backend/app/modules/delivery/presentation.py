@@ -209,6 +209,7 @@ def deliver_report(
     claim = str(request.report.get("claimReference") or "").strip()
     if not claim:
         raise HTTPException(status_code=422, detail="A claim reference is required")
+
     record = db.scalar(
         select(TechnicalReportRecord).where(
             TechnicalReportRecord.claim_reference == claim
@@ -216,35 +217,24 @@ def deliver_report(
     )
     if not record:
         raise HTTPException(
-            status_code=422, detail="Save the report before scheduling delivery"
+            status_code=422,
+            detail="Save the report before scheduling delivery",
         )
     if user.role == Role.REPORT_CAPTURER and record.created_by != user.id:
         raise HTTPException(status_code=404, detail="Report not found")
-    if record.status == "Draft":
-        raise HTTPException(
-            status_code=422,
-            detail="The report must pass API validation before delivery",
-        )
+
     recipient = db.get(Recipient, request.recipient_id)
-    if not recipient or recipient.deleted_at is not None or not recipient.is_active:
-        raise HTTPException(
-            status_code=422, detail="The selected recipient is not active"
-        )
-    report_branch = str(record.report_data.get("branch") or "")
-    report_category = str(record.report_data.get("category") or "")
-    if recipient.branch_code not in {"All Branches", report_branch}:
-        raise HTTPException(
-            status_code=422, detail="Recipient is not configured for this branch"
-        )
-    if recipient.category not in {"All Categories", report_category}:
-        raise HTTPException(
-            status_code=422,
-            detail="Recipient is not configured for this claim category",
-        )
+    if not recipient:
+        raise HTTPException(status_code=422, detail="Recipient not found")
+
     cc = [str(address).lower() for address in request.cc]
     for address in _read_cc(recipient.default_cc):
         if address not in cc:
             cc.append(address)
+
+    # Create and commit the delivery row before *any* delivery/preflight work.
+    # From this point forward, every send attempt is visible in Delivery Centre,
+    # even when validation, PDF generation or SMTP delivery fails.
     attempt = DeliveryAttempt(
         claim_reference=claim,
         recipient_id=recipient.id,
@@ -267,15 +257,57 @@ def deliver_report(
     db.commit()
     db.refresh(attempt)
 
-    # Try immediately, but never lose the delivery record. The attempt is
-    # committed above before any PDF/SMTP work starts. If an unexpected error
-    # happens before the delivery service can classify it, persist it as Failed
-    # so Delivery Centre always shows what happened.
+    def fail_attempt(message: str) -> DeliveryAttempt:
+        attempt.status = "Failed"
+        attempt.error_message = message[:1000]
+        attempt.attempt_count = max(attempt.attempt_count, 1)
+        attempt.last_attempt_at = datetime.now(UTC)
+        record.status = "Email Failed"
+        db.add(attempt)
+        db.add(record)
+        db.add(
+            AuditEvent(
+                actor_id=user.id,
+                action="report.email_failed",
+                entity_type="technical_report",
+                entity_id=claim,
+                details={
+                    "delivery_id": str(attempt.id),
+                    "recipient": recipient.email,
+                    "attempt": attempt.attempt_count,
+                    "error": attempt.error_message,
+                },
+            )
+        )
+        db.commit()
+        db.refresh(attempt)
+        return attempt
+
+    if record.status == "Draft":
+        return fail_attempt(
+            "The report must pass API validation before delivery."
+        )
+
+    if recipient.deleted_at is not None or not recipient.is_active:
+        return fail_attempt("The selected recipient is not active.")
+
+    report_branch = str(record.report_data.get("branch") or "")
+    report_category = str(record.report_data.get("category") or "")
+
+    if recipient.branch_code not in {"All Branches", report_branch}:
+        return fail_attempt(
+            "Recipient is not configured for this branch."
+        )
+
+    if recipient.category not in {"All Categories", report_category}:
+        return fail_attempt(
+            "Recipient is not configured for this claim category."
+        )
+
     try:
         return _service(db).deliver(attempt, user.id)
     except Exception as exc:
         db.rollback()
-
         persisted = db.get(DeliveryAttempt, attempt.id)
         if persisted is None:
             raise
@@ -283,12 +315,18 @@ def deliver_report(
         persisted.status = "Failed"
         persisted.error_message = str(exc)[:1000] or exc.__class__.__name__
         persisted.last_attempt_at = datetime.now(UTC)
-        if persisted.attempt_count == 0:
-            persisted.attempt_count = 1
+        persisted.attempt_count = max(persisted.attempt_count, 1)
 
-        record.status = "Email Failed"
+        record = db.scalar(
+            select(TechnicalReportRecord).where(
+                TechnicalReportRecord.claim_reference == claim
+            )
+        )
+        if record:
+            record.status = "Email Failed"
+            db.add(record)
+
         db.add(persisted)
-        db.add(record)
         db.add(
             AuditEvent(
                 actor_id=user.id,
@@ -306,7 +344,6 @@ def deliver_report(
         db.commit()
         db.refresh(persisted)
         return persisted
-
 
 @router.post("/reports/deliveries/{delivery_id}/retry", response_model=DeliveryResponse)
 def retry_delivery(
