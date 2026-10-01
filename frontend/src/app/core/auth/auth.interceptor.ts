@@ -1,26 +1,33 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, switchMap, throwError } from 'rxjs';
+import { catchError, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
+
+function cookie(name: string): string {
+  const prefix = `${encodeURIComponent(name)}=`;
+  const match = document.cookie
+    .split(';')
+    .map((value) => value.trim())
+    .find((value) => value.startsWith(prefix));
+  return match ? decodeURIComponent(match.slice(prefix.length)) : '';
+}
+
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);
-  const withToken = (token: string | null) =>
-    token ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : request;
-  const sent = withToken(auth.accessToken());
-  const isAuthRequest =
-    /\/auth\/(login|register|refresh|logout|forgot-password|reset-password)$/.test(request.url);
-  return next(sent).pipe(
+  const unsafe = !['GET', 'HEAD', 'OPTIONS'].includes(request.method.toUpperCase());
+  const csrf = cookie('rt_tyres_csrf');
+
+  const secured = request.clone({
+    withCredentials: true,
+    setHeaders: unsafe && csrf ? { 'X-CSRF-Token': csrf } : {},
+  });
+
+  return next(secured).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status !== 401 || isAuthRequest || !auth.refreshToken()) {
-        return throwError(() => error);
+      if (error.status === 401 && !/\/auth\/(me|company-login)/.test(request.url)) {
+        auth.expireSession();
       }
-      return auth.refreshSession().pipe(
-        switchMap(() => next(withToken(auth.accessToken()))),
-        catchError((refreshError) => {
-          auth.expireSession();
-          return throwError(() => refreshError);
-        }),
-      );
+      return throwError(() => error);
     }),
   );
 };
