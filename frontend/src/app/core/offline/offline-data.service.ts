@@ -3,10 +3,12 @@ import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ReportRecipient, TechnicalReport } from '../../shared/models/report.models';
+import { AuthService } from '../auth/auth.service';
 import type { ReportReferenceData } from '../data/report.store';
 
 interface PendingReport {
   id: string;
+  ownerId: string;
   report: TechnicalReport;
   expectedUpdatedAt: string | null;
   queuedAt: string;
@@ -15,6 +17,7 @@ interface PendingReport {
 }
 interface PendingPhoto {
   key: string;
+  ownerId: string;
   reportId: string;
   category: string;
   blob: Blob;
@@ -24,6 +27,7 @@ interface PendingPhoto {
 }
 interface PendingDeletion {
   key: string;
+  ownerId: string;
   reportId: string;
   imageId: string;
   queuedAt: string;
@@ -31,6 +35,7 @@ interface PendingDeletion {
 }
 interface PendingDelivery {
   key: string;
+  ownerId: string;
   reportId: string;
   claimReference: string;
   recipientId: string;
@@ -60,6 +65,7 @@ const EMPTY_STATS: OfflineStats = {
 @Injectable({ providedIn: 'root' })
 export class OfflineDataService {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
   private dbPromise: Promise<IDBDatabase> | null = null;
   readonly online = signal(typeof navigator === 'undefined' ? true : navigator.onLine);
   readonly syncing = signal(false);
@@ -91,6 +97,7 @@ export class OfflineDataService {
     };
     await this.put('reports', {
       id: report.id,
+      ownerId: this.currentUserId(),
       report: sanitized,
       expectedUpdatedAt: existing?.expectedUpdatedAt ?? expectedUpdatedAt,
       queuedAt: existing?.queuedAt ?? new Date().toISOString(),
@@ -107,7 +114,7 @@ export class OfflineDataService {
 
   async loadReport(reportId: string): Promise<TechnicalReport | null> {
     const pending = await this.getItem<PendingReport>('reports', reportId);
-    if (!pending) return null;
+    if (!pending || pending.ownerId !== this.currentUserId()) return null;
     const photos = await this.getAll<PendingPhoto>('photos');
     const queued = new Map(
       photos.filter((photo) => photo.reportId === reportId).map((photo) => [photo.category, photo]),
@@ -131,6 +138,7 @@ export class OfflineDataService {
   async queuePhoto(reportId: string, category: string, blob: Blob, filename: string): Promise<void> {
     await this.put('photos', {
       key: `${reportId}:${category}`,
+      ownerId: this.currentUserId(),
       reportId,
       category,
       blob,
@@ -149,6 +157,7 @@ export class OfflineDataService {
   async queueImageDeletion(reportId: string, imageId: string): Promise<void> {
     await this.put('deletions', {
       key: `${reportId}:${imageId}`,
+      ownerId: this.currentUserId(),
       reportId,
       imageId,
       queuedAt: new Date().toISOString(),
@@ -158,25 +167,25 @@ export class OfflineDataService {
   }
 
   async cacheReferenceData(data: ReportReferenceData): Promise<void> {
-    await this.put('meta', { key: 'reference-data', value: data } satisfies MetaRecord);
+    await this.put('meta', { key: this.userMetaKey('reference-data'), value: data } satisfies MetaRecord);
   }
 
   async referenceData(): Promise<ReportReferenceData | null> {
-    const record = await this.getItem<MetaRecord>('meta', 'reference-data');
+    const record = await this.getItem<MetaRecord>('meta', this.userMetaKey('reference-data'));
     return (record?.value as ReportReferenceData | undefined) ?? null;
   }
 
   async clearReferenceCache(): Promise<void> {
-    await this.remove('meta', 'reference-data');
+    await this.remove('meta', this.userMetaKey('reference-data'));
   }
 
 
   async cacheRecipients(recipients: ReportRecipient[]): Promise<void> {
-    await this.put('meta', { key: 'report-recipients', value: recipients } satisfies MetaRecord);
+    await this.put('meta', { key: this.userMetaKey('report-recipients'), value: recipients } satisfies MetaRecord);
   }
 
   async cachedRecipients(branch = '', category = ''): Promise<ReportRecipient[]> {
-    const record = await this.getItem<MetaRecord>('meta', 'report-recipients');
+    const record = await this.getItem<MetaRecord>('meta', this.userMetaKey('report-recipients'));
     const recipients = (record?.value as ReportRecipient[] | undefined) ?? [];
     return recipients.filter(
       (recipient) =>
@@ -193,6 +202,7 @@ export class OfflineDataService {
   ): Promise<void> {
     await this.put('deliveries', {
       key: `${report.id}:${recipientId}`,
+      ownerId: this.currentUserId(),
       reportId: report.id,
       claimReference: report.claimReference,
       recipientId,
@@ -314,7 +324,10 @@ export class OfflineDataService {
       }
 
       if (syncedAnything) {
-        await this.put('meta', { key: 'last-synced-at', value: new Date().toISOString() } satisfies MetaRecord);
+        await this.put('meta', {
+          key: this.userMetaKey('last-synced-at'),
+          value: new Date().toISOString(),
+        } satisfies MetaRecord);
       }
     } finally {
       this.syncing.set(false);
@@ -329,7 +342,7 @@ export class OfflineDataService {
         this.getAll<PendingPhoto>('photos'),
         this.getAll<PendingDeletion>('deletions'),
         this.getAll<PendingDelivery>('deliveries'),
-        this.getItem<MetaRecord>('meta', 'last-synced-at'),
+        this.getItem<MetaRecord>('meta', this.userMetaKey('last-synced-at')),
       ]);
       this.stats.set({
         pendingReports: reports.length,
@@ -381,7 +394,22 @@ export class OfflineDataService {
   }
   private async getAll<T>(storeName: string): Promise<T[]> {
     const db = await this.openDb();
-    return this.request<T[]>(db.transaction(storeName, 'readonly').objectStore(storeName).getAll());
+    const values = await this.request<T[]>(
+      db.transaction(storeName, 'readonly').objectStore(storeName).getAll(),
+    );
+    if (storeName === 'meta') return values;
+    const ownerId = this.currentUserId();
+    return values.filter(
+      (value) => (value as { ownerId?: string }).ownerId === ownerId,
+    );
+  }
+
+  private currentUserId(): string {
+    return this.auth.user()?.id ?? '';
+  }
+
+  private userMetaKey(name: string): string {
+    return `${this.currentUserId()}:${name}`;
   }
   private request<T>(request: IDBRequest<T>): Promise<T> {
     return new Promise((resolve, reject) => {
