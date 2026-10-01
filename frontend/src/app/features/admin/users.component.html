@@ -47,6 +47,9 @@
                 ><button class="mini action-button" (click)="toggle(user)">
                   {{ user.is_active ? 'Disable' : 'Enable' }}</button
                 ><button class="dots" title="Reset password" (click)="reset(user)">•••</button>
+                <button class="mini danger-action" type="button" (click)="remove(user)">
+                  Delete
+                </button>
               </td>
             </tr>
           } @empty {
