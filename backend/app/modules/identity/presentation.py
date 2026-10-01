@@ -207,7 +207,11 @@ def branches(
         require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
     ),
 ):
-    return db.scalars(select(Branch).order_by(Branch.name)).all()
+    return db.scalars(
+        select(Branch)
+        .where(Branch.deleted_at.is_(None))
+        .order_by(Branch.name)
+    ).all()
 
 
 @router.post(
@@ -219,7 +223,9 @@ def create_branch(
     actor: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
     code = request.code.strip().upper()
-    if db.scalar(select(Branch).where(Branch.code == code)):
+    if db.scalar(
+        select(Branch).where(Branch.code == code, Branch.deleted_at.is_(None))
+    ):
         raise HTTPException(status_code=409, detail="Branch code already exists")
     branch = Branch(
         code=code,
@@ -250,7 +256,7 @@ def update_branch(
     actor: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
     branch = db.get(Branch, branch_id)
-    if not branch:
+    if not branch or branch.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Branch not found")
     changes = request.model_dump(exclude_unset=True)
     if "routing_email" in changes:
@@ -278,11 +284,38 @@ def update_branch(
     return branch
 
 
+@router.delete("/branches/{branch_id}", status_code=status.HTTP_204_NO_CONTENT)
+def soft_delete_branch(
+    branch_id: UUID,
+    db: Session = Depends(get_db),
+    actor: User = Depends(require_roles(Role.ADMINISTRATOR)),
+):
+    branch = db.get(Branch, branch_id)
+    if not branch or branch.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    branch.is_active = False
+    branch.deleted_at = datetime.now(UTC)
+    db.add(
+        AuditEvent(
+            actor_id=actor.id,
+            action="branch.soft_deleted",
+            entity_type="branch",
+            entity_id=str(branch.id),
+            details={"code": branch.code},
+        )
+    )
+    db.commit()
+
+
 @router.get("/users", response_model=list[ManagedUserResponse])
 def users(
     db: Session = Depends(get_db), _: User = Depends(require_roles(Role.ADMINISTRATOR))
 ):
-    return db.scalars(select(User).order_by(User.full_name)).all()
+    return db.scalars(
+        select(User)
+        .where(User.deleted_at.is_(None))
+        .order_by(User.full_name)
+    ).all()
 
 
 @router.post(
@@ -295,7 +328,12 @@ def create_user(
 ):
     if request.role not in {role.value for role in Role}:
         raise HTTPException(status_code=422, detail="Invalid role")
-    if db.scalar(select(User).where(User.email == str(request.email).lower())):
+    if db.scalar(
+        select(User).where(
+            User.email == str(request.email).lower(),
+            User.deleted_at.is_(None),
+        )
+    ):
         raise HTTPException(status_code=409, detail="Email already exists")
     if request.branch_id and not db.get(Branch, request.branch_id):
         raise HTTPException(status_code=422, detail="Branch not found")
@@ -335,7 +373,7 @@ def update_user(
     actor: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
     user = db.get(User, user_id)
-    if not user:
+    if not user or user.deleted_at is not None:
         raise HTTPException(status_code=404, detail="User not found")
     changes = request.model_dump(exclude_unset=True)
     if "role" in changes and changes["role"] not in {role.value for role in Role}:
@@ -369,7 +407,7 @@ def admin_reset_password(
     actor: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
     user = db.get(User, user_id)
-    if not user:
+    if not user or user.deleted_at is not None:
         raise HTTPException(status_code=404, detail="User not found")
     temporary_password = secrets.token_urlsafe(12) + "A1!"
     user.password_hash = hash_password(temporary_password)
@@ -385,6 +423,32 @@ def admin_reset_password(
     )
     db.commit()
     return {"temporary_password": temporary_password}
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def soft_delete_user(
+    user_id: UUID,
+    db: Session = Depends(get_db),
+    actor: User = Depends(require_roles(Role.ADMINISTRATOR)),
+):
+    user = db.get(User, user_id)
+    if not user or user.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.id == actor.id:
+        raise HTTPException(status_code=409, detail="You cannot delete your own account")
+    user.is_active = False
+    user.deleted_at = datetime.now(UTC)
+    _revoke_sessions(user.id, db)
+    db.add(
+        AuditEvent(
+            actor_id=actor.id,
+            action="user.soft_deleted",
+            entity_type="user",
+            entity_id=str(user.id),
+            details={"email": user.email},
+        )
+    )
+    db.commit()
 
 
 @router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)
