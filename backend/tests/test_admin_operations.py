@@ -215,8 +215,14 @@ def test_recipient_rules_are_applied_to_claim_delivery(client):
         "salesperson": "Admin",
         "customerName": "Fleet Customer",
         "brand": "Dunlop",
+        "rimSize": "22.5",
+        "pattern": "SP320",
         "dot": "0124",
         "serialNumber": "SERIAL-1",
+        "remainingTreadDepth": "12",
+        "inspectedPressure": "100",
+        "inspectedLocation": "RTCPHX",
+        "tyrePosition": "Horse - Steer left",
         "photos": [{"category": category} for category in REQUIRED_PHOTOS],
     }
     assert (
