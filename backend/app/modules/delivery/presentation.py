@@ -78,30 +78,41 @@ def create_recipient(
     db: Session = Depends(get_db),
     user: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
-    if db.scalar(
-        select(Recipient).where(
-            Recipient.email == str(request.email),
-            Recipient.deleted_at.is_(None),
-        )
-    ):
+    email = str(request.email).lower()
+    recipient = db.scalar(select(Recipient).where(Recipient.email == email))
+    if recipient and recipient.deleted_at is None:
         raise HTTPException(
-            status_code=409, detail="A recipient with this email already exists"
+            status_code=409,
+            detail="A recipient with this email already exists",
         )
-    recipient = Recipient(
-        company=request.company.strip(),
-        contact_name=request.contact_name.strip(),
-        email=str(request.email).lower(),
-        default_cc=_store_cc(request.default_cc),
-        branch_code=request.branch_code.strip(),
-        category=request.category.strip(),
-        escalation_enabled=request.escalation_enabled,
-    )
-    db.add(recipient)
-    db.flush()
+
+    restored = recipient is not None
+    if restored:
+        recipient.company = request.company.strip()
+        recipient.contact_name = request.contact_name.strip()
+        recipient.default_cc = _store_cc(request.default_cc)
+        recipient.branch_code = request.branch_code.strip()
+        recipient.category = request.category.strip()
+        recipient.escalation_enabled = request.escalation_enabled
+        recipient.is_active = True
+        recipient.deleted_at = None
+    else:
+        recipient = Recipient(
+            company=request.company.strip(),
+            contact_name=request.contact_name.strip(),
+            email=email,
+            default_cc=_store_cc(request.default_cc),
+            branch_code=request.branch_code.strip(),
+            category=request.category.strip(),
+            escalation_enabled=request.escalation_enabled,
+        )
+        db.add(recipient)
+        db.flush()
+
     db.add(
         AuditEvent(
             actor_id=user.id,
-            action="recipient.created",
+            action="recipient.restored" if restored else "recipient.created",
             entity_type="recipient",
             entity_id=str(recipient.id),
             details={"email": recipient.email},
