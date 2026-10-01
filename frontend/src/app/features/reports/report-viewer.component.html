@@ -1,64 +1,156 @@
-<section class="operation-page audit-page">
+<section class="operation-page audit-report-page">
   <div class="crumb">Audit Viewer</div>
-  <header class="operation-title">
+
+  <header class="audit-report-header">
     <div>
+      <span class="report-eyebrow">Activity report</span>
       <h1>Audit Viewer</h1>
       <p>
         {{
           isCapturer()
-            ? 'History for technical claims you created'
-            : 'Read-only system and technical-report activity'
+            ? 'Review activity for technical claims you created.'
+            : 'Review system activity, report changes and delivery events.'
         }}
       </p>
     </div>
+    <div class="report-total">
+      <strong>{{ total() }}</strong>
+      <span>events found</span>
+    </div>
   </header>
 
-  <section class="viewer-filter">
-    <label class="search-field">
-      <span>Search</span>
-      <div class="search-control">
-        <b>⌕</b>
-        <input
-          [(ngModel)]="query"
-          (keyup.enter)="load()"
-          placeholder="Search action or claim reference..."
-        />
+  <section class="audit-summary-grid">
+    <article>
+      <span>Today</span>
+      <strong>{{ todayCount() }}</strong>
+      <small>events recorded today</small>
+    </article>
+    <article>
+      <span>Email activity</span>
+      <strong>{{ emailCount() }}</strong>
+      <small>send, retry and follow-up events</small>
+    </article>
+    <article>
+      <span>Archived</span>
+      <strong>{{ archiveCount() }}</strong>
+      <small>archived claim events</small>
+    </article>
+    <article>
+      <span>Period</span>
+      <strong>{{ days() === 1 ? 'Today' : days() + ' days' }}</strong>
+      <small>current report range</small>
+    </article>
+  </section>
+
+  <section class="audit-report-filters">
+    <div class="filter-title">
+      <div>
+        <strong>Report filters</strong>
+        <span>Refine the audit activity shown below</span>
       </div>
-    </label>
-    <label>
-      Period
-      <select [(ngModel)]="days" (change)="load()">
-        <option [ngValue]="7">Last 7 days</option>
-        <option [ngValue]="30">Last 30 days</option>
-        <option [ngValue]="365">Last year</option>
-      </select>
-    </label>
+      <button type="button" (click)="clearFilters()">Clear filters</button>
+    </div>
+
+    <div class="audit-filter-grid">
+      <label class="search-field audit-search">
+        <span>Search</span>
+        <div class="search-control">
+          <b>⌕</b>
+          <input
+            [(ngModel)]="query"
+            (keyup.enter)="load()"
+            placeholder="Search action, claim reference, user or status..."
+          />
+        </div>
+      </label>
+
+      <label>
+        Period
+        <select [(ngModel)]="days" (change)="load()">
+          <option [ngValue]="1">Today</option>
+          <option [ngValue]="7">Last 7 days</option>
+          <option [ngValue]="30">Last 30 days</option>
+          <option [ngValue]="90">Last 90 days</option>
+          <option [ngValue]="365">Last year</option>
+        </select>
+      </label>
+
+      <label>
+        User
+        <select [(ngModel)]="actor" (change)="load()">
+          <option value="">All users</option>
+          @for (name of actors(); track name) {
+            <option [value]="name">{{ name }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        Action
+        <select [(ngModel)]="action" (change)="load()">
+          <option value="">All actions</option>
+          @for (value of actions(); track value) {
+            <option [value]="value">{{ actionLabel(value) }}</option>
+          }
+        </select>
+      </label>
+    </div>
   </section>
 
   @if (message()) {
     <p class="operation-message">{{ message() }}</p>
   }
 
-  <section class="delivery-table audit-table">
+  <section class="audit-report-card">
+    <div class="audit-report-card-header">
+      <div>
+        <strong>Audit activity</strong>
+        <span>Most recent events appear first</span>
+      </div>
+      <span>{{ items().length }} shown</span>
+    </div>
+
     <div class="table-scroll">
-      <table>
+      <table class="audit-report-table">
         <thead>
           <tr>
-            <th>Timestamp</th>
-            <th>Actor</th>
+            <th>Date / Time</th>
+            <th>User</th>
             <th>Action</th>
             <th>Claim / Reference</th>
-            <th>Details</th>
+            <th>Activity summary</th>
           </tr>
         </thead>
         <tbody>
           @for (item of items(); track item.id) {
             <tr>
-              <td>{{ item.occurred_at }}</td>
-              <td class="actor">{{ item.actor }}</td>
-              <td><span class="audit-action">{{ actionLabel(item.action) }}</span></td>
-              <td class="reference">{{ item.details['claim_reference'] || item.entity_id || '—' }}</td>
-              <td class="details-cell">{{ details(item) }}</td>
+              <td class="audit-date">
+                <strong>{{ item.occurred_at | date:'dd MMM yyyy' }}</strong>
+                <span>{{ item.occurred_at | date:'HH:mm:ss' }}</span>
+              </td>
+              <td>
+                <div class="audit-user">
+                  <span>{{ item.actor.slice(0, 1).toUpperCase() }}</span>
+                  <strong>{{ item.actor }}</strong>
+                </div>
+              </td>
+              <td>
+                <span class="audit-action" [class]="actionClass(item.action)">
+                  {{ actionLabel(item.action) }}
+                </span>
+              </td>
+              <td class="reference">
+                {{ item.details['claim_reference'] || item.entity_id || '—' }}
+              </td>
+              <td>
+                <div class="audit-message">
+                  <span class="audit-message-icon">•</span>
+                  <div>
+                    <strong>{{ summary(item) }}</strong>
+                    <small>{{ item.entity_type.replaceAll('_', ' ') }}</small>
+                  </div>
+                </div>
+              </td>
             </tr>
           } @empty {
             <tr class="empty-row">
@@ -66,13 +158,7 @@
                 <div class="empty-state">
                   <span>▣</span>
                   <strong>No audit activity found</strong>
-                  <small>
-                    {{
-                      isCapturer()
-                        ? 'Activity for claims you create will appear here.'
-                        : 'Try another search term or select a longer period.'
-                    }}
-                  </small>
+                  <small>Try changing the period, user, action or search filters.</small>
                 </div>
               </td>
             </tr>
@@ -80,6 +166,7 @@
         </tbody>
       </table>
     </div>
+
     <footer class="table-footer">
       <span>Showing {{ items().length }} of {{ total() }} entries</span>
     </footer>
