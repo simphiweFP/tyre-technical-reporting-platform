@@ -32,6 +32,7 @@ export class AppShellComponent {
       .join('')
       .toUpperCase(),
   );
+  private searchTimer?: ReturnType<typeof setTimeout>;
   readonly roleLabel = computed(() =>
     (this.auth.user()?.role ?? 'administrator').replace('_', ' '),
   );
@@ -57,8 +58,16 @@ export class AppShellComponent {
     if (!(await this.alerts.confirm('Sign out?', 'You will need to sign in again to continue working.', 'Sign out', 'warning'))) return;
     this.auth.logout();
   }
+  searchChanged(value: string): void {
+    this.search.set(value);
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.runSearch(), 300);
+  }
+
   runSearch(): void {
-    void this.router.navigate(['/reports'], { queryParams: { q: this.search().trim() || null } });
+    void this.router.navigate(['/reports'], {
+      queryParams: { q: this.search().trim() || null },
+    });
   }
 
   private isOverviewUrl(url: string): boolean {
