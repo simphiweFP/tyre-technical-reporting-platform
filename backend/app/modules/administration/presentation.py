@@ -105,6 +105,8 @@ def update_system_settings(
 def audit_events(
     query: str = "",
     days: int = Query(default=7, ge=1, le=3650),
+    actor_id: str = "",
+    action: str = "",
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=250),
     db: Session = Depends(get_db),
@@ -133,6 +135,13 @@ def audit_events(
             AuditEvent.entity_type == "technical_report",
             AuditEvent.entity_id.in_(owned_refs),
         )
+    if actor_id.strip():
+        statement = statement.where(
+            AuditEvent.actor_id == actor_id.strip()
+        )
+    if action.strip():
+        statement = statement.where(AuditEvent.action == action.strip())
+
     rows = db.execute(statement).all()
     if query.strip():
         term = query.strip().casefold()
