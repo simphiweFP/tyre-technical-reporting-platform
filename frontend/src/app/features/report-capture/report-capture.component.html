@@ -585,7 +585,7 @@
           <button
             type="button"
             class="primary-action"
-            [disabled]="!selectedRecipient() || submitting()"
+            [disabled]="!hasSelectedRecipient() || submitting()"
             (click)="sendFromPreview()"
           >
             ✉ &nbsp; {{ submitting() ? 'Sending…' : 'Send report' }}
@@ -600,29 +600,57 @@
         <span class="preview-kicker">Submission complete</span>
         <h1>Report submitted</h1>
         <h2>{{ report().claimReference }}</h2>
-        <p>The report is stored by the API and queued for third-party email delivery.</p>
+        <p>
+          @if (deliveryStatus() === 'Queued') {
+            The report is safely stored on this device and will be sent automatically when you reconnect.
+          } @else {
+            The report is stored by the API and the email delivery status is shown below.
+          }
+        </p>
         <div class="success-statuses">
           <article>
             <i>☁</i>
             <div>
-              <strong>Saved to server</strong><small>Available across authorised devices</small>
+              @if (deliveryStatus() === 'Queued') {
+                <strong>Saved on this device</strong><small>Will sync when the connection returns</small>
+              } @else {
+                <strong>Saved to server</strong><small>Available across authorised devices</small>
+              }
             </div>
-            <span class="ready">● Ready</span>
+            <span [class.ready]="deliveryStatus() !== 'Queued'">
+              ● {{ deliveryStatus() === 'Queued' ? 'Offline' : 'Ready' }}
+            </span>
           </article>
           <article>
             <i>✉</i>
             <div>
-              <strong>Email {{ deliveryStatus() }}</strong
-              ><small>{{ deliveryEmail() }}</small>
+              <strong>
+                Email {{ deliveryStatus() === 'Sent' ? 'Accepted' : deliveryStatus() }}
+              </strong>
+              <small>
+                {{
+                  deliveryStatus() === 'Queued'
+                    ? 'Waiting for connection · ' + deliveryEmail()
+                    : deliveryEmail()
+                }}
+              </small>
             </div>
-            <span [class.ready]="deliveryStatus() === 'Sent'">{{ deliveryStatus() }}</span>
+            <span [class.ready]="deliveryStatus() === 'Sent'">
+              {{ deliveryStatus() === 'Sent' ? 'Accepted' : deliveryStatus() }}
+            </span>
           </article>
           <article>
             <i>▤</i>
             <div>
-              <strong>PDF handled by API</strong><small>Attached by the delivery worker</small>
+              @if (deliveryStatus() === 'Queued') {
+                <strong>PDF waiting to send</strong><small>Will be generated/attached after sync</small>
+              } @else {
+                <strong>PDF handled by API</strong><small>Attached to the email delivery</small>
+              }
             </div>
-            <span class="ready">● Ready</span>
+            <span [class.ready]="deliveryStatus() !== 'Queued'">
+              ● {{ deliveryStatus() === 'Queued' ? 'Queued' : 'Ready' }}
+            </span>
           </article>
         </div>
         <a routerLink="/dashboard" class="primary-action full-action">⌂ &nbsp; Back to dashboard</a>
