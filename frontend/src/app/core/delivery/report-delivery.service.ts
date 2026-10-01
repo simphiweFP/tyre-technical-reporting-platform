@@ -116,19 +116,33 @@ export class ReportDeliveryService {
   }
 
   async openDeliveryPdf(deliveryId: string): Promise<void> {
-    const blob = await firstValueFrom(
-      this.http.get(
-        `${environment.apiUrl}/deliveries/${deliveryId}/pdf`,
-        { responseType: 'blob' },
-      ),
-    );
-    const url = URL.createObjectURL(blob);
-    const opened = window.open(url, '_blank', 'noopener');
-    if (!opened) {
-      URL.revokeObjectURL(url);
+    // Open the tab immediately from the user's click so browsers do not treat
+    // the later authenticated HTTP response as a popup. Using "noopener" in
+    // window.open can also return null even when a tab opened, which caused a
+    // false "PDF could not be opened" alert.
+    const preview = window.open('about:blank', '_blank');
+    if (!preview) {
       throw new Error('The browser blocked the PDF preview window.');
     }
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+
+    preview.opener = null;
+    let url = '';
+
+    try {
+      const blob = await firstValueFrom(
+        this.http.get(
+          `${environment.apiUrl}/deliveries/${deliveryId}/pdf`,
+          { responseType: 'blob' },
+        ),
+      );
+      url = URL.createObjectURL(blob);
+      preview.location.replace(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (error) {
+      preview.close();
+      if (url) URL.revokeObjectURL(url);
+      throw error;
+    }
   }
 
   followUp(deliveryId: string, message: string): Promise<{ message: string; message_id: string; in_reply_to: string | null }> {
