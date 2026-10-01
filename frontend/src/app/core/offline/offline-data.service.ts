@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { TechnicalReport } from '../../shared/models/report.models';
+import { ReportRecipient, TechnicalReport } from '../../shared/models/report.models';
 import type { ReportReferenceData } from '../data/report.store';
 
 interface PendingReport {
@@ -29,11 +29,22 @@ interface PendingDeletion {
   queuedAt: string;
   error: string;
 }
+interface PendingDelivery {
+  key: string;
+  reportId: string;
+  claimReference: string;
+  recipientId: string;
+  recipientEmail: string;
+  report: TechnicalReport;
+  queuedAt: string;
+  error: string;
+}
 interface MetaRecord { key: string; value: unknown; }
 export interface OfflineStats {
   pendingReports: number;
   pendingPhotos: number;
   pendingDeletions: number;
+  pendingDeliveries: number;
   conflicts: number;
   lastSyncedAt: string | null;
 }
@@ -41,6 +52,7 @@ const EMPTY_STATS: OfflineStats = {
   pendingReports: 0,
   pendingPhotos: 0,
   pendingDeletions: 0,
+  pendingDeliveries: 0,
   conflicts: 0,
   lastSyncedAt: null,
 };
@@ -153,6 +165,40 @@ export class OfflineDataService {
     await this.remove('meta', 'reference-data');
   }
 
+
+  async cacheRecipients(recipients: ReportRecipient[]): Promise<void> {
+    await this.put('meta', { key: 'report-recipients', value: recipients } satisfies MetaRecord);
+  }
+
+  async cachedRecipients(branch = '', category = ''): Promise<ReportRecipient[]> {
+    const record = await this.getItem<MetaRecord>('meta', 'report-recipients');
+    const recipients = (record?.value as ReportRecipient[] | undefined) ?? [];
+    return recipients.filter(
+      (recipient) =>
+        recipient.is_active &&
+        (!branch || recipient.branch_code === 'All Branches' || recipient.branch_code === branch) &&
+        (!category || recipient.category === 'All Categories' || recipient.category === category),
+    );
+  }
+
+  async queueDelivery(
+    report: TechnicalReport,
+    recipientId: string,
+    recipientEmail: string,
+  ): Promise<void> {
+    await this.put('deliveries', {
+      key: `${report.id}:${recipientId}`,
+      reportId: report.id,
+      claimReference: report.claimReference,
+      recipientId,
+      recipientEmail,
+      report,
+      queuedAt: new Date().toISOString(),
+      error: '',
+    } satisfies PendingDelivery);
+    await this.refreshStats();
+  }
+
   async syncNow(): Promise<void> {
     if (!this.online() || this.syncing()) return;
     this.syncing.set(true);
@@ -231,6 +277,37 @@ export class OfflineDataService {
         }
       }
 
+      const remainingReports = new Set(
+        (await this.getAll<PendingReport>('reports')).map((record) => record.id),
+      );
+      const remainingPhotos = new Set(
+        (await this.getAll<PendingPhoto>('photos')).map((record) => record.reportId),
+      );
+
+      for (const item of await this.getAll<PendingDelivery>('deliveries')) {
+        if (remainingReports.has(item.reportId) || remainingPhotos.has(item.reportId)) continue;
+        try {
+          const result = await firstValueFrom(
+            this.http.post<{ status: string }>(`${environment.apiUrl}/reports/deliver`, {
+              recipient_id: item.recipientId,
+              report: item.report,
+              cc: [],
+            }),
+          );
+          if (result.status === 'Sent') {
+            await this.remove('deliveries', item.key);
+            syncedAnything = true;
+          } else {
+            item.error = `Delivery is ${result.status}. The server will continue retrying.`;
+            await this.put('deliveries', item);
+          }
+        } catch (error) {
+          item.error = 'Email delivery is waiting for the next sync.';
+          await this.put('deliveries', item);
+          if (error instanceof HttpErrorResponse && error.status === 0) break;
+        }
+      }
+
       if (syncedAnything) {
         await this.put('meta', { key: 'last-synced-at', value: new Date().toISOString() } satisfies MetaRecord);
       }
@@ -242,16 +319,18 @@ export class OfflineDataService {
 
   async refreshStats(): Promise<void> {
     try {
-      const [reports, photos, deletions, lastSync] = await Promise.all([
+      const [reports, photos, deletions, deliveries, lastSync] = await Promise.all([
         this.getAll<PendingReport>('reports'),
         this.getAll<PendingPhoto>('photos'),
         this.getAll<PendingDeletion>('deletions'),
+        this.getAll<PendingDelivery>('deliveries'),
         this.getItem<MetaRecord>('meta', 'last-synced-at'),
       ]);
       this.stats.set({
         pendingReports: reports.length,
         pendingPhotos: photos.length,
         pendingDeletions: deletions.length,
+        pendingDeliveries: deliveries.length,
         conflicts: reports.filter((report) => report.conflict).length,
         lastSyncedAt: typeof lastSync?.value === 'string' ? lastSync.value : null,
       });
@@ -264,12 +343,13 @@ export class OfflineDataService {
     if (this.dbPromise) return this.dbPromise;
     this.dbPromise = new Promise((resolve, reject) => {
       if (typeof indexedDB === 'undefined') return reject(new Error('IndexedDB is unavailable'));
-      const request = indexedDB.open('royal-tyres-offline', 1);
+      const request = indexedDB.open('royal-tyres-offline', 2);
       request.onupgradeneeded = () => {
         const db = request.result;
         if (!db.objectStoreNames.contains('reports')) db.createObjectStore('reports', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('photos')) db.createObjectStore('photos', { keyPath: 'key' });
         if (!db.objectStoreNames.contains('deletions')) db.createObjectStore('deletions', { keyPath: 'key' });
+        if (!db.objectStoreNames.contains('deliveries')) db.createObjectStore('deliveries', { keyPath: 'key' });
         if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
       };
       request.onsuccess = () => resolve(request.result);
