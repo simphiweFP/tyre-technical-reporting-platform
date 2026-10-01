@@ -84,6 +84,18 @@ class ReportDeliveryService:
             self.db.commit()
             raise
 
+        sent_at = datetime.now(UTC)
+        attempt.follow_ups = [
+            *(attempt.follow_ups or []),
+            {
+                "body": body.strip(),
+                "sent_at": sent_at.isoformat(),
+                "message_id": message_id,
+                "in_reply_to": attempt.message_id,
+                "recipient": attempt.recipient_email,
+                "actor_id": str(actor_id),
+            },
+        ]
         self.db.add(
             AuditEvent(
                 actor_id=actor_id,
