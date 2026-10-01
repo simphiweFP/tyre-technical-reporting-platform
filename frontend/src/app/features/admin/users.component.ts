@@ -138,6 +138,26 @@ export class UsersComponent {
       await this.alerts.error('Reset failed', 'A temporary password could not be created.');
     }
   }
+  async remove(user: ManagedUser): Promise<void> {
+    if (!(await this.alerts.confirm(
+      'Delete user?',
+      `${user.full_name} will lose access immediately and remain available in audit history.`,
+      'Delete user',
+      'warning',
+      true,
+    ))) return;
+    try {
+      await this.admin.deleteUser(user.id);
+      this.users.update((items) => items.filter((item) => item.id !== user.id));
+      await this.alerts.success('User deleted', `${user.full_name} was removed successfully.`);
+    } catch {
+      await this.alerts.error(
+        'Delete failed',
+        'The user could not be deleted. You cannot delete your own account.',
+      );
+    }
+  }
+
   private async load(): Promise<void> {
     try {
       const [users, branches] = await Promise.all([this.admin.users(), this.admin.branches()]);
