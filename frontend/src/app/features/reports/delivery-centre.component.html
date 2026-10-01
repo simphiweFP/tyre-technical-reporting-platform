@@ -15,8 +15,8 @@
             <div class="search-control">
               <b>⌕</b
               ><input
-                [(ngModel)]="query"
-                (keyup.enter)="load()"
+                [ngModel]="query()"
+                (ngModelChange)="searchChanged($event)"
                 placeholder="Search by claim ref or recipient email..."
               />
             </div>
