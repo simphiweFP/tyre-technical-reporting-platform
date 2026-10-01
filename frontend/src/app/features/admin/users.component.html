@@ -14,10 +14,15 @@
     <div class="notice error-notice">{{ error() }}</div>
   }
   <section class="data-card">
-    <label class="search"
-      >Search by name, username or email... <span>⌕</span
-      ><input [ngModel]="query()" (ngModelChange)="query.set($event)" aria-label="Search users"
-    /></label>
+    <label class="search">
+      <span aria-hidden="true">⌕</span>
+      <input
+        [ngModel]="query()"
+        (ngModelChange)="query.set($event)"
+        placeholder="Search by name, username or email..."
+        aria-label="Search users"
+      />
+    </label>
     <div class="table-scroll">
       <table>
         <thead>
