@@ -59,17 +59,25 @@ def _delivery_error_message(exc: Exception, recipient_email: str) -> str:
         )
 
     if isinstance(exc, smtplib.SMTPDataError):
+        smtp_error = (
+            exc.smtp_error.decode("utf-8", errors="replace")
+            if isinstance(exc.smtp_error, bytes)
+            else exc.smtp_error
+        )
         return (
             f"The mail server rejected the message for {recipient_email}. "
-            f"SMTP {exc.smtp_code}: "
-            f"{exc.smtp_error.decode('utf-8', errors='replace') if isinstance(exc.smtp_error, bytes) else exc.smtp_error}"
+            f"SMTP {exc.smtp_code}: {smtp_error}"
         )
 
     if isinstance(exc, smtplib.SMTPSenderRefused):
+        smtp_error = (
+            exc.smtp_error.decode("utf-8", errors="replace")
+            if isinstance(exc.smtp_error, bytes)
+            else exc.smtp_error
+        )
         return (
             "The sending mailbox was rejected by the mail server. "
-            f"SMTP {exc.smtp_code}: "
-            f"{exc.smtp_error.decode('utf-8', errors='replace') if isinstance(exc.smtp_error, bytes) else exc.smtp_error}"
+            f"SMTP {exc.smtp_code}: {smtp_error}"
         )
 
     return str(exc)[:1000] or exc.__class__.__name__
