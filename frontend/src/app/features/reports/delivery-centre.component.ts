@@ -67,7 +67,16 @@ export class DeliveryCentreComponent{
 
   closeDetails(){this.selected.set(null);this.followUpMessage.set('')}
 
-  viewPdf(id:string){this.delivery.openDeliveryPdf(id)}
+  async viewPdf(id:string){
+    this.alerts.loading('Opening PDF…','Loading the saved report securely.');
+    try{
+      await this.delivery.openDeliveryPdf(id);
+      this.alerts.close();
+    }catch{
+      this.alerts.close();
+      await this.alerts.error('PDF could not be opened','The saved report could not be loaded. Please try again.');
+    }
+  }
 
   async sendFollowUp(id:string){
     const message=this.followUpMessage().trim();
