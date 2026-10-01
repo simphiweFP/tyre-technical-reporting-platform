@@ -240,7 +240,7 @@
                 }
               </label>
               <label class="mock-field compact" [class.has-error]="fieldError('returnedWithRim')">
-                <span>Returned with Rim? <em>*</em></span><i>⊗</i>
+                <span>Returned with Rim?</span><i>⊗</i>
                 <select formControlName="returnedWithRim">
                   <option [ngValue]="null">Select option</option>
                   <option [ngValue]="true">Yes</option>
@@ -252,7 +252,7 @@
                 }
               </label>
               <label class="mock-field compact" [class.has-error]="fieldError('fittedLoose')">
-                <span>Fitted / Loose <em>*</em></span><i>◉</i>
+                <span>Fitted / Loose</span><i>◉</i>
                 <select formControlName="fittedLoose">
                   <option value="">Select option</option>
                   <option value="Fitted">Fitted</option>
@@ -264,28 +264,28 @@
                 }
               </label>
               <label class="mock-field compact" [class.has-error]="fieldError('claimCode')">
-                <span>Claim code or description <em>*</em></span><i>▤</i
+                <span>Claim code or description</span><i>▤</i
                 ><input formControlName="claimCode" placeholder="Enter claim code or description" />
                 @if (fieldError('claimCode')) {
                   <small class="field-error">{{ fieldError('claimCode') }}</small>
                 }
               </label>
               <label class="mock-field compact" [class.has-error]="fieldError('tyreMileage')">
-                <span>Tyre mileage <em>*</em></span><i>◔</i
+                <span>Tyre mileage</span><i>◔</i
                 ><input formControlName="tyreMileage" placeholder="Enter tyre mileage" />
                 @if (fieldError('tyreMileage')) {
                   <small class="field-error">{{ fieldError('tyreMileage') }}</small>
                 }
               </label>
               <label class="mock-field compact" [class.has-error]="fieldError('natureOfRepair')">
-                <span>Nature of repair <em>*</em></span><i>▤</i
+                <span>Nature of repair</span><i>▤</i
                 ><input formControlName="natureOfRepair" placeholder="Enter repair details" />
                 @if (fieldError('natureOfRepair')) {
                   <small class="field-error">{{ fieldError('natureOfRepair') }}</small>
                 }
               </label>
               <label class="mock-field compact" [class.has-error]="fieldError('goodsTransported')">
-                <span>Goods transported <em>*</em></span><i>▤</i
+                <span>Goods transported</span><i>▤</i
                 ><input formControlName="goodsTransported" placeholder="Enter goods transported" />
                 @if (fieldError('goodsTransported')) {
                   <small class="field-error">{{ fieldError('goodsTransported') }}</small>
@@ -297,7 +297,7 @@
               <h2>Vehicle details</h2>
               <div class="two-column-fields">
                 <label class="mock-field compact" [class.has-error]="fieldError('vehicleMakeModel')"
-                  ><span>Vehicle (make/model) <em>*</em></span><i>▰</i
+                  ><span>Vehicle (make/model)</span><i>▰</i
                   ><input formControlName="vehicleMakeModel" placeholder="Enter make / model"
                 />
                   @if (fieldError('vehicleMakeModel')) {
@@ -305,7 +305,7 @@
                   }
                 </label>
                 <label class="mock-field compact" [class.has-error]="fieldError('vehicleMileage')"
-                  ><span>Vehicle mileage <em>*</em></span><i>◔</i
+                  ><span>Vehicle mileage</span><i>◔</i
                   ><input formControlName="vehicleMileage" placeholder="e.g. 120000"
                 />
                   @if (fieldError('vehicleMileage')) {
