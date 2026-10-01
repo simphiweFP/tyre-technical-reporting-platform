@@ -435,7 +435,10 @@ def soft_delete_user(
     if not user or user.deleted_at is not None:
         raise HTTPException(status_code=404, detail="User not found")
     if user.id == actor.id:
-        raise HTTPException(status_code=409, detail="You cannot delete your own account")
+        raise HTTPException(
+            status_code=409,
+            detail="You cannot delete your own account",
+        )
     user.is_active = False
     user.deleted_at = datetime.now(UTC)
     _revoke_sessions(user.id, db)
