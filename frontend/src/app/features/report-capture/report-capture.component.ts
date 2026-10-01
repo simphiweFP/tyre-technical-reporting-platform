@@ -9,6 +9,7 @@ import { OfflineDataService } from '../../core/offline/offline-data.service';
 import { SweetAlertService } from '../../core/ui/sweet-alert.service';
 import { ReportCaptureFacade } from './report-capture.facade';
 import {
+  DeliveryAttempt,
   PHOTO_CATEGORIES,
   ReportPhoto,
   ReportRecipient,
@@ -513,7 +514,7 @@ export class ReportCaptureComponent implements OnDestroy {
       { label: 'Serial number', value: values.serialNumber || 'Not captured' },
     ];
   }
-  async sendReport(): Promise<'Queued' | string> {
+  async sendReport(): Promise<'Queued' | DeliveryAttempt> {
     if (!(await this.validateStep(3)) || !this.hasSelectedRecipient()) {
       throw new Error('The report is not ready to send.');
     }
@@ -546,13 +547,15 @@ export class ReportCaptureComponent implements OnDestroy {
       ...this.report(),
       status: result.status === 'Sent'
         ? ('Email Sent' as const)
-        : ('Submitted' as const),
+        : result.status === 'Failed'
+          ? ('Email Failed' as const)
+          : ('Submitted' as const),
     };
     this.report.set(updated);
     await this.workflow.saveNow(updated);
     this.deliveryStatus.set(result.status);
     this.deliveryEmail.set(result.recipient_email);
-    return result.status;
+    return result;
   }
   async downloadPdf(): Promise<void> {
     if (!this.offline.online()) {
@@ -605,22 +608,52 @@ export class ReportCaptureComponent implements OnDestroy {
     this.alerts.sending();
 
     try {
-      const status = await this.sendReport();
+      const result = await this.sendReport();
       this.alerts.close();
-      if (status === 'Queued') {
+
+      if (result === 'Queued') {
         await this.alerts.success(
           'Report queued',
           `${this.report().claimReference} is saved on this device and will send automatically when the connection returns.`,
         );
-      } else if (status === 'Sent') {
+        this.previewMode.set(false);
+        this.successMode.set(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      if (result.status === 'Sent') {
         await this.alerts.success(
           'Report accepted',
           `${this.report().claimReference} was accepted by the mail server for ${this.deliveryEmail() || recipient?.email || 'the selected recipient'}.`,
         );
+        this.previewMode.set(false);
+        this.successMode.set(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
       }
-      this.previewMode.set(false);
-      this.successMode.set(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      if (result.status === 'Failed') {
+        await this.alerts.error(
+          'Email delivery failed',
+          result.error_message ||
+            'The recipient could not receive the email. The failed delivery was saved in Delivery Centre for reporting and retry.',
+        );
+        this.captureMessage.set(
+          'Email delivery failed. The failure is available in Delivery Centre.',
+        );
+        return;
+      }
+
+      await this.alerts.warning(
+        'Email not delivered yet',
+        result.error_message
+          ? `The delivery could not complete and will be retried automatically. ${result.error_message}`
+          : 'The delivery could not complete and will be retried automatically. You can track it in Delivery Centre.',
+      );
+      this.captureMessage.set(
+        'Email is waiting for retry. Track the delivery in Delivery Centre.',
+      );
     } catch {
       this.alerts.close();
       await this.alerts.error(
