@@ -467,12 +467,20 @@ export class ReportCaptureComponent implements OnDestroy {
   }
 
   fieldError(field: string): string {
+    const optionalFields = new Set([
+      'returnedWithRim',
+      'fittedLoose',
+      'claimCode',
+      'tyreMileage',
+      'natureOfRepair',
+      'goodsTransported',
+      'vehicleMakeModel',
+      'vehicleMileage',
+    ]);
+    if (optionalFields.has(field)) return '';
+
     const error = this.validationErrors()[field] ?? '';
     if (!error) return '';
-
-    if (field === 'returnedWithRim') {
-      return this.form.controls.returnedWithRim.value === null ? error : '';
-    }
 
     const control = this.form.get(field);
     if (!control) return error;
