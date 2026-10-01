@@ -170,12 +170,15 @@
                   <small class="field-error">{{ validationErrors()['brand'] }}</small>
                 }
               </label>
-              <label class="mock-field compact">
-                <span>Rim size</span><i>⊗</i
+              <label class="mock-field compact" [class.has-error]="validationErrors()['rimSize']">
+                <span>Rim size <em>*</em></span><i>⊗</i
                 ><input formControlName="rimSize" placeholder="e.g. 22.5" />
+                @if (validationErrors()['rimSize']) {
+                  <small class="field-error">{{ validationErrors()['rimSize'] }}</small>
+                }
               </label>
-              <label class="mock-field compact">
-                <span>Pattern</span><i>▥</i
+              <label class="mock-field compact" [class.has-error]="validationErrors()['pattern']">
+                <span>Pattern <em>*</em></span><i>▥</i
                 ><input
                   formControlName="pattern"
                   list="pattern-options"
@@ -186,6 +189,9 @@
                     <option [value]="pattern"></option>
                   }
                 </datalist>
+                @if (validationErrors()['pattern']) {
+                  <small class="field-error">{{ validationErrors()['pattern'] }}</small>
+                }
               </label>
               <label class="mock-field compact" [class.has-error]="validationErrors()['dot']">
                 <span>DOT <em>*</em></span
@@ -204,16 +210,22 @@
                   <small class="field-error">{{ validationErrors()['serialNumber'] }}</small>
                 }
               </label>
-              <label class="mock-field compact">
-                <span>Remaining tread depth (mm)</span><i>◔</i
+              <label class="mock-field compact" [class.has-error]="validationErrors()['remainingTreadDepth']">
+                <span>Remaining tread depth (mm) <em>*</em></span><i>◔</i
                 ><input formControlName="remainingTreadDepth" placeholder="e.g. 12" />
+                @if (validationErrors()['remainingTreadDepth']) {
+                  <small class="field-error">{{ validationErrors()['remainingTreadDepth'] }}</small>
+                }
               </label>
-              <label class="mock-field compact">
-                <span>Inspected pressure (psi)</span><i>◔</i
+              <label class="mock-field compact" [class.has-error]="validationErrors()['inspectedPressure']">
+                <span>Inspected pressure (psi) <em>*</em></span><i>◔</i
                 ><input formControlName="inspectedPressure" placeholder="e.g. 100" />
+                @if (validationErrors()['inspectedPressure']) {
+                  <small class="field-error">{{ validationErrors()['inspectedPressure'] }}</small>
+                }
               </label>
-              <label class="mock-field compact">
-                <span>Inspected location</span><i>●</i>
+              <label class="mock-field compact" [class.has-error]="validationErrors()['inspectedLocation']">
+                <span>Inspected location <em>*</em></span><i>●</i>
                 <select formControlName="inspectedLocation">
                   <option value="">Select inspected location</option>
                   <option value="RTCPHX">RTCPHX</option>
@@ -223,58 +235,87 @@
                   <option value="Breakdown">Breakdown</option>
                 </select>
                 <b>›</b>
+                @if (validationErrors()['inspectedLocation']) {
+                  <small class="field-error">{{ validationErrors()['inspectedLocation'] }}</small>
+                }
               </label>
-              <label class="mock-field compact">
-                <span>Returned with Rim?</span><i>⊗</i>
+              <label class="mock-field compact" [class.has-error]="validationErrors()['returnedWithRim']">
+                <span>Returned with Rim? <em>*</em></span><i>⊗</i>
                 <select formControlName="returnedWithRim">
                   <option [ngValue]="null">Select option</option>
                   <option [ngValue]="true">Yes</option>
                   <option [ngValue]="false">No</option>
                 </select>
                 <b>›</b>
+                @if (validationErrors()['returnedWithRim']) {
+                  <small class="field-error">{{ validationErrors()['returnedWithRim'] }}</small>
+                }
               </label>
-              <label class="mock-field compact">
-                <span>Fitted / Loose</span><i>◉</i>
+              <label class="mock-field compact" [class.has-error]="validationErrors()['fittedLoose']">
+                <span>Fitted / Loose <em>*</em></span><i>◉</i>
                 <select formControlName="fittedLoose">
                   <option value="">Select option</option>
                   <option value="Fitted">Fitted</option>
                   <option value="Loose">Loose</option>
                 </select>
                 <b>›</b>
+                @if (validationErrors()['fittedLoose']) {
+                  <small class="field-error">{{ validationErrors()['fittedLoose'] }}</small>
+                }
               </label>
-              <label class="mock-field compact">
-                <span>Claim code or description</span><i>▤</i
+              <label class="mock-field compact" [class.has-error]="validationErrors()['claimCode']">
+                <span>Claim code or description <em>*</em></span><i>▤</i
                 ><input formControlName="claimCode" placeholder="Enter claim code or description" />
+                @if (validationErrors()['claimCode']) {
+                  <small class="field-error">{{ validationErrors()['claimCode'] }}</small>
+                }
               </label>
-              <label class="mock-field compact">
-                <span>Tyre mileage</span><i>◔</i
+              <label class="mock-field compact" [class.has-error]="validationErrors()['tyreMileage']">
+                <span>Tyre mileage <em>*</em></span><i>◔</i
                 ><input formControlName="tyreMileage" placeholder="Enter tyre mileage" />
+                @if (validationErrors()['tyreMileage']) {
+                  <small class="field-error">{{ validationErrors()['tyreMileage'] }}</small>
+                }
               </label>
-              <label class="mock-field compact">
-                <span>Nature of repair</span><i>▤</i
+              <label class="mock-field compact" [class.has-error]="validationErrors()['natureOfRepair']">
+                <span>Nature of repair <em>*</em></span><i>▤</i
                 ><input formControlName="natureOfRepair" placeholder="Enter repair details" />
+                @if (validationErrors()['natureOfRepair']) {
+                  <small class="field-error">{{ validationErrors()['natureOfRepair'] }}</small>
+                }
               </label>
-              <label class="mock-field compact">
-                <span>Goods transported</span><i>▤</i
+              <label class="mock-field compact" [class.has-error]="validationErrors()['goodsTransported']">
+                <span>Goods transported <em>*</em></span><i>▤</i
                 ><input formControlName="goodsTransported" placeholder="Enter goods transported" />
+                @if (validationErrors()['goodsTransported']) {
+                  <small class="field-error">{{ validationErrors()['goodsTransported'] }}</small>
+                }
               </label>
             </div>
 
             <div class="vehicle-block">
               <h2>Vehicle details</h2>
               <div class="two-column-fields">
-                <label class="mock-field compact"
-                  ><span>Vehicle (make/model)</span><i>▰</i
+                <label class="mock-field compact" [class.has-error]="validationErrors()['vehicleMakeModel']"
+                  ><span>Vehicle (make/model) <em>*</em></span><i>▰</i
                   ><input formControlName="vehicleMakeModel" placeholder="Enter make / model"
-                /></label>
-                <label class="mock-field compact"
-                  ><span>Vehicle mileage</span><i>◔</i
+                />
+                  @if (validationErrors()['vehicleMakeModel']) {
+                    <small class="field-error">{{ validationErrors()['vehicleMakeModel'] }}</small>
+                  }
+                </label>
+                <label class="mock-field compact" [class.has-error]="validationErrors()['vehicleMileage']"
+                  ><span>Vehicle mileage <em>*</em></span><i>◔</i
                   ><input formControlName="vehicleMileage" placeholder="e.g. 120000"
-                /></label>
+                />
+                  @if (validationErrors()['vehicleMileage']) {
+                    <small class="field-error">{{ validationErrors()['vehicleMileage'] }}</small>
+                  }
+                </label>
               </div>
             </div>
-            <div class="mock-field tyre-position-picker">
-              <span>Tyre position</span>
+            <div class="mock-field tyre-position-picker" [class.has-error]="validationErrors()['tyrePosition']">
+              <span>Tyre position <em>*</em></span>
               <button
                 type="button"
                 class="tyre-position-trigger"
@@ -284,6 +325,9 @@
                 <strong>{{ form.controls.tyrePosition.value || 'Select position' }}</strong>
                 <b>›</b>
               </button>
+              @if (validationErrors()['tyrePosition']) {
+                <small class="field-error">{{ validationErrors()['tyrePosition'] }}</small>
+              }
             </div>
             <label class="mock-field other-info-field">
               <span>Other relevant info</span>
