@@ -158,7 +158,7 @@
         <div><small>From</small><strong>{{ detail.from }}</strong></div>
         <div><small>To</small><strong>{{ detail.to.join(', ') }}</strong></div>
         <div><small>CC</small><strong>{{ detail.cc.length ? detail.cc.join(', ') : 'None' }}</strong></div>
-        <div><small>Message ID</small><strong>{{ detail.message_id || 'Not available' }}</strong></div>
+        <div><small>Sent / Last attempt</small><strong>{{ detail.last_attempt_at | date:'medium' }}</strong></div>
       </div>
 
       <section class="email-body">
