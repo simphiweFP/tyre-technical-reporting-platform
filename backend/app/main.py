@@ -16,6 +16,9 @@ from backend.app.modules.administration.presentation import (
 )
 from backend.app.modules.delivery.presentation import router as delivery_router
 from backend.app.modules.identity.presentation import router as auth_router
+from backend.app.modules.identity.rt_auth_presentation import (
+    router as rt_auth_router,
+)
 from backend.app.modules.reports.customer_lookup import refresh_customer_cache_if_due
 from backend.app.modules.reports.presentation import router as reports_router
 
@@ -61,6 +64,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(rt_auth_router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(reports_router, prefix="/api/v1")
 app.include_router(delivery_router, prefix="/api/v1")
