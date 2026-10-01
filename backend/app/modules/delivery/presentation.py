@@ -390,6 +390,7 @@ def delivery_details(
         "attempt_count": attempt.attempt_count,
         "created_at": attempt.created_at,
         "last_attempt_at": attempt.last_attempt_at,
+        "follow_ups": attempt.follow_ups or [],
     }
 
 
