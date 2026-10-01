@@ -68,6 +68,10 @@ def _microsoft_client():
     "/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
 )
 def register(request: RegisterRequest, db: Session = Depends(get_db)):
+    raise HTTPException(
+        status_code=410,
+        detail="Registration is managed by Royal Tyres RT-Auth.",
+    )
     email = str(request.email).lower()
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(
@@ -103,6 +107,10 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
 
 @router.get("/microsoft/login")
 async def microsoft_login(request: Request):
+    raise HTTPException(
+        status_code=410,
+        detail="Microsoft login was replaced by Royal Tyres RT-Auth.",
+    )
     return await _microsoft_client().authorize_redirect(
         request, get_settings().microsoft_redirect_uri
     )
@@ -110,6 +118,10 @@ async def microsoft_login(request: Request):
 
 @router.get("/microsoft/callback")
 async def microsoft_callback(request: Request, db: Session = Depends(get_db)):
+    raise HTTPException(
+        status_code=410,
+        detail="Microsoft login was replaced by Royal Tyres RT-Auth.",
+    )
     try:
         token = await _microsoft_client().authorize_access_token(request)
         identity = token.get("userinfo") or await _microsoft_client().userinfo(
@@ -172,6 +184,10 @@ async def microsoft_callback(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 def login(request: LoginRequest, db: Session = Depends(get_db)):
+    raise HTTPException(
+        status_code=410,
+        detail="Password login is handled by Royal Tyres RT-Auth.",
+    )
     user, access_token, refresh_token = AuthenticationService(db).login(
         request.email, request.password
     )
@@ -182,6 +198,10 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 
 @router.post("/refresh", response_model=TokenResponse)
 def refresh(request: RefreshRequest, db: Session = Depends(get_db)):
+    raise HTTPException(
+        status_code=410,
+        detail="Bearer token refresh was replaced by the RT-Auth application session.",
+    )
     user, access_token, refresh_token = AuthenticationService(db).refresh(
         request.refresh_token
     )
@@ -192,6 +212,10 @@ def refresh(request: RefreshRequest, db: Session = Depends(get_db)):
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(request: LogoutRequest, db: Session = Depends(get_db)):
+    raise HTTPException(
+        status_code=410,
+        detail="Use the Royal Tyres company logout endpoint.",
+    )
     AuthenticationService(db).logout(request.refresh_token)
 
 
@@ -483,6 +507,10 @@ def forgot_password(
     tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    raise HTTPException(
+        status_code=410,
+        detail="Password recovery is managed by Royal Tyres RT-Auth.",
+    )
     user = db.scalar(
         select(User).where(
             User.email == str(request.email).lower(), User.is_active.is_(True)
@@ -527,6 +555,10 @@ def forgot_password(
 
 @router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
 def reset_password(request: PasswordResetRequest, db: Session = Depends(get_db)):
+    raise HTTPException(
+        status_code=410,
+        detail="Password reset is managed by Royal Tyres RT-Auth.",
+    )
     reset = db.scalar(
         select(PasswordResetToken).where(
             PasswordResetToken.token_hash == token_digest(request.token),
