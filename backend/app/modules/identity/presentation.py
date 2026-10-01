@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 from uuid import UUID
 
 from authlib.integrations.starlette_client import OAuth, OAuthError
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -17,13 +17,15 @@ from backend.app.modules.branches.infrastructure import Branch
 from backend.app.modules.delivery.domain import EmailMessage
 from backend.app.modules.delivery.infrastructure import SmtpEmailGateway
 from backend.app.modules.identity.application import AuthenticationService
-from backend.app.modules.identity.dependencies import current_user, require_roles
+from backend.app.modules.identity.dependencies import current_session, current_user, require_roles
 from backend.app.modules.identity.domain import Role
 from backend.app.modules.identity.infrastructure import (
     PasswordResetToken,
+    RTAuthSession,
     RefreshSession,
     User,
 )
+from backend.app.modules.identity.rt_auth import RTAuthClient, RTAuthError
 from backend.app.modules.identity.schemas import (
     BranchCreateRequest,
     BranchResponse,
