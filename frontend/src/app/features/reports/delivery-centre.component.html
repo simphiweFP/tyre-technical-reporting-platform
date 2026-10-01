@@ -26,7 +26,7 @@
               <option value="">All statuses</option>
               <option>Pending</option>
               <option>Retrying</option>
-              <option>Sent</option>
+              <option value="Sent">Accepted</option>
               <option>Failed</option>
             </select></label
           >
@@ -62,7 +62,7 @@
                       [class.sent]="row.status === 'Sent'"
                       [class.failed]="row.status === 'Failed'"
                       [class.retrying]="row.status === 'Retrying'"
-                      >● {{ row.status }}</span
+                      >● {{ deliveryStatusLabel(row.status) }}</span
                     >
                   </td>
                   <td>
@@ -115,7 +115,7 @@
       </article>
       <article>
         <b class="status-icon sent">✉</b>
-        <div><strong>Sent</strong><small>Successfully delivered</small></div>
+        <div><strong>Accepted</strong><small>Accepted by mail server</small></div>
         <span class="good">{{ items().filter((x) => x.status === 'Sent').length }}</span>
       </article>
       <article>
@@ -133,7 +133,7 @@
     <section class="delivery-detail-modal" (click)="$event.stopPropagation()">
       <header>
         <div>
-          <span class="detail-kicker">{{ detail.status }}</span>
+          <span class="detail-kicker">{{ deliveryStatusLabel(detail.status) }}</span>
           <h2>{{ detail.subject }}</h2>
           <p>{{ detail.claim_reference }}</p>
         </div>
@@ -144,7 +144,7 @@
         <div><small>From</small><strong>{{ detail.from }}</strong></div>
         <div><small>To</small><strong>{{ detail.to.join(', ') }}</strong></div>
         <div><small>CC</small><strong>{{ detail.cc.length ? detail.cc.join(', ') : 'None' }}</strong></div>
-        <div><small>Sent / Last attempt</small><strong>{{ detail.last_attempt_at | date:'medium' }}</strong></div>
+        <div><small>Accepted / Last attempt</small><strong>{{ detail.last_attempt_at | date:'medium' }}</strong></div>
       </div>
 
       <section class="email-body">
