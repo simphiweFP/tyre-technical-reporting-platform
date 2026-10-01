@@ -1,9 +1,10 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ReportPhoto, TechnicalReport } from '../../shared/models/report.models';
 import { OfflineDataService } from '../offline/offline-data.service';
+import { AuthService } from '../auth/auth.service';
 
 interface ServerImage {
   id: string;
@@ -75,6 +76,7 @@ export interface ReportSearch {
 @Injectable({ providedIn: 'root' })
 export class ReportStore {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
   readonly offline = inject(OfflineDataService);
   private readonly state = signal<TechnicalReport[]>([]);
   private readonly serverUpdatedAt = new Map<string, string>();
@@ -89,13 +91,22 @@ export class ReportStore {
   private pendingSaves = 0;
 
   constructor() {
-    if (this.offline.online()) {
-      void this.refresh();
-    } else {
-      void this.loadOfflineReports();
-    }
+    effect(() => {
+      const userId = this.auth.user()?.id ?? '';
+      this.resetVisibleState();
+
+      if (!userId) return;
+
+      if (this.offline.online()) {
+        void this.refresh();
+      } else {
+        void this.loadOfflineReports();
+      }
+    });
+
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => {
+        if (!this.auth.user()) return;
         void this.offline.syncNow().then(() => this.refresh());
       });
     }
@@ -479,6 +490,15 @@ export class ReportStore {
       updatedAt: item.updated_at,
       photos,
     };
+  }
+
+  private resetVisibleState(): void {
+    this.state.set([]);
+    this.total.set(0);
+    this.matchingTotal.set(0);
+    this.statusCounts.set({});
+    this.serverUpdatedAt.clear();
+    this.saveError.set('');
   }
 
   private updateLocal(report: TechnicalReport): void {
