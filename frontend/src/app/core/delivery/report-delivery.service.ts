@@ -71,11 +71,6 @@ export class ReportDeliveryService {
       this.http.put<ReportRecipient>(`${environment.apiUrl}/recipients/${id}`, input),
     );
   }
-  testRecipient(id: string): Promise<{ message: string }> {
-    return firstValueFrom(
-      this.http.post<{ message: string }>(`${environment.apiUrl}/recipients/${id}/test`, null),
-    );
-  }
   deliveries(query = '', status = ''): Promise<{ items: DeliveryAttempt[]; total: number }> {
     return firstValueFrom(
       this.http.get<{ items: DeliveryAttempt[]; total: number }>(
@@ -142,6 +137,12 @@ export class ReportDeliveryService {
         `${environment.apiUrl}/deliveries/${deliveryId}/follow-up`,
         { message },
       ),
+    );
+  }
+
+  softDeleteRecipient(recipientId: string): Promise<void> {
+    return firstValueFrom(
+      this.http.delete<void>(`${environment.apiUrl}/recipients/${recipientId}`),
     );
   }
 
