@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import re
 import smtplib
 from datetime import UTC, datetime, timedelta
 
@@ -42,15 +43,19 @@ def _delivery_error_message(exc: Exception, recipient_email: str) -> str:
             iter(exc.recipients.values()),
             None,
         )
-        smtp_detail = ""
+        server_message = ""
         if details:
-            code, message = details
+            _, message = details
             if isinstance(message, bytes):
                 message = message.decode("utf-8", errors="replace")
-            smtp_detail = f" SMTP {code}: {message}"
+            server_message = re.sub(
+                r"^\\s*\\d{3}(?:[ -]\\d(?:\\.\\d+)*)?[ :\\-]*",
+                "",
+                str(message),
+            ).strip()
         return (
             f"The recipient email address {recipient_email} could not receive the message."
-            f"{smtp_detail}"
+            + (f"\\n{server_message}" if server_message else "")
         )
 
     if isinstance(exc, smtplib.SMTPDataError):
