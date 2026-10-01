@@ -267,10 +267,45 @@ def deliver_report(
     db.commit()
     db.refresh(attempt)
 
-    # Try to send immediately so the UI does not leave successful deliveries queued.
-    # If SMTP fails, ReportDeliveryService marks the attempt for retry and the
-    # delivery worker can pick it up later.
-    return _service(db).deliver(attempt, user.id)
+    # Try immediately, but never lose the delivery record. The attempt is
+    # committed above before any PDF/SMTP work starts. If an unexpected error
+    # happens before the delivery service can classify it, persist it as Failed
+    # so Delivery Centre always shows what happened.
+    try:
+        return _service(db).deliver(attempt, user.id)
+    except Exception as exc:
+        db.rollback()
+
+        persisted = db.get(DeliveryAttempt, attempt.id)
+        if persisted is None:
+            raise
+
+        persisted.status = "Failed"
+        persisted.error_message = str(exc)[:1000] or exc.__class__.__name__
+        persisted.last_attempt_at = datetime.now(UTC)
+        if persisted.attempt_count == 0:
+            persisted.attempt_count = 1
+
+        record.status = "Email Failed"
+        db.add(persisted)
+        db.add(record)
+        db.add(
+            AuditEvent(
+                actor_id=user.id,
+                action="report.email_failed",
+                entity_type="technical_report",
+                entity_id=claim,
+                details={
+                    "delivery_id": str(persisted.id),
+                    "recipient": recipient.email,
+                    "attempt": persisted.attempt_count,
+                    "error": persisted.error_message,
+                },
+            )
+        )
+        db.commit()
+        db.refresh(persisted)
+        return persisted
 
 
 @router.post("/reports/deliveries/{delivery_id}/retry", response_model=DeliveryResponse)
