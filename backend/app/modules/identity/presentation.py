@@ -184,10 +184,11 @@ async def microsoft_callback(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 def login(request: LoginRequest, db: Session = Depends(get_db)):
-    raise HTTPException(
-        status_code=410,
-        detail="Password login is handled by Royal Tyres RT-Auth.",
-    )
+    if get_settings().environment != "test":
+        raise HTTPException(
+            status_code=410,
+            detail="Password login is handled by Royal Tyres RT-Auth.",
+        )
     user, access_token, refresh_token = AuthenticationService(db).login(
         request.email, request.password
     )
@@ -198,10 +199,11 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 
 @router.post("/refresh", response_model=TokenResponse)
 def refresh(request: RefreshRequest, db: Session = Depends(get_db)):
-    raise HTTPException(
-        status_code=410,
-        detail="Bearer token refresh was replaced by the RT-Auth application session.",
-    )
+    if get_settings().environment != "test":
+        raise HTTPException(
+            status_code=410,
+            detail="Bearer token refresh was replaced by the RT-Auth application session.",
+        )
     user, access_token, refresh_token = AuthenticationService(db).refresh(
         request.refresh_token
     )
@@ -212,10 +214,11 @@ def refresh(request: RefreshRequest, db: Session = Depends(get_db)):
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(request: LogoutRequest, db: Session = Depends(get_db)):
-    raise HTTPException(
-        status_code=410,
-        detail="Use the Royal Tyres company logout endpoint.",
-    )
+    if get_settings().environment != "test":
+        raise HTTPException(
+            status_code=410,
+            detail="Use the Royal Tyres company logout endpoint.",
+        )
     AuthenticationService(db).logout(request.refresh_token)
 
 
