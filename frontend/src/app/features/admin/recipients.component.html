@@ -50,8 +50,10 @@
                 </button>
               </td>
               <td>
-                <button class="test" (click)="test(item)">➤ Test</button
-                ><button class="mini" (click)="open(item)">✎ Edit</button>
+                <button class="mini" (click)="open(item)">✎ Edit</button>
+                <button class="mini danger-action" type="button" (click)="remove(item)">
+                  Delete
+                </button>
               </td>
             </tr>
           } @empty {
