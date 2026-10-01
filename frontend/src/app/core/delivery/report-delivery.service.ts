@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { OfflineDataService } from '../offline/offline-data.service';
 import {
   DeliveryAttempt,
   ReportRecipient,
@@ -47,15 +48,22 @@ export interface RecipientInput {
 @Injectable({ providedIn: 'root' })
 export class ReportDeliveryService {
   private readonly http = inject(HttpClient);
+  private readonly offline = inject(OfflineDataService);
 
-  recipients(activeOnly = true, branch = '', category = ''): Promise<ReportRecipient[]> {
+  async recipients(activeOnly = true, branch = '', category = ''): Promise<ReportRecipient[]> {
+    if (!this.offline.online()) {
+      return this.offline.cachedRecipients(branch, category);
+    }
+
     const params = new HttpParams()
       .set('active_only', activeOnly)
       .set('branch', branch)
       .set('category', category);
-    return firstValueFrom(
+    const recipients = await firstValueFrom(
       this.http.get<ReportRecipient[]>(`${environment.apiUrl}/recipients`, { params }),
     );
+    await this.offline.cacheRecipients(recipients);
+    return recipients;
   }
 
   createRecipient(input: RecipientInput): Promise<ReportRecipient> {
