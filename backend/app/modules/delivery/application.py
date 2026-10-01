@@ -53,9 +53,12 @@ def _delivery_error_message(exc: Exception, recipient_email: str) -> str:
                 "",
                 str(message),
             ).strip()
-        return (
-            f"The recipient email address {recipient_email} could not receive the message."
-            + (f"\\n{server_message}" if server_message else "")
+        recipient_message = (
+            f"The recipient email address {recipient_email} "
+            "could not receive the message."
+        )
+        return recipient_message + (
+            f"\\n{server_message}" if server_message else ""
         )
 
     if isinstance(exc, smtplib.SMTPDataError):
