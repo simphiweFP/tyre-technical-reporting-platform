@@ -41,6 +41,14 @@ class Settings(BaseSettings):
     microsoft_client_id: str = ""
     microsoft_client_secret: str = ""
     microsoft_redirect_uri: str = "http://localhost:8000/api/v1/auth/microsoft/callback"
+    auth_issuer_url: str = ""
+    auth_client_id: str = ""
+    auth_client_secret: str = ""
+    auth_redirect_uri: str = "https://localhost:8000/api/v1/auth/callback"
+    auth_root_ca_path: str = ""
+    auth_session_hours: int = 12
+    auth_cookie_name: str = "rt_tyres_session"
+    auth_csrf_cookie_name: str = "rt_tyres_csrf"
     jwt_secret_file: str = ""
     smtp_password_file: str = ""
     microsoft_client_secret_file: str = ""
@@ -99,6 +107,16 @@ class Settings(BaseSettings):
             errors.append("SMTP_PASSWORD must be configured when SMTP_USERNAME is set")
         if not self.gemini_api_key:
             errors.append("GEMINI_API_KEY must be configured for AI image analysis")
+        if not self.auth_issuer_url:
+            errors.append("AUTH_ISSUER_URL must be configured")
+        if not self.auth_client_id:
+            errors.append("AUTH_CLIENT_ID must be configured")
+        if not self.auth_client_secret:
+            errors.append("AUTH_CLIENT_SECRET must be configured")
+        if not self.auth_redirect_uri.startswith("https://"):
+            errors.append("AUTH_REDIRECT_URI must use HTTPS")
+        if not self.auth_root_ca_path:
+            errors.append("AUTH_ROOT_CA_PATH must be configured")
         if errors:
             raise RuntimeError("Unsafe production configuration: " + "; ".join(errors))
 
