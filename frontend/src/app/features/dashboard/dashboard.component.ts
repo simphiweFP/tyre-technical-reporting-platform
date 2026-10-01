@@ -19,7 +19,9 @@ export class DashboardComponent {
   readonly isCapturer = computed(() => this.auth.hasRole('report_capturer'));
   readonly isViewer = computed(() => this.auth.hasRole('viewer'));
   readonly canCapture = computed(() => this.isAdmin() || this.isCapturer());
-  readonly recent = computed(() => this.store.reports().slice(0, 6));
+  readonly recent = computed(() =>
+    this.store.reports().slice(0, this.isCapturer() ? 1 : 6),
+  );
   readonly latestDraft = computed(() => this.store.reports().find((report) => report.status === 'Draft') ?? null);
   readonly analytics = signal<ReportAnalytics | null>(null);
   readonly workflowStatuses = ['Draft', 'Ready to Submit', 'Submitted', 'Email Sent', 'Email Failed'];
