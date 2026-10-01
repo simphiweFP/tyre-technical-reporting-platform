@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import smtplib
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
@@ -204,8 +205,17 @@ class ReportDeliveryService:
                 report_record.status = "Email Sent"
         except Exception as exc:
             settings = get_settings()
+            permanent_recipient_failure = isinstance(
+                exc,
+                (
+                    smtplib.SMTPRecipientsRefused,
+                    smtplib.SMTPSenderRefused,
+                ),
+            )
             attempt.status = (
-                "Retrying"
+                "Failed"
+                if permanent_recipient_failure
+                else "Retrying"
                 if attempt.attempt_count < settings.max_delivery_attempts
                 else "Failed"
             )
