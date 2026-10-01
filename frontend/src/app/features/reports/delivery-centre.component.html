@@ -47,7 +47,6 @@
                 <th>Claim Ref</th>
                 <th>Recipient(s)</th>
                 <th>Status</th>
-                <th>Details</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -65,19 +64,6 @@
                       [class.retrying]="row.status === 'Retrying'"
                       >● {{ row.status }}</span
                     >
-                  </td>
-                  <td class="details-cell">
-                    @if (row.error_message) {
-                      <button class="detail-link error-link" type="button" (click)="view(row.id)">
-                        View error
-                      </button>
-                    } @else if (row.status === 'Sent') {
-                      <button class="detail-link" type="button" (click)="view(row.id)">
-                        View sent email
-                      </button>
-                    } @else {
-                      Attempt {{ row.attempt_count }}
-                    }
                   </td>
                   <td>
                     <div class="delivery-actions">
@@ -101,7 +87,7 @@
                 </tr>
               } @empty {
                 <tr class="empty-row">
-                  <td colspan="6">
+                  <td colspan="5">
                     <div class="empty-state">
                       <span>✉</span><strong>No delivery records found</strong
                       ><small
@@ -178,6 +164,29 @@
         <section class="delivery-error-box">
           <small>Delivery error</small>
           <pre>{{ detail.error_message }}</pre>
+        </section>
+      }
+
+      @if (detail.follow_ups?.length) {
+        <section class="follow-up-history">
+          <div class="follow-up-history-heading">
+            <div>
+              <small>Email follow-up history</small>
+              <strong>{{ detail.follow_ups.length }} sent</strong>
+            </div>
+          </div>
+          <div class="follow-up-history-list">
+            @for (followUp of detail.follow_ups.slice().reverse(); track followUp.message_id) {
+              <article>
+                <header>
+                  <strong>Follow-up sent</strong>
+                  <span>{{ followUp.sent_at | date:'medium' }}</span>
+                </header>
+                <p>{{ followUp.body }}</p>
+                <small>To: {{ followUp.recipient }}</small>
+              </article>
+            }
+          </div>
         </section>
       }
 
