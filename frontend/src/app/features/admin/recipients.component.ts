@@ -135,19 +135,24 @@ export class RecipientsComponent {
       await this.alerts.error('Recipient not updated', 'The recipient status could not be changed.');
     }
   }
-  async test(item: ReportRecipient) {
-    if (!(await this.alerts.confirm('Send test email?', `A test message will be sent to ${item.email}.`, 'Send test'))) return;
-    this.alerts.loading('Sending test…', 'Checking the configured recipient and SMTP delivery.');
+
+  async remove(item: ReportRecipient): Promise<void> {
+    if (!(await this.alerts.confirm(
+      'Delete recipient?',
+      `${item.email} will be removed from active configuration but retained for audit history.`,
+      'Delete recipient',
+      'warning',
+      true,
+    ))) return;
     try {
-      const result = await this.delivery.testRecipient(item.id);
-      this.alerts.close();
-      this.notice.set(result.message);
-      await this.alerts.success('Test email sent', result.message);
+      await this.delivery.softDeleteRecipient(item.id);
+      this.recipients.update((items) => items.filter((entry) => entry.id !== item.id));
+      await this.alerts.success('Recipient deleted', `${item.email} was removed successfully.`);
     } catch {
-      this.alerts.close();
-      await this.alerts.error('Test failed', 'The test email could not be delivered.');
+      await this.alerts.error('Delete failed', 'The recipient could not be deleted.');
     }
   }
+
   addCc(): boolean {
     const addresses = this.ccDraft()
       .split(/[;,]/)
