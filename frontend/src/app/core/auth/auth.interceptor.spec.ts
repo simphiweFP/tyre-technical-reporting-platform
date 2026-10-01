@@ -31,8 +31,8 @@ describe('authInterceptor', () => {
     http.get(`${environment.apiUrl}/reports/records`).subscribe();
 
     const request = controller.expectOne(`${environment.apiUrl}/reports/records`);
-    expect(request.request.withCredentials).toBeTrue();
-    expect(request.request.headers.has('Authorization')).toBeFalse();
+    expect(request.request.withCredentials).toBeTruthy();
+    expect(request.request.headers.has('Authorization')).toBeFalsy();
     request.flush({ items: [], total: 0 });
   });
 
@@ -40,7 +40,7 @@ describe('authInterceptor', () => {
     http.post(`${environment.apiUrl}/reports/records`, {}).subscribe();
 
     const request = controller.expectOne(`${environment.apiUrl}/reports/records`);
-    expect(request.request.withCredentials).toBeTrue();
+    expect(request.request.withCredentials).toBeTruthy();
     expect(request.request.headers.get('X-CSRF-Token')).toBe('test-csrf');
     request.flush({});
   });
