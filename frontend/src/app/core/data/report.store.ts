@@ -436,20 +436,10 @@ export class ReportStore {
         ['remainingTreadDepth', 'Remaining tread depth is required.'],
         ['inspectedPressure', 'Inspected pressure is required.'],
         ['inspectedLocation', 'Inspected location is required.'],
-        ['fittedLoose', 'Select whether the tyre is fitted or loose.'],
-        ['claimCode', 'Claim code or description is required.'],
-        ['tyreMileage', 'Tyre mileage is required.'],
-        ['natureOfRepair', 'Nature of repair is required.'],
-        ['goodsTransported', 'Goods transported is required.'],
-        ['vehicleMakeModel', 'Vehicle make/model is required.'],
-        ['vehicleMileage', 'Vehicle mileage is required.'],
         ['tyrePosition', 'Tyre position is required.'],
       ];
       for (const [field, message] of requiredText) {
         if (!String(report[field] ?? '').trim()) errors[String(field)] = message;
-      }
-      if (report.returnedWithRim === null) {
-        errors['returnedWithRim'] = 'Select whether the tyre was returned with a rim.';
       }
     }
     return { valid: Object.keys(errors).length === 0, errors };
