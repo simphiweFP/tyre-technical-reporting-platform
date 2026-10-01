@@ -93,6 +93,7 @@ export class DeliveryCentreComponent{
       this.alerts.close();
       this.message.set('Follow-up email sent in the original email thread.');
       this.followUpMessage.set('');
+      this.selected.set(await this.delivery.deliveryDetails(id));
       await this.alerts.success('Follow-up sent','Your message was sent successfully.');
     }catch{
       this.alerts.close();
