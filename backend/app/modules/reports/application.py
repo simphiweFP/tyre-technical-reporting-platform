@@ -86,11 +86,11 @@ class TechnicalReportService:
             ],
         )
 
-    def analytics(self, user: User, mine_only: bool = True) -> AnalyticsResponse:
+    def analytics(self, user: User) -> AnalyticsResponse:
         records_query = select(TechnicalReportRecord).where(
             TechnicalReportRecord.archived.is_(False)
         )
-        if mine_only or user.role == Role.REPORT_CAPTURER:
+        if user.role == Role.REPORT_CAPTURER:
             records_query = records_query.where(
                 TechnicalReportRecord.created_by == user.id
             )
@@ -133,14 +133,13 @@ class TechnicalReportService:
         date_to: date | None = None,
         include_archived: bool = False,
         archived_only: bool = False,
-        mine_only: bool = True,
         offset: int = 0,
         limit: int = 100,
     ) -> ReportListResponse:
         statement = select(TechnicalReportRecord).order_by(
             TechnicalReportRecord.updated_at.desc()
         )
-        if mine_only or user.role == Role.REPORT_CAPTURER:
+        if user.role == Role.REPORT_CAPTURER:
             statement = statement.where(TechnicalReportRecord.created_by == user.id)
         if archived_only:
             statement = statement.where(TechnicalReportRecord.archived.is_(True))
