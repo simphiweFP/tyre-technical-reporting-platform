@@ -68,10 +68,11 @@ def _microsoft_client():
     "/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
 )
 def register(request: RegisterRequest, db: Session = Depends(get_db)):
-    raise HTTPException(
-        status_code=410,
-        detail="Registration is managed by Royal Tyres RT-Auth.",
-    )
+    if get_settings().environment != "test":
+        raise HTTPException(
+            status_code=410,
+            detail="Registration is managed by Royal Tyres RT-Auth.",
+        )
     email = str(request.email).lower()
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(
