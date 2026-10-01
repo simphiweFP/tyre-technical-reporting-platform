@@ -116,12 +116,13 @@ async def analyse_image_with_ai(
 
 @router.get("/analytics/summary", response_model=AnalyticsResponse)
 def analytics_summary(
+    mine_only: bool = True,
     db: Session = Depends(get_db),
     user: User = Depends(
         require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
     ),
 ):
-    return TechnicalReportService(db).analytics(user)
+    return TechnicalReportService(db).analytics(user, mine_only=mine_only)
 
 
 @router.get("/records", response_model=ReportListResponse)
@@ -133,6 +134,7 @@ def list_reports(
     date_to: date | None = None,
     include_archived: bool = False,
     archived_only: bool = False,
+    mine_only: bool = True,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=250),
     db: Session = Depends(get_db),
@@ -149,6 +151,7 @@ def list_reports(
         date_to=date_to,
         include_archived=include_archived,
         archived_only=archived_only,
+        mine_only=mine_only,
         offset=offset,
         limit=limit,
     )
