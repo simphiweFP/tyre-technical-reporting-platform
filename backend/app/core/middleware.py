@@ -29,6 +29,21 @@ class RequestProtectionMiddleware(BaseHTTPMiddleware):
         while window and window[0] < now - timedelta(minutes=1):
             window.popleft()
         settings = get_settings()
+
+        if (
+            request.url.path.startswith("/api/v1/")
+            and request.method.upper() not in {"GET", "HEAD", "OPTIONS"}
+            and request.cookies.get(settings.auth_cookie_name)
+        ):
+            csrf_cookie = request.cookies.get(settings.auth_csrf_cookie_name) or ""
+            csrf_header = request.headers.get("x-csrf-token") or ""
+            if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "CSRF validation failed"},
+                    headers={"X-Request-ID": request_id},
+                )
+
         limit = (
             10_000
             if settings.environment == "test"
