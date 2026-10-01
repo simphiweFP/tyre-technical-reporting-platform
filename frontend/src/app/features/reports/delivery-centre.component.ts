@@ -20,6 +20,7 @@ export class DeliveryCentreComponent{
   readonly detailsBusy=signal(false);
   readonly followUpMessage=signal('');
   readonly followUpBusy=signal(false);
+  private searchTimer?: ReturnType<typeof setTimeout>;
 
   constructor(){void this.load()}
 
@@ -122,6 +123,12 @@ export class DeliveryCentreComponent{
       this.message.set('Delivery record could not be removed.');
       await this.alerts.error('Delete failed','The delivery record could not be removed.');
     }
+  }
+
+  searchChanged(value:string){
+    this.query.set(value);
+    if(this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer=setTimeout(()=>void this.load(),300);
   }
 
   deliveryStatusLabel(status: string): string {
