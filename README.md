@@ -67,14 +67,48 @@ npm start
 
 The frontend expects the API at `http://localhost:8000/api/v1`. Reports, drafts and compressed report images are stored in PostgreSQL. Image bytes are Base64-encoded in `report_images.base64_data` and are only served through authenticated endpoints.
 
-## Registration and sign-in
+## Royal Tyres central authentication
 
-Registration is public and offers two paths:
+The application is a relying party of **RT-Auth**, Royal Tyres' central identity
+provider. The reporting platform never checks or receives a user's company
+password. The browser is redirected to RT-Auth, the backend exchanges the
+single-use authorization code using PKCE, validates the RS256 `id_token`
+against RT-Auth JWKS, then creates an opaque database-backed application session
+stored in an HttpOnly cookie.
 
-- **Continue with Microsoft / Outlook:** OpenID Connect through Microsoft Entra ID. A verified matching email safely links to the existing account instead of creating a duplicate.
-- **Create a new account:** name, email and a password of at least 12 characters.
+Local password registration/login, Microsoft login and local password recovery
+are no longer application sign-in paths. User identities and app-role
+assignments are managed centrally in RT-Auth. The app JIT-provisions a local
+profile on first successful RT-Auth login and maps these role codes:
 
-Self-registered accounts receive the `pending` role and cannot access reports. An administrator must assign a branch and promote the account to Viewer, Report Capturer or Administrator. Configure `MICROSOFT_TENANT_ID`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` and `MICROSOFT_REDIRECT_URI` to enable Microsoft sign-in. Register the callback URL in the Entra application exactly as configured.
+- `administrator`
+- `report_capturer`
+- `viewer`
+
+Register those role codes for this client in RT-Auth and assign them there.
+
+Configure the uncommitted root `.env`:
+
+```env
+AUTH_ISSUER_URL=https://192.168.1.236:8010
+AUTH_CLIENT_ID=RT-TyreTechnicalReporting
+AUTH_CLIENT_SECRET=<secret printed once by RT-Auth>
+AUTH_REDIRECT_URI=https://<your-app-host>:8000/api/v1/auth/callback
+AUTH_ROOT_CA_PATH=L:\Projects\certs\rootCA.crt
+AUTH_SESSION_HOURS=12
+```
+
+`AUTH_REDIRECT_URI` must exactly match the redirect URI registered in RT-Auth.
+Do not commit `AUTH_CLIENT_SECRET`. The backend explicitly trusts
+`AUTH_ROOT_CA_PATH` for RT-Auth server-to-server calls; TLS verification must
+not be disabled.
+
+The app keeps the RT-Auth refresh token server-side only. The browser receives
+only an opaque HttpOnly application-session cookie plus a CSRF cookie. API
+requests use the application session rather than Bearer tokens in localStorage.
+Signing out revokes this app's RT-Auth refresh-token family and clears the local
+session cookies.
+
 
 ## AI-assisted capture and PDF generation
 
@@ -158,7 +192,7 @@ Each backup includes a `SHA256SUMS` manifest. Run `sha256sum -c SHA256SUMS` befo
 
 ## Production deployment checklist
 
-- Replace the JWT secret and seeded administrator password with managed secrets.
+- Configure RT-Auth client credentials, exact HTTPS callback URI and the Royal Tyres root CA as deployment secrets.
 - Use PostgreSQL with encrypted backups. API startup applies pending migrations automatically.
 - Back up PostgreSQL and test restores; report images are included in the database dump.
 - Configure an HTTPS reverse proxy and restrict `ALLOWED_ORIGINS` to the deployed Angular URL.
@@ -170,10 +204,10 @@ Each backup includes a `SHA256SUMS` manifest. Run `sha256sum -c SHA256SUMS` befo
 
 ## Roles
 
-- **Administrator:** manages users, roles, branches, recipients and all reports.
+- **Administrator:** role assignment comes from RT-Auth; inside this app manages branches, recipients and all reports.
 - **Report Capturer:** used by technicians and salespeople to create and deliver reports.
 - **Viewer:** read-only report and PDF access.
-- **Pending:** public registration completed but no report access until an administrator assigns permissions.
+- **Pending:** authenticated RT-Auth user with no recognized reporting-platform role.
 
 ## Explicit exclusions
 
