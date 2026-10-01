@@ -118,6 +118,10 @@ export class ReportCaptureComponent implements OnDestroy {
       emitEvent: false,
     });
     this.form.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.clearResolvedValidationErrors());
+
+    this.form.valueChanges
       .pipe(debounceTime(650), takeUntil(this.destroy$))
       .subscribe(() => this.persist());
     this.customerSearch$
@@ -626,6 +630,49 @@ export class ReportCaptureComponent implements OnDestroy {
       this.captureMessage.set('Technical report dropdown data is temporarily unavailable.');
     }
   }
+  private clearResolvedValidationErrors(): void {
+    const current = this.form.getRawValue();
+    const errors = { ...this.validationErrors() };
+
+    const textFields = [
+      'salesperson',
+      'customerName',
+      'branch',
+      'brand',
+      'rimSize',
+      'pattern',
+      'dot',
+      'serialNumber',
+      'remainingTreadDepth',
+      'inspectedPressure',
+      'inspectedLocation',
+      'fittedLoose',
+      'claimCode',
+      'tyreMileage',
+      'natureOfRepair',
+      'goodsTransported',
+      'vehicleMakeModel',
+      'vehicleMileage',
+      'tyrePosition',
+    ] as const;
+
+    for (const field of textFields) {
+      if (String(current[field] ?? '').trim()) {
+        delete errors[field];
+      }
+    }
+
+    if (current.returnedWithRim !== null) {
+      delete errors['returnedWithRim'];
+    }
+
+    this.validationErrors.set(errors);
+
+    if (!Object.keys(errors).length && this.captureMessage() === 'Correct the highlighted fields before continuing.') {
+      this.captureMessage.set('');
+    }
+  }
+
   private async validateStep(step: number): Promise<boolean> {
     this.persist();
     try {
