@@ -32,7 +32,12 @@ class TechnicalReportService:
 
     def reference_data(self, user: User) -> ReportReferenceDataResponse:
         branches = self.db.scalars(
-            select(Branch).where(Branch.is_active.is_(True)).order_by(Branch.name)
+            select(Branch)
+            .where(
+                Branch.is_active.is_(True),
+                Branch.deleted_at.is_(None),
+            )
+            .order_by(Branch.name)
         ).all()
         records_query = select(TechnicalReportRecord).where(
             TechnicalReportRecord.archived.is_(False)
@@ -143,7 +148,10 @@ class TechnicalReportService:
 
         if branch:
             matched_branch = self.db.scalar(
-                select(Branch).where(or_(Branch.code == branch, Branch.name == branch))
+                select(Branch).where(
+                    Branch.deleted_at.is_(None),
+                    or_(Branch.code == branch, Branch.name == branch),
+                )
             )
             branch_values = {branch}
             if matched_branch:
