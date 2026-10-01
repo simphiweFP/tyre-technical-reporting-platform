@@ -83,6 +83,23 @@ export class BranchesComponent {
       await this.alerts.error('Branch not updated', this.errorMessage(error, 'The branch status could not be changed.'));
     }
   }
+  async remove(item: Branch): Promise<void> {
+    if (!(await this.alerts.confirm(
+      'Delete branch?',
+      `${item.name} will be removed from active branch configuration but retained for audit history.`,
+      'Delete branch',
+      'warning',
+      true,
+    ))) return;
+    try {
+      await this.admin.deleteBranch(item.id);
+      this.branches.update((items) => items.filter((branch) => branch.id !== item.id));
+      await this.alerts.success('Branch deleted', `${item.name} was removed successfully.`);
+    } catch {
+      await this.alerts.error('Delete failed', 'The branch could not be deleted.');
+    }
+  }
+
   private async load() {
     try {
       this.branches.set(await this.admin.branches());
