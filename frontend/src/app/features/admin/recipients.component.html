@@ -11,9 +11,15 @@
     <div class="notice">{{ notice() }}</div>
   }
   <section class="data-card">
-    <label class="search"
-      >Search by branch, category or recipient... <input [ngModel]="query()" (ngModelChange)="query.set($event)" /><span>⌕</span></label
-    >
+    <label class="search">
+      <span aria-hidden="true">⌕</span>
+      <input
+        [ngModel]="query()"
+        (ngModelChange)="query.set($event)"
+        placeholder="Search by branch, category or recipient..."
+        aria-label="Search report recipients"
+      />
+    </label>
     <div class="table-scroll">
       <table>
         <thead>
