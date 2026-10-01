@@ -79,25 +79,101 @@ export class ReportDetailComponent {
     const r = this.report();
     const recipientId = this.selectedRecipient();
     if (!r || !recipientId) {
-      await this.alerts.warning('Recipient required', 'Select a recipient before sending this report.');
+      await this.alerts.warning(
+        'Recipient required',
+        'Select a recipient before sending this report.',
+      );
       return;
     }
+
     const recipient = this.recipients().find((item) => item.id === recipientId);
-    if (!(await this.alerts.confirmReportSend(recipient?.email ?? 'Selected recipient', r.claimReference))) return;
+    if (
+      !(await this.alerts.confirmReportSend(
+        recipient?.email ?? 'Selected recipient',
+        r.claimReference,
+      ))
+    ) {
+      return;
+    }
+
     this.busy.set('send');
+    this.message.set('');
     this.alerts.sending();
+
     try {
       const result = await this.delivery.deliver(r, recipientId);
-      const updated = { ...r, status: 'Submitted' as const };
+
+      const updated = {
+        ...r,
+        status:
+          result.status === 'Sent'
+            ? ('Email Sent' as const)
+            : result.status === 'Failed'
+              ? ('Email Failed' as const)
+              : ('Submitted' as const),
+      };
       await this.store.saveNow(updated);
       this.report.set(updated);
-      this.alerts.close();
-      this.message.set(`Report sent to ${result.recipient_email}.`);
+
+      // Always reload delivery history. Failed and retrying attempts are
+      // reporting records too and must remain visible in Delivery Centre.
       await this.loadDeliveries(r.claimReference);
-      await this.alerts.success('Report sent', `${r.claimReference} was sent to ${result.recipient_email}.`);
-    } catch {
       this.alerts.close();
-      await this.alerts.error('Send failed', 'The report could not be delivered.');
+
+      if (result.status === 'Sent') {
+        this.message.set(`Email accepted for ${result.recipient_email}.`);
+        await this.alerts.success(
+          'Report accepted',
+          `${r.claimReference} was accepted by the mail server for ${result.recipient_email}.`,
+        );
+        return;
+      }
+
+      if (result.status === 'Failed') {
+        this.message.set(
+          'Email delivery failed. The failed attempt was saved in Delivery Centre.',
+        );
+        await this.alerts.error(
+          'Email delivery failed',
+          result.error_message ||
+            'The recipient could not receive the email. The failed attempt is available in Delivery Centre for reporting and retry.',
+        );
+        return;
+      }
+
+      this.message.set(
+        'Email delivery is waiting for retry. Track it in Delivery Centre.',
+      );
+      await this.alerts.warning(
+        'Email not delivered yet',
+        result.error_message
+          ? `The delivery is scheduled for retry. ${result.error_message}`
+          : 'The delivery is scheduled for retry and is visible in Delivery Centre.',
+      );
+    } catch {
+      // A request can fail after the server has already persisted an attempt.
+      // Refresh history so any saved failure is still surfaced to the user.
+      await this.loadDeliveries(r.claimReference);
+      this.alerts.close();
+
+      const latest = this.deliveries()[0];
+      if (latest && latest.status === 'Failed') {
+        const updated = { ...r, status: 'Email Failed' as const };
+        this.report.set(updated);
+        this.message.set(
+          'Email delivery failed. The failed attempt was saved in Delivery Centre.',
+        );
+        await this.alerts.error(
+          'Email delivery failed',
+          latest.error_message ||
+            'The failed delivery is available in Delivery Centre for reporting and retry.',
+        );
+      } else {
+        await this.alerts.error(
+          'Send failed',
+          'The report could not be delivered. Check Delivery Centre for any saved delivery attempt.',
+        );
+      }
     } finally {
       this.busy.set('');
     }
