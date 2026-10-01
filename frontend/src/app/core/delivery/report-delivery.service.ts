@@ -8,6 +8,14 @@ import {
   TechnicalReport,
 } from '../../shared/models/report.models';
 
+export interface DeliveryFollowUp {
+  body: string;
+  sent_at: string;
+  message_id: string;
+  in_reply_to: string | null;
+  recipient: string;
+}
+
 export interface DeliveryDetail {
   id: string;
   claim_reference: string;
@@ -23,6 +31,7 @@ export interface DeliveryDetail {
   attempt_count: number;
   created_at: string;
   last_attempt_at: string;
+  follow_ups: DeliveryFollowUp[];
 }
 
 export interface RecipientInput {
