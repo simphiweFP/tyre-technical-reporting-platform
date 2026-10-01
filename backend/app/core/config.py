@@ -7,7 +7,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "Tyre Technical Reporting Platform"
     environment: str = "development"
-    database_url: str = "sqlite:///./tyre_reports.db"
+    database_url: str = (
+        "postgresql+psycopg://tyre_app:tyre_app@localhost:5432/tyre_reports"
+    )
     jwt_secret: str = "development-secret-change-before-deployment"
     jwt_algorithm: str = "HS256"
     access_token_minutes: int = 15
