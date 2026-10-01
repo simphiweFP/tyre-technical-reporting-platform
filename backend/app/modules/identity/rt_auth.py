@@ -45,16 +45,20 @@ class RTAuthClient:
         return f"{self.settings.auth_issuer_url.rstrip('/')}/authorize?{query}"
 
     def exchange_code(self, code: str, verifier: str) -> dict:
-        response = self._client().post(
-            f"{self.settings.auth_issuer_url.rstrip('/')}/token",
-            auth=(self.settings.auth_client_id, self.settings.auth_client_secret),
-            data={
-                "grant_type": "authorization_code",
-                "code": code,
-                "redirect_uri": self.settings.auth_redirect_uri,
-                "code_verifier": verifier,
-            },
-        )
+        with self._client() as client:
+            response = client.post(
+                f"{self.settings.auth_issuer_url.rstrip('/')}/token",
+                auth=(
+                    self.settings.auth_client_id,
+                    self.settings.auth_client_secret,
+                ),
+                data={
+                    "grant_type": "authorization_code",
+                    "code": code,
+                    "redirect_uri": self.settings.auth_redirect_uri,
+                    "code_verifier": verifier,
+                },
+            )
         if response.status_code >= 400:
             raise RTAuthError("RT-Auth rejected the authorization code exchange")
         payload = response.json()
@@ -94,11 +98,15 @@ class RTAuthClient:
         return claims
 
     def revoke(self, refresh_token: str) -> None:
-        response = self._client().post(
-            f"{self.settings.auth_issuer_url.rstrip('/')}/revoke",
-            auth=(self.settings.auth_client_id, self.settings.auth_client_secret),
-            data={"refresh_token": refresh_token},
-        )
+        with self._client() as client:
+            response = client.post(
+                f"{self.settings.auth_issuer_url.rstrip('/')}/revoke",
+                auth=(
+                    self.settings.auth_client_id,
+                    self.settings.auth_client_secret,
+                ),
+                data={"refresh_token": refresh_token},
+            )
         if response.status_code >= 400:
             raise RTAuthError("RT-Auth refresh token revocation failed")
 
@@ -115,9 +123,10 @@ class RTAuthClient:
         return key
 
     def _refresh_jwks(self) -> None:
-        response = self._client().get(
-            f"{self.settings.auth_issuer_url.rstrip('/')}/.well-known/jwks.json"
-        )
+        with self._client() as client:
+            response = client.get(
+                f"{self.settings.auth_issuer_url.rstrip('/')}/.well-known/jwks.json"
+            )
         if response.status_code >= 400:
             raise RTAuthError("Could not load RT-Auth signing keys")
         keys = response.json().get("keys") or []
