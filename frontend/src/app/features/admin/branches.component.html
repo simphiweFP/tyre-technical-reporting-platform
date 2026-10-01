@@ -36,7 +36,12 @@
                 </button>
               </td>
               <td>{{ branch.routing_email || 'Not configured' }}</td>
-              <td><button class="mini" (click)="open(branch)">✎ &nbsp; Edit</button></td>
+              <td>
+                <button class="mini" (click)="open(branch)">✎ &nbsp; Edit</button>
+                <button class="mini danger-action" type="button" (click)="remove(branch)">
+                  Delete
+                </button>
+              </td>
             </tr>
           } @empty {
             <tr class="empty-row">
