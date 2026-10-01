@@ -202,7 +202,10 @@ def refresh(request: RefreshRequest, db: Session = Depends(get_db)):
     if get_settings().environment != "test":
         raise HTTPException(
             status_code=410,
-            detail="Bearer token refresh was replaced by the RT-Auth application session.",
+            detail=(
+                "Bearer token refresh was replaced by the "
+                "RT-Auth application session."
+            ),
         )
     user, access_token, refresh_token = AuthenticationService(db).refresh(
         request.refresh_token
