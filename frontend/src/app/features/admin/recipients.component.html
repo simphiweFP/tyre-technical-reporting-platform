@@ -12,7 +12,7 @@
   }
   <section class="data-card">
     <label class="search"
-      >Search by branch, category or recipient... <input [(ngModel)]="query" /><span>⌕</span></label
+      >Search by branch, category or recipient... <input [ngModel]="query()" (ngModelChange)="query.set($event)" /><span>⌕</span></label
     >
     <div class="table-scroll">
       <table>
