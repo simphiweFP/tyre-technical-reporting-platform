@@ -87,15 +87,20 @@ export class ReportCaptureFacade {
     return this.store.removeQueuedImage(reportId, category);
   }
 
-  deliver(report: TechnicalReport, recipientEmail: string): Promise<DeliveryAttempt> {
-    return this.delivery.deliver(report, recipientEmail);
+  deliver(
+    report: TechnicalReport,
+    recipientEmail: string,
+    cc: string[] = [],
+  ): Promise<DeliveryAttempt> {
+    return this.delivery.deliver(report, recipientEmail, cc);
   }
 
   queueDelivery(
     report: TechnicalReport,
     recipientEmail: string,
+    cc: string[] = [],
   ): Promise<void> {
-    return this.store.offline.queueDelivery(report, recipientEmail);
+    return this.store.offline.queueDelivery(report, recipientEmail, cc);
   }
 
   downloadPdf(report: TechnicalReport): Promise<void> {
