@@ -29,7 +29,10 @@ export class ClaimsComponent {
   private readonly alerts = inject(SweetAlertService);
   private readonly route = inject(ActivatedRoute);
   readonly tab = signal('tracker');
-  readonly showAllColumns = signal(false);
+  readonly opening = signal(false);
+  private listScrollY = 0;
+  private detailRequest = 0;
+  private handledHandover = '';
   readonly items = signal<ClaimCase[]>([]);
   readonly total = signal(0);
   readonly offset = signal(0);
@@ -100,55 +103,18 @@ export class ClaimsComponent {
     { label: 'Pattern', key: 'pattern' },
     { label: 'Serial number', key: 'serial_number' },
   ];
-  readonly trackerColumns = [
-    { label: 'Date', key: 'claim_date' },
-    { label: 'Claim Reference', key: 'claim_reference' },
-    { label: 'Supplier', key: 'supplier' },
-    { label: 'Customer name', key: 'customer_name' },
-    ...this.sourceFields.slice(0, 1),
-    ...this.sourceFields.slice(1),
-    { label: 'Damage', key: 'damage' },
-    { label: 'RTD mm', key: 'remaining_tread_depth' },
-    { label: 'OTD mm', key: 'original_tread_depth' },
-    { label: '% remaining', key: 'remaining_percentage' },
-    { label: 'Submitted to Supplier', key: 'supplier_submitted_date' },
-    { label: 'Status', key: 'supplier_status' },
-    { label: '% Accepted', key: 'accepted_percentage' },
-    { label: 'Feedback date', key: 'supplier_feedback_date' },
-    { label: '% to Credit', key: 'customer_credit_percentage' },
-    { label: 'Credit note /Invoice ref', key: 'credit_note_reference' },
-    { label: 'Credit date', key: 'customer_credit_date' },
-    { label: 'Supplier Offset Invoice no.', key: 'supplier_offset_invoice' },
-    { label: 'Offset date', key: 'supplier_offset_date' },
-    { label: 'Assigned to', key: 'owner_name' },
-    { label: 'Progress', key: 'workflow_status' },
-  ];
   columns() {
-    if (!this.showAllColumns())
-      return [
-        { label: 'Claim', key: 'claim_reference' },
-        { label: 'Customer', key: 'customer_name' },
-        { label: 'Supplier', key: 'supplier' },
-        { label: 'Decision', key: 'supplier_status' },
-        ...(this.tab() === 'credit'
-          ? [{ label: '% to credit', key: 'customer_credit_percentage' }]
-          : []),
-        { label: 'Next action', key: 'next_action' },
-        { label: 'Assigned to', key: 'owner_name' },
-      ];
-    return this.tab() === 'tracker'
-      ? this.trackerColumns
-      : [
-          ...this.trackerColumns.slice(0, 11),
-          ...this.trackerColumns.filter((c) =>
-            [
-              'supplier_status',
-              'customer_credit_percentage',
-              'credit_note_reference',
-              'customer_credit_date',
-            ].includes(c.key),
-          ),
-        ];
+    return [
+      { label: 'Claim', key: 'claim_reference' },
+      { label: 'Customer', key: 'customer_name' },
+      { label: 'Supplier', key: 'supplier' },
+      { label: 'Decision', key: 'supplier_status' },
+      ...(this.tab() === 'credit'
+        ? [{ label: '% to credit', key: 'customer_credit_percentage' }]
+        : []),
+      { label: 'Next action', key: 'next_action' },
+      { label: 'Assigned to', key: 'owner_name' },
+    ];
   }
   nextAction(item: ClaimCase): string {
     if (item.workflow_status === 'Closed') return 'Completed';
@@ -227,7 +193,8 @@ export class ClaimsComponent {
       this.suppliers.set(suppliers.items);
       if (this.canHandover()) this.available.set(await this.api.available());
       const reportId = this.route.snapshot.queryParamMap.get('handover');
-      if (reportId && this.selected()?.report_id !== reportId) {
+      if (reportId && this.handledHandover !== reportId) {
+        this.handledHandover = reportId;
         try {
           await this.open(await this.api.forReport(reportId));
         } catch (e) {
@@ -269,24 +236,41 @@ export class ClaimsComponent {
     await this.load();
   }
   async open(item: ClaimCase): Promise<void> {
+    const request = ++this.detailRequest;
     this.error.set('');
+    this.opening.set(true);
+    if (!this.selected()) this.listScrollY = window.scrollY;
     try {
       const fresh = await this.api.get(item.id);
+      if (request !== this.detailRequest) return;
+      this.deliveries.set([]);
+      this.activity.set([]);
+      this.instructionNotes = '';
       this.apply(fresh);
-      setTimeout(() =>
-        document
-          .getElementById('claim-editor')
-          ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-      );
+      setTimeout(() => this.showSection('claims-management'));
       const [deliveries, activity] = await Promise.all([
         this.api.deliveries(fresh.claim_reference),
         this.api.activity(fresh.id),
       ]);
+      if (request !== this.detailRequest) return;
       this.deliveries.set(deliveries);
       this.activity.set(activity);
     } catch (e) {
-      this.error.set(this.message(e));
+      if (request === this.detailRequest) this.error.set(this.message(e));
+    } finally {
+      if (request === this.detailRequest) this.opening.set(false);
     }
+  }
+  closeDetails(): void {
+    ++this.detailRequest;
+    this.opening.set(false);
+    this.selected.set(null);
+    this.form = null;
+    this.error.set('');
+    setTimeout(() => window.scrollTo({ top: this.listScrollY }));
+  }
+  showSection(id: string): void {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
   apply(item: ClaimCase): void {
     this.selected.set(item);

@@ -626,3 +626,65 @@ fieldset:disabled select {
     }
   }
 }
+
+#claims-management {
+  .detail-heading {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 18px;
+    p {
+      margin: 4px 0 0;
+      color: #64748b;
+    }
+    > .decision-state {
+      margin-left: auto;
+    }
+  }
+  .detail-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    background: #f0f4fa;
+    border-radius: 6px;
+    button {
+      background: white;
+    }
+  }
+  .view-claim {
+    color: #006fd7;
+    border-color: #b4d2ef;
+    font-weight: 700;
+  }
+  .reference {
+    white-space: nowrap;
+  }
+  .table-scroll td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .claim-editor {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .claim-editor fieldset,
+  .document-actions,
+  .history-grid {
+    scroll-margin-top: 24px;
+  }
+  .claim-editor legend {
+    color: #122e5a;
+    font-weight: 700;
+  }
+  @media (max-width: 600px) {
+    .detail-heading > .decision-state {
+      margin-left: 0;
+    }
+    .detail-nav button {
+      flex: 1 1 140px;
+    }
+  }
+}
