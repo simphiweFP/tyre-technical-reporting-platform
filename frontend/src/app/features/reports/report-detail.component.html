@@ -13,15 +13,48 @@
         </p>
       </div>
       <nav>
-        <button (click)="generatePdf()" [disabled]="!!busy()">▤ &nbsp; Generate PDF</button
-        ><select
-          [value]="selectedRecipient()"
-          (change)="selectedRecipient.set($any($event.target).value)"
-        >
-          @for (item of recipients(); track item.id) {
-            <option [value]="item.id">{{ item.company }}</option>
-          }</select
-        ><button class="send" (click)="send()" [disabled]="!!busy()">➤ &nbsp; Send report</button
+        <button (click)="generatePdf()" [disabled]="!!busy()">▤ &nbsp; Generate PDF</button>
+        <div class="direct-recipient">
+          <input
+            type="email"
+            autocomplete="email"
+            placeholder="Recipient email"
+            [value]="recipientEmail()"
+            (input)="recipientEmail.set($any($event.target).value)"
+          />
+          <div class="detail-cc-row">
+            <input
+              type="email"
+              autocomplete="email"
+              placeholder="CC email"
+              [value]="ccInput()"
+              [disabled]="ccRecipients().length >= 5"
+              (input)="ccInput.set($any($event.target).value); ccError.set('')"
+            />
+            <button
+              type="button"
+              class="cc-add"
+              [disabled]="!ccInput().trim() || ccRecipients().length >= 5"
+              (click)="addCcRecipient()"
+            >
+              + CC
+            </button>
+          </div>
+          @if (ccRecipients().length) {
+            <div class="detail-cc-list">
+              @for (email of ccRecipients(); track email) {
+                <span>
+                  {{ email }}
+                  <button type="button" (click)="removeCcRecipient(email)">×</button>
+                </span>
+              }
+            </div>
+          }
+          @if (ccError()) {
+            <small class="detail-email-error">{{ ccError() }}</small>
+          }
+        </div>
+        <button class="send" (click)="send()" [disabled]="!!busy()">➤ &nbsp; Send report</button
         ><button class="archive" (click)="archive()" [disabled]="!!busy()">▣ &nbsp; Archive</button>
       </nav>
     </header>
