@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ReportStore } from '../../core/data/report.store';
 import { ReportDeliveryService } from '../../core/delivery/report-delivery.service';
 import { ReportIntelligenceService } from '../../core/media/report-intelligence.service';
@@ -9,7 +9,6 @@ import { DeliveryAttempt, TechnicalReport } from '../../shared/models/report.mod
 
 @Component({
   selector: 'app-report-detail',
-  imports: [RouterLink],
   templateUrl: './report-detail.component.html',
   styleUrl: './report-detail.component.scss',
 })
