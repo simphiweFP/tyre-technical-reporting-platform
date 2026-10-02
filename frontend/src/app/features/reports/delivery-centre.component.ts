@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnDestroy, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   DeliveryDetail,
@@ -8,7 +8,7 @@ import {
 import { DeliveryAttempt } from '../../shared/models/report.models';
 import { SweetAlertService } from '../../core/ui/sweet-alert.service';
 @Component({selector:'app-delivery-centre',imports:[CommonModule,FormsModule],templateUrl:'./delivery-centre.component.html',styleUrl: './delivery-centre.component.scss'})
-export class DeliveryCentreComponent{
+export class DeliveryCentreComponent implements OnDestroy{
   private readonly delivery=inject(ReportDeliveryService);
   private readonly alerts=inject(SweetAlertService);
   readonly items=signal<DeliveryAttempt[]>([]);
@@ -21,8 +21,14 @@ export class DeliveryCentreComponent{
   readonly followUpMessage=signal('');
   readonly followUpBusy=signal(false);
   private searchTimer?: ReturnType<typeof setTimeout>;
+  private readonly refreshTimer = window.setInterval(() => void this.load(), 30_000);
 
   constructor(){void this.load()}
+
+  ngOnDestroy(): void {
+    window.clearInterval(this.refreshTimer);
+    if(this.searchTimer) clearTimeout(this.searchTimer);
+  }
 
   async load(){
     try{
