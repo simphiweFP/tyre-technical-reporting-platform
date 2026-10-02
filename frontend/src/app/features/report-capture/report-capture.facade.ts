@@ -13,7 +13,6 @@ import {
 } from '../../core/media/report-intelligence.service';
 import {
   DeliveryAttempt,
-  ReportRecipient,
   TechnicalReport,
 } from '../../shared/models/report.models';
 
@@ -88,20 +87,15 @@ export class ReportCaptureFacade {
     return this.store.removeQueuedImage(reportId, category);
   }
 
-  recipients(report: TechnicalReport): Promise<ReportRecipient[]> {
-    return this.delivery.recipients(true, report.branch, report.category);
-  }
-
-  deliver(report: TechnicalReport, recipientId: string): Promise<DeliveryAttempt> {
-    return this.delivery.deliver(report, recipientId);
+  deliver(report: TechnicalReport, recipientEmail: string): Promise<DeliveryAttempt> {
+    return this.delivery.deliver(report, recipientEmail);
   }
 
   queueDelivery(
     report: TechnicalReport,
-    recipientId: string,
     recipientEmail: string,
   ): Promise<void> {
-    return this.store.offline.queueDelivery(report, recipientId, recipientEmail);
+    return this.store.offline.queueDelivery(report, recipientEmail);
   }
 
   downloadPdf(report: TechnicalReport): Promise<void> {
