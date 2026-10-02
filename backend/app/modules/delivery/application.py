@@ -232,6 +232,9 @@ class ReportDeliveryService:
             cc=tuple(attempt.cc),
             attachment_name=attachment_name,
             attachment=pdf,
+            attachment_content_type=attempt.report_payload.get(
+                "attachmentContentType", "application/pdf"
+            ),
         )
         attempt.attempt_count += 1
         attempt.last_attempt_at = datetime.now(UTC)

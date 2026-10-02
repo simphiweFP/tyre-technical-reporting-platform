@@ -186,13 +186,14 @@ def _attach_inline_image(html_part, cid: str, path: Path) -> None:
     )
 
 
-
 class DeliveryAttempt(Base):
     __tablename__ = "report_delivery_attempts"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     claim_reference: Mapped[str] = mapped_column(String(80), index=True)
-    document_type: Mapped[str] = mapped_column(String(40), default="technical", server_default="technical")
+    document_type: Mapped[str] = mapped_column(
+        String(40), default="technical", server_default="technical"
+    )
     recipient_id: Mapped[UUID | None] = mapped_column(nullable=True, index=True)
     recipient_email: Mapped[str] = mapped_column(String(255))
     cc: Mapped[list] = mapped_column(JSON, default=list)
@@ -266,10 +267,11 @@ class SmtpEmailGateway:
             _attach_inline_image(html_part, cid, path)
 
         if message.attachment is not None:
+            maintype, subtype = message.attachment_content_type.split("/", 1)
             email.add_attachment(
                 message.attachment,
-                maintype="application",
-                subtype="pdf",
+                maintype=maintype,
+                subtype=subtype,
                 filename=message.attachment_name,
             )
         with smtplib.SMTP(

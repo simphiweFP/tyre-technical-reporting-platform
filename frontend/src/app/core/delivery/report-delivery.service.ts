@@ -3,10 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { OfflineDataService } from '../offline/offline-data.service';
-import {
-  DeliveryAttempt,
-  TechnicalReport,
-} from '../../shared/models/report.models';
+import { DeliveryAttempt, TechnicalReport } from '../../shared/models/report.models';
 
 export interface DeliveryFollowUp {
   body: string;
@@ -82,12 +79,21 @@ export class ReportDeliveryService {
 
   deliveryDetails(deliveryId: string): Promise<DeliveryDetail> {
     return firstValueFrom(
-      this.http.get<DeliveryDetail>(
-        `${environment.apiUrl}/deliveries/${deliveryId}/details`,
-      ),
+      this.http.get<DeliveryDetail>(`${environment.apiUrl}/deliveries/${deliveryId}/details`),
     );
   }
 
+  async downloadAttachment(deliveryId: string, filename: string): Promise<void> {
+    const blob = await firstValueFrom(
+      this.http.get(`${environment.apiUrl}/deliveries/${deliveryId}/pdf`, { responseType: 'blob' }),
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
   async openDeliveryPdf(deliveryId: string): Promise<void> {
     // Open the tab immediately from the user's click so browsers do not treat
     // the later authenticated HTTP response as a popup. Using "noopener" in
@@ -103,10 +109,9 @@ export class ReportDeliveryService {
 
     try {
       const blob = await firstValueFrom(
-        this.http.get(
-          `${environment.apiUrl}/deliveries/${deliveryId}/pdf`,
-          { responseType: 'blob' },
-        ),
+        this.http.get(`${environment.apiUrl}/deliveries/${deliveryId}/pdf`, {
+          responseType: 'blob',
+        }),
       );
       url = URL.createObjectURL(blob);
       preview.location.replace(url);
@@ -118,7 +123,10 @@ export class ReportDeliveryService {
     }
   }
 
-  followUp(deliveryId: string, message: string): Promise<{ message: string; message_id: string; in_reply_to: string | null }> {
+  followUp(
+    deliveryId: string,
+    message: string,
+  ): Promise<{ message: string; message_id: string; in_reply_to: string | null }> {
     return firstValueFrom(
       this.http.post<{ message: string; message_id: string; in_reply_to: string | null }>(
         `${environment.apiUrl}/deliveries/${deliveryId}/follow-up`,
@@ -128,8 +136,6 @@ export class ReportDeliveryService {
   }
 
   softDeleteDelivery(deliveryId: string): Promise<void> {
-    return firstValueFrom(
-      this.http.delete<void>(`${environment.apiUrl}/deliveries/${deliveryId}`),
-    );
+    return firstValueFrom(this.http.delete<void>(`${environment.apiUrl}/deliveries/${deliveryId}`));
   }
 }

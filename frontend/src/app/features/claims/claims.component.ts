@@ -49,6 +49,7 @@ export class ClaimsComponent {
   readonly notice = signal('');
   readonly handoverOpen = signal(false);
   readonly sendOpen = signal(false);
+  readonly workbookSend = signal(false);
   readonly canWrite = computed(() => this.auth.hasRole('claims_administrator'));
   readonly canHandover = computed(() => this.auth.hasRole('administrator', 'report_capturer'));
   readonly credits = computed(() =>
@@ -473,7 +474,13 @@ export class ClaimsComponent {
       this.busy.set(false);
     }
   }
+  prepareWorkbookEmail(section = this.tab()): void {
+    this.prepareSend(section);
+    this.workbookSend.set(true);
+    this.sendForm.email = '';
+  }
   prepareSend(kind: string, instruction?: string): void {
+    this.workbookSend.set(false);
     this.sendForm = {
       kind,
       email: kind === 'credit' ? (this.selected()?.owner_email ?? '') : '',
@@ -497,24 +504,24 @@ export class ClaimsComponent {
     this.error.set('');
     try {
       const item = this.selected();
-      const result =
-        this.sendForm.kind === 'scorecard'
-          ? await this.api.sendScorecard(
-              this.activeFilters(true),
-              this.sendForm.email,
-              cc,
-              this.sendForm.body,
-            )
-          : await this.api.send(
-              item!.id,
-              this.sendForm.kind,
-              this.sendForm.email,
-              cc,
-              this.sendForm.body,
-              this.sendForm.instruction_id || undefined,
-            );
+      const result = this.workbookSend()
+        ? await this.api.sendWorkbook(
+            this.sendForm.kind,
+            this.activeFilters(true),
+            this.sendForm.email,
+            cc,
+            this.sendForm.body,
+          )
+        : await this.api.send(
+            item!.id,
+            this.sendForm.kind,
+            this.sendForm.email,
+            cc,
+            this.sendForm.body,
+            this.sendForm.instruction_id || undefined,
+          );
       this.sendOpen.set(false);
-      if (item && this.sendForm.kind !== 'scorecard')
+      if (item && !this.workbookSend())
         this.deliveries.set(await this.api.deliveries(item.claim_reference));
       if (result.status === 'Sent')
         await this.alerts.success(

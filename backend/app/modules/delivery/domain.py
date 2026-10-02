@@ -12,6 +12,7 @@ class EmailMessage:
     attachment: bytes | None = None
     in_reply_to: str | None = None
     references: str | None = None
+    attachment_content_type: str = "application/pdf"
 
 
 class EmailGateway(Protocol):

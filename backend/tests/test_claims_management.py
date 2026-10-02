@@ -561,3 +561,146 @@ def test_manual_handover_waits_for_sent_email(client, claims_setup):
         json={"report_id": crew["report"], "assigned_to": crew["owner"]},
     )
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize("section", ["tracker", "credit", "scorecard", "metrics"])
+def test_workbook_csv_email_matches_export_and_is_scoped(
+    client, claims_setup, monkeypatch, section
+):
+    crew = claims_setup
+    claim = handover(client, crew)
+    update(
+        client,
+        crew,
+        claim,
+        supplier="=Unsafe Supplier",
+        supplier_status="Accepted",
+        supplier_feedback_date="2026-10-02",
+        accepted_percentage=100,
+        customer_credit_percentage=75,
+    )
+    captured = []
+    monkeypatch.setattr(
+        delivery_presentation.SmtpEmailGateway,
+        "send",
+        lambda self, message: captured.append(message) or "csv-message",
+    )
+    exported = client.get(f"/api/v1/claims/export/{section}", headers=crew["claims"])
+    response = client.post(
+        f"/api/v1/claims/workbook/{section}/send",
+        headers=crew["claims"],
+        json={
+            "recipient_email": "accounts@example.com",
+            "cc": ["manager@example.com"],
+            "body": "Claim report",
+        },
+    )
+    assert response.status_code == 200 and response.json()["status"] == "Sent", (
+        response.text
+    )
+    assert captured[0].attachment == exported.content
+    assert captured[0].attachment_name.endswith(".csv")
+    assert captured[0].attachment_content_type == "text/csv"
+    delivery_id = response.json()["id"]
+    saved = client.get(f"/api/v1/deliveries/{delivery_id}/pdf", headers=crew["claims"])
+    assert saved.status_code == 200 and saved.content == exported.content
+    assert saved.headers["content-type"].startswith("text/csv")
+    assert (
+        client.get(
+            f"/api/v1/deliveries/{delivery_id}/pdf", headers=crew["other"]
+        ).status_code
+        == 404
+    )
+    assert (
+        client.post(
+            f"/api/v1/claims/workbook/{section}/send",
+            headers=crew["admin"],
+            json={"recipient_email": "accounts@example.com"},
+        ).status_code
+        == 403
+    )
+    history = client.get("/api/v1/deliveries", headers=crew["claims"]).json()["items"]
+    assert any(item["id"] == delivery_id for item in history)
+
+
+def test_csv_retry_preserves_original_attachment(client, claims_setup, monkeypatch):
+    crew = claims_setup
+    claim = handover(client, crew)
+    captured = []
+
+    def fail(self, message):
+        captured.append(message)
+        raise smtplib.SMTPRecipientsRefused(
+            {"accounts@example.com": (550, b"Unavailable")}
+        )
+
+    monkeypatch.setattr(delivery_presentation.SmtpEmailGateway, "send", fail)
+    response = client.post(
+        "/api/v1/claims/workbook/tracker/send",
+        headers=crew["claims"],
+        json={"recipient_email": "accounts@example.com"},
+    )
+    assert response.status_code == 200 and response.json()["status"] == "Failed"
+    update(client, crew, claim, supplier="Changed after email")
+    monkeypatch.setattr(
+        delivery_presentation.SmtpEmailGateway,
+        "send",
+        lambda self, message: captured.append(message) or "retry-csv",
+    )
+    retried = client.post(
+        f"/api/v1/reports/deliveries/{response.json()['id']}/retry",
+        headers=crew["claims"],
+    )
+    assert retried.status_code == 200 and retried.json()["status"] == "Sent", (
+        retried.text
+    )
+    assert captured[0].attachment == captured[1].attachment
+    assert captured[1].attachment_content_type == "text/csv"
+
+
+@pytest.mark.parametrize(
+    "content_type,filename",
+    [("text/csv", "Claims.csv"), ("application/pdf", "Claims.pdf")],
+)
+def test_smtp_attachment_uses_correct_mime_type(monkeypatch, content_type, filename):
+    from backend.app.core.config import Settings
+    from backend.app.modules.delivery.domain import EmailMessage
+    from backend.app.modules.delivery.infrastructure import SmtpEmailGateway
+
+    sent = []
+
+    class SmtpClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def ehlo(self):
+            pass
+
+        def send_message(self, message):
+            sent.append(message)
+
+    monkeypatch.setattr(smtplib, "SMTP", SmtpClient)
+    gateway = SmtpEmailGateway(
+        Settings(smtp_host="smtp.example.com", smtp_use_tls=False, smtp_username="")
+    )
+    gateway.send(
+        EmailMessage(
+            subject="Report",
+            body="Report attached",
+            to=("accounts@example.com",),
+            cc=(),
+            attachment_name=filename,
+            attachment=b"report-content",
+            attachment_content_type=content_type,
+        )
+    )
+    attachment = next(sent[0].iter_attachments())
+    assert attachment.get_content_type() == content_type
+    assert attachment.get_filename() == filename
+    assert attachment.get_payload(decode=True) == b"report-content"

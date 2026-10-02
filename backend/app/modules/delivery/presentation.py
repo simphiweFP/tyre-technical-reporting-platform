@@ -50,7 +50,15 @@ def _check_delivery_access(db: Session, attempt: DeliveryAttempt, user: User):
             )
         )
         if not assigned and not (
-            attempt.document_type == "scorecard" and attempt.requested_by == user.id
+            attempt.document_type
+            in {
+                "scorecard",
+                "tracker_csv",
+                "credit_csv",
+                "scorecard_csv",
+                "metrics_csv",
+            }
+            and attempt.requested_by == user.id
         ):
             raise HTTPException(status_code=404, detail="Delivery not found")
     if user.role == Role.REPORT_CAPTURER:
@@ -354,9 +362,11 @@ def delivery_pdf(
         )
         return StreamingResponse(
             BytesIO(snapshot),
-            media_type="application/pdf",
+            media_type=attempt.report_payload.get(
+                "attachmentContentType", "application/pdf"
+            ),
             headers={
-                "Content-Disposition": f'inline; filename="{filename}"',
+                "Content-Disposition": f'{"attachment" if filename.endswith(".csv") else "inline"}; filename="{filename}"',
                 "X-Content-SHA256": attempt.sent_pdf_sha256 or "",
             },
         )
@@ -492,7 +502,17 @@ def list_deliveries(
         statement = statement.where(
             DeliveryAttempt.claim_reference.in_(assigned_claims)
             | (
-                (DeliveryAttempt.document_type == "scorecard")
+                (
+                    DeliveryAttempt.document_type.in_(
+                        [
+                            "scorecard",
+                            "tracker_csv",
+                            "credit_csv",
+                            "scorecard_csv",
+                            "metrics_csv",
+                        ]
+                    )
+                )
                 & (DeliveryAttempt.requested_by == user.id)
             )
         )

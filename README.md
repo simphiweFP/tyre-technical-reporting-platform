@@ -202,6 +202,8 @@ The four screens follow the Claims Management workbook: **Claim Tracker**, **Ins
 
 Administrators can import the source `.xlsx` workbook and select a claims owner. Valid `I000001`-format references are retained; existing references are skipped without overwriting. Rows without references or with invalid values are reported for correction. Tracker and instruction suppliers can differ, and source rows are retained for traceability. Workbook scorecards and metrics are recomputed from claim records.
 
+Use **Email reports** to choose Claim Tracker, Instruction to Credit, Supplier Scorecard or Other Metrics. The selected report is generated as a CSV attachment using the supplier, branch and date filters; **Download CSV** previews that export. CSV emails appear in Delivery Centre, keep their original attachment for retries and are accessible only to the sending Claims Administrator or the system administrator.
+
 PDFs include the technical report, claim tracker, credit instruction, rejection report and supplier scorecard. Email delivery saves the PDF snapshot, recipient, CC addresses and delivery outcome; retries use that same snapshot. Credit instruction snapshots retain the values at issue time. Credits and supplier offsets are recorded manually through references, dates and amounts.
 
 Scorecard acceptance/rejection rates use all claims in the selected period. Response days run from supplier submission to feedback; resolution days run from claim date to customer credit date. Recovered credit value sums entered amounts only for completed supplier offsets, with missing amounts highlighted. Other metrics show under-review claims, outstanding supplier offsets, unpassed customer credits, and highest/lowest claim suppliers and customers (including ties).

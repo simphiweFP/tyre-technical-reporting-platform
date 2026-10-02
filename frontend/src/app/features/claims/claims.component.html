@@ -35,9 +35,22 @@
     </header>
     <nav class="tabs" aria-label="Claims sections">
       @for (t of tabs; track t.key) {
-        <button [class.active]="tab() === t.key" (click)="selectTab(t.key)">{{ t.label }}</button>
+        <button
+          [attr.data-section]="t.key"
+          [class.active]="tab() === t.key"
+          (click)="selectTab(t.key)"
+        >
+          {{ t.label }}
+        </button>
       }
     </nav>
+    @if (canWrite()) {
+      <div class="report-toolbar">
+        <button class="primary" (click)="prepareWorkbookEmail()" [disabled]="busy()">
+          Email reports</button
+        ><small>Choose a workbook report and send its CSV.</small>
+      </div>
+    }
     <div class="filters">
       <label
         >Search<input
@@ -234,7 +247,9 @@
             <button (click)="export('scorecard')">Export CSV</button
             ><button (click)="scorecardPdf()">Download PDF</button>
             @if (canWrite()) {
-              <button class="primary" (click)="prepareSend('scorecard')">Send scorecard</button>
+              <button class="primary" (click)="prepareWorkbookEmail('scorecard')">
+                Send scorecard
+              </button>
             }
           </div>
         </header>
@@ -802,9 +817,33 @@
     <div class="backdrop">
       <form #sendFormRef="ngForm" class="modal" (ngSubmit)="send(sendFormRef)">
         <header>
-          <h2>Send {{ sendForm.kind === 'credit' ? 'credit instruction' : sendForm.kind }}</h2>
+          <h2>
+            {{
+              workbookSend()
+                ? 'Email workbook report'
+                : 'Send ' + (sendForm.kind === 'credit' ? 'credit instruction' : sendForm.kind)
+            }}
+          </h2>
           <button type="button" (click)="sendOpen.set(false)">×</button>
         </header>
+        @if (workbookSend()) {
+          <label
+            >Report<select name="report_section" [(ngModel)]="sendForm.kind" required>
+              @for (report of tabs; track report.key) {
+                <option [value]="report.key">{{ report.label }}</option>
+              }
+            </select></label
+          >
+          <div class="csv-attachment">
+            <div>
+              <strong>CSV attachment</strong
+              ><small>Uses the selected supplier, branch and date period.</small>
+            </div>
+            <button type="button" (click)="export(sendForm.kind)" [disabled]="busy()">
+              Download CSV
+            </button>
+          </div>
+        }
         <label>To<input name="to" type="email" email [(ngModel)]="sendForm.email" required /></label
         ><label
           >CC emails<input

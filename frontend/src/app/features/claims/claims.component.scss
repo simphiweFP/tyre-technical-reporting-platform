@@ -790,3 +790,85 @@ fieldset:disabled select {
     }
   }
 }
+
+#claims-management {
+  .tabs button {
+    border-bottom: 3px solid var(--stage-color);
+  }
+  .tabs [data-section='tracker'] {
+    --stage-color: #0872d3;
+  }
+  .tabs [data-section='credit'] {
+    --stage-color: #b77910;
+  }
+  .tabs [data-section='scorecard'] {
+    --stage-color: #078a4e;
+  }
+  .tabs [data-section='metrics'] {
+    --stage-color: #7556bb;
+  }
+  .tabs button.active {
+    background: var(--stage-color);
+  }
+  .report-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 0 0 14px;
+    small {
+      color: #5c6e88;
+    }
+  }
+  .csv-attachment {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px;
+    margin-bottom: 18px;
+    border: 1px solid #bde3cf;
+    border-radius: 6px;
+    background: #edf9f1;
+    small {
+      display: block;
+      margin-top: 5px;
+      color: #526581;
+    }
+  }
+  #claim-source {
+    --stage-color: #64809c;
+  }
+  #claim-information {
+    --stage-color: #0872d3;
+  }
+  #customer-credit {
+    --stage-color: #b77910;
+  }
+  #supplier-recovery {
+    --stage-color: #078a4e;
+  }
+  #claim-documents {
+    --stage-color: #7556bb;
+  }
+  #claim-history,
+  #claim-assignment {
+    --stage-color: #64809c;
+  }
+  .detail-card {
+    border-left: 4px solid var(--stage-color);
+    > summary::after {
+      color: var(--stage-color);
+    }
+  }
+  .metric-grid article {
+    border-top: 4px solid #0872d3;
+  }
+  .metric-grid article:nth-child(3n + 2) {
+    border-top-color: #b77910;
+  }
+  .metric-grid article:nth-child(3n) {
+    border-top-color: #078a4e;
+  }
+}

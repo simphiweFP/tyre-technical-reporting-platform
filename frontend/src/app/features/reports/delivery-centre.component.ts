@@ -93,9 +93,12 @@ export class DeliveryCentreComponent implements OnDestroy {
   }
 
   async viewPdf(id: string) {
-    this.alerts.loading('Opening PDF…', 'Loading the saved report securely.');
+    this.alerts.loading('Loading attachment…', 'Loading the saved report securely.');
     try {
-      await this.delivery.openDeliveryPdf(id);
+      const detail = this.selected();
+      if (detail?.attachment_name.endsWith('.csv'))
+        await this.delivery.downloadAttachment(id, detail.attachment_name);
+      else await this.delivery.openDeliveryPdf(id);
       this.alerts.close();
     } catch {
       this.alerts.close();

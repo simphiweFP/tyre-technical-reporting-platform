@@ -202,6 +202,21 @@ export class ClaimsService {
       }),
     );
   }
+  sendWorkbook(
+    section: string,
+    filters: Record<string, string>,
+    recipient_email: string,
+    cc: string[],
+    body: string,
+  ) {
+    return firstValueFrom(
+      this.http.post<ClaimDelivery>(
+        `${this.base}/workbook/${section}/send`,
+        { recipient_email, cc, body },
+        { params: filters },
+      ),
+    );
+  }
   sendScorecard(
     filters: Record<string, string>,
     recipient_email: string,

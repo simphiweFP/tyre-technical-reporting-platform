@@ -222,7 +222,7 @@ def claim_metrics(
     )
 
 
-def _csv_response(rows, columns, filename):
+def _csv_bytes(rows, columns):
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow([label for label, _ in columns])
@@ -237,11 +237,11 @@ def _csv_response(rows, columns, filename):
                 value = "'" + value
             values.append("" if value is None else value)
         writer.writerow(values)
-    return StreamingResponse(
-        iter(["\ufeff" + output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    return ("\ufeff" + output.getvalue()).encode("utf-8")
+
+
+def _csv_export(rows, columns, filename):
+    return _csv_bytes(rows, columns), filename
 
 
 @router.get("/export/{section}")
@@ -257,8 +257,17 @@ def export(
     items = _views(
         db, user, supplier=supplier, branch=branch, date_from=date_from, date_to=date_to
     )
+    payload, filename = _workbook_csv(items, section)
+    return StreamingResponse(
+        iter([payload]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _workbook_csv(items, section):
     if section == "tracker":
-        return _csv_response(
+        return _csv_export(
             [flat_claim(i) for i in items],
             [*TRACKER_COLUMNS, *EXTRA_COLUMNS],
             "Claim_Tracker.csv",
@@ -275,7 +284,7 @@ def export(
                     else ""
                 )
                 rows.append(row)
-        return _csv_response(
+        return _csv_export(
             rows,
             [
                 *INSTRUCTION_COLUMNS,
@@ -286,7 +295,7 @@ def export(
         )
     values = metrics(items)
     if section == "scorecard":
-        return _csv_response(
+        return _csv_export(
             values["scorecard"], SCORECARD_COLUMNS, "Supplier_Scorecard.csv"
         )
     if section == "metrics":
@@ -295,10 +304,37 @@ def export(
             for key, value in values.items()
             if key != "scorecard"
         ]
-        return _csv_response(
+        return _csv_export(
             rows, [("Metric", "metric"), ("Value", "value")], "Other_Metrics.csv"
         )
     raise HTTPException(status_code=404, detail="Unknown workbook section")
+
+
+@router.post("/workbook/{section}/send", response_model=DeliveryResponse)
+def send_workbook(
+    section: str,
+    request: DocumentSendRequest,
+    supplier: str = "",
+    branch: str = "",
+    date_from: date | None = None,
+    date_to: date | None = None,
+    db: Session = Depends(get_db),
+    user: User = Depends(write_access),
+):
+    items = _views(
+        db, user, supplier=supplier, branch=branch, date_from=date_from, date_to=date_to
+    )
+    payload, filename = _workbook_csv(items, section)
+    return _send(
+        db,
+        user,
+        f"{section}_{date.today().isoformat()}",
+        f"{section}_csv",
+        payload,
+        filename,
+        request,
+        content_type="text/csv",
+    )
 
 
 @router.get("/scorecard/pdf")
@@ -658,7 +694,17 @@ def download_document(
     )
 
 
-def _send(db, user, claim, kind, pdf, filename, request, case=None):
+def _send(
+    db,
+    user,
+    claim,
+    kind,
+    pdf,
+    filename,
+    request,
+    case=None,
+    content_type="application/pdf",
+):
     attempt = DeliveryAttempt(
         claim_reference=claim,
         recipient_id=None,
@@ -666,7 +712,11 @@ def _send(db, user, claim, kind, pdf, filename, request, case=None):
         cc=[str(e) for e in request.cc],
         requested_by=user.id,
         status="Pending",
-        report_payload={"claimReference": claim, "documentType": kind},
+        report_payload={
+            "claimReference": claim,
+            "documentType": kind,
+            "attachmentContentType": content_type,
+        },
         document_type=kind,
         email_subject=f"Royal Tyres {kind.replace('_', ' ')} {claim}",
         email_body=request.body.strip()
