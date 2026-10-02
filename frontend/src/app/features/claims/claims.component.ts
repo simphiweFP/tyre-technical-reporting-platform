@@ -30,6 +30,7 @@ export class ClaimsComponent {
   private readonly route = inject(ActivatedRoute);
   readonly tab = signal('tracker');
   readonly opening = signal(false);
+  readonly expandedPanel = signal('');
   private listScrollY = 0;
   private detailRequest = 0;
   private handledHandover = '';
@@ -118,6 +119,8 @@ export class ClaimsComponent {
   }
   nextAction(item: ClaimCase): string {
     if (item.workflow_status === 'Closed') return 'Completed';
+    if (item.instructions[0] && !item.instructions[0].acknowledged_at)
+      return 'Receive credit instruction';
     if (!item.data.supplier) return 'Select supplier';
     if (item.data.supplier_status === 'Rejected') return 'Send rejection report';
     if (item.data.supplier_status === 'Under review')
@@ -247,6 +250,7 @@ export class ClaimsComponent {
       this.activity.set([]);
       this.instructionNotes = '';
       this.apply(fresh);
+      this.expandedPanel.set('');
       setTimeout(() => this.showSection('claims-management'));
       const [deliveries, activity] = await Promise.all([
         this.api.deliveries(fresh.claim_reference),
@@ -269,8 +273,27 @@ export class ClaimsComponent {
     this.error.set('');
     setTimeout(() => window.scrollTo({ top: this.listScrollY }));
   }
+  togglePanel(id: string, event: Event): void {
+    event.preventDefault();
+    this.expandedPanel.update((current) => (current === id ? '' : id));
+  }
+  nextSection(item: ClaimCase): string {
+    if (item.workflow_status === 'Closed') return '';
+    if (item.instructions[0] && !item.instructions[0].acknowledged_at) return 'claim-documents';
+    if (!item.data.supplier) return 'claim-information';
+    if (item.data.supplier_status === 'Rejected') return 'claim-documents';
+    if (item.data.supplier_status === 'Under review')
+      return item.data.supplier_submitted_date ? 'claim-information' : 'claim-documents';
+    if (item.data.customer_credit_percentage === null || item.credit_outstanding)
+      return 'customer-credit';
+    if (item.supplier_offset_outstanding) return 'supplier-recovery';
+    return 'claim-information';
+  }
   showSection(id: string): void {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (id !== 'claims-management') this.expandedPanel.set(id);
+    setTimeout(() =>
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    );
   }
   apply(item: ClaimCase): void {
     this.selected.set(item);
@@ -322,6 +345,13 @@ export class ClaimsComponent {
     if (form.invalid) {
       form.control.markAllAsTouched();
       this.error.set('Complete the highlighted fields.');
+      const invalidName = Object.keys(form.controls).find((name) => form.controls[name].invalid);
+      const input = invalidName ? document.getElementsByName(invalidName)[0] : null;
+      const card = input?.closest('details');
+      if (card?.id) {
+        this.showSection(card.id);
+        setTimeout(() => input?.focus());
+      }
       return;
     }
     const data = { ...this.form };

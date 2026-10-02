@@ -341,13 +341,6 @@
         >{{ c.data.supplier_status }} · {{ c.workflow_status }}</span
       >
     </div>
-    <nav class="detail-nav" aria-label="Claim detail sections">
-      <button (click)="showSection('claim-information')">Claim &amp; supplier</button>
-      <button (click)="showSection('customer-credit')">Customer credit</button>
-      <button (click)="showSection('supplier-recovery')">Supplier recovery</button>
-      <button (click)="showSection('claim-documents')">Reports &amp; instructions</button>
-      <button (click)="showSection('claim-history')">History</button>
-    </nav>
     <section class="card claim-editor" id="claim-editor">
       <header>
         <div>
@@ -361,192 +354,254 @@
           claim reports.
         </p>
       }
-      <p class="handover-note">
-        <strong>Next action: {{ nextAction(c) }}</strong> · Customer and tyre details come from the
-        technical report.
-      </p>
-      <div class="source-grid">
-        @for (field of sourceFields; track field.key) {
-          <div>
-            <small>{{ field.label }}</small
-            ><strong>{{ cell(c, field.key) }}</strong>
-          </div>
+      <div class="next-action-bar">
+        <div>
+          <small>Next action</small><strong>{{ nextAction(c) }}</strong>
+        </div>
+        @if (nextSection(c)) {
+          <button type="button" class="primary" (click)="showSection(nextSection(c))">
+            {{ canWrite() ? 'Continue' : 'View details' }}
+          </button>
         }
       </div>
-      @if (c.handover_notes) {
-        <p class="handover-note">Handover notes: {{ c.handover_notes }}</p>
-      }
+      <details class="detail-card" id="claim-source" [open]="expandedPanel() === 'claim-source'">
+        <summary (click)="togglePanel('claim-source', $event)">
+          <span
+            >Customer &amp; tyre details<small
+              >{{ c.branch }} · {{ c.brand }} ·
+              {{ c.serial_number || 'Serial not recorded' }}</small
+            ></span
+          >
+        </summary>
+        <div class="source-grid">
+          @for (field of sourceFields; track field.key) {
+            <div>
+              <small>{{ field.label }}</small
+              ><strong>{{ cell(c, field.key) }}</strong>
+            </div>
+          }
+        </div>
+        @if (c.handover_notes) {
+          <p class="handover-note">Handover notes: {{ c.handover_notes }}</p>
+        }
+      </details>
       @if (form; as f) {
         <form #claimForm="ngForm" (ngSubmit)="save(claimForm)">
-          <fieldset id="claim-information" [disabled]="!canWrite() || busy()">
-            <legend>Claim and supplier</legend>
-            <div class="form-grid">
-              <label
-                >Date received<input
-                  name="claim_date"
-                  type="date"
-                  [(ngModel)]="f.claim_date"
-                  required /></label
-              ><label
-                >Supplier<input
-                  name="supplier"
-                  [ngModel]="f.supplier"
-                  (ngModelChange)="supplierSearch($event)"
-                  list="supplier-options"
-                  maxlength="200"
-                  required
-                  placeholder="Search or type a supplier"
-                /><small>Select a suggestion or enter a supplier name.</small></label
-              ><label
-                >Tyre size<input
-                  name="tyre_size"
-                  [(ngModel)]="f.tyre_size"
-                  maxlength="100"
-                  placeholder="e.g. 23.5R25" /></label
-              ><label
-                >Progress<select name="progress" [(ngModel)]="workflowStatus">
-                  <option>Received</option>
-                  <option>In progress</option>
-                  <option>Closed</option>
-                </select></label
-              ><label class="wide"
-                >Damage<textarea
-                  name="damage"
-                  [(ngModel)]="f.damage"
-                  maxlength="5000"
-                  rows="2"
-                ></textarea></label
-              ><label
-                >Remaining tread depth (RTD) mm<input
-                  name="rtd"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  [(ngModel)]="f.remaining_tread_depth" /></label
-              ><label
-                >Original tread depth (OTD) mm<input
-                  name="otd"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  [(ngModel)]="f.original_tread_depth" /></label
-              ><label
-                >Percentage remaining<output>{{
-                  remaining() === null ? 'Enter RTD and OTD' : (remaining() | number: '1.0-2') + '%'
-                }}</output></label
-              ><label
-                >Submitted to supplier<input
-                  name="submitted"
-                  type="date"
-                  [(ngModel)]="f.supplier_submitted_date" /></label
-              ><label
-                >Supplier status<select
-                  name="decision"
-                  [(ngModel)]="f.supplier_status"
-                  (ngModelChange)="decisionChanged()"
-                >
-                  <option>Under review</option>
-                  <option>Accepted</option>
-                  <option>Rejected</option>
-                </select></label
-              ><label
-                >% Accepted<input
-                  name="accepted"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  [(ngModel)]="f.accepted_percentage"
-                  [readonly]="f.supplier_status === 'Rejected'" /></label
-              ><label
-                >Supplier feedback date<input
-                  name="feedback_date"
-                  type="date"
-                  [(ngModel)]="f.supplier_feedback_date"
-                  [required]="f.supplier_status !== 'Under review'" /></label
-              ><label class="wide"
-                >Supplier feedback / rejection comments<textarea
-                  name="feedback_comments"
-                  [(ngModel)]="f.supplier_feedback_comments"
-                  [required]="f.supplier_status === 'Rejected'"
-                  maxlength="5000"
-                  rows="3"
-                ></textarea>
-              </label>
-            </div>
-          </fieldset>
-          <fieldset id="customer-credit" [disabled]="!canWrite() || busy()">
-            <legend>Customer compensation</legend>
-            <div class="form-grid">
-              <label
-                >% to Credit (manual)<input
-                  name="credit_percentage"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  [(ngModel)]="f.customer_credit_percentage"
-                /><small>Enter the agreed percentage from 0 to 100.</small></label
-              ><label
-                >Customer credit amount (ZAR)<input
-                  name="credit_amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  [(ngModel)]="f.customer_credit_amount" /></label
-              ><label
-                >Instruction supplier<input
-                  name="instruction_supplier"
-                  [ngModel]="f.instruction_supplier"
-                  (ngModelChange)="supplierSearch($event, true)"
-                  list="supplier-options"
-                  maxlength="200"
-                  placeholder="Same as claim supplier" /></label
-              ><label
-                >Credit note /Invoice ref<input
-                  name="credit_ref"
-                  [(ngModel)]="f.credit_note_reference"
-                  (ngModelChange)="referenceChanged('customer')"
-                  maxlength="100" /></label
-              ><label
-                >Date credit passed<input
-                  name="credit_date"
-                  type="date"
-                  [(ngModel)]="f.customer_credit_date"
-              /></label>
-            </div>
-          </fieldset>
-          <fieldset id="supplier-recovery" [disabled]="!canWrite() || busy()">
-            <legend>Supplier compensation</legend>
-            <div class="form-grid">
-              <label
-                >Supplier Offset Invoice no.<input
-                  name="offset_ref"
-                  [(ngModel)]="f.supplier_offset_invoice"
-                  (ngModelChange)="referenceChanged('supplier')"
-                  maxlength="100" /></label
-              ><label
-                >Supplier offset date<input
-                  name="offset_date"
-                  type="date"
-                  [(ngModel)]="f.supplier_offset_date" /></label
-              ><label
-                >Supplier recovered amount (ZAR)<input
-                  name="recovered_amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  [(ngModel)]="f.supplier_recovered_amount"
-              /></label>
-            </div>
-          </fieldset>
+          <details
+            class="detail-card"
+            id="claim-information"
+            [open]="expandedPanel() === 'claim-information'"
+          >
+            <summary (click)="togglePanel('claim-information', $event)">
+              <span
+                >Claim and supplier<small
+                  >{{ f.supplier || 'Select supplier' }} · {{ f.supplier_status }}</small
+                ></span
+              >
+            </summary>
+            <fieldset [disabled]="!canWrite() || busy()">
+              <legend>Claim and supplier</legend>
+              <div class="form-grid">
+                <label
+                  >Date received<input
+                    name="claim_date"
+                    type="date"
+                    [(ngModel)]="f.claim_date"
+                    required /></label
+                ><label
+                  >Supplier<input
+                    name="supplier"
+                    [ngModel]="f.supplier"
+                    (ngModelChange)="supplierSearch($event)"
+                    list="supplier-options"
+                    maxlength="200"
+                    required
+                    placeholder="Search or type a supplier"
+                  /><small>Select a suggestion or enter a supplier name.</small></label
+                ><label
+                  >Tyre size<input
+                    name="tyre_size"
+                    [(ngModel)]="f.tyre_size"
+                    maxlength="100"
+                    placeholder="e.g. 23.5R25" /></label
+                ><label
+                  >Progress<select name="progress" [(ngModel)]="workflowStatus">
+                    <option>Received</option>
+                    <option>In progress</option>
+                    <option>Closed</option>
+                  </select></label
+                ><label class="wide"
+                  >Damage<textarea
+                    name="damage"
+                    [(ngModel)]="f.damage"
+                    maxlength="5000"
+                    rows="2"
+                  ></textarea></label
+                ><label
+                  >Remaining tread depth (RTD) mm<input
+                    name="rtd"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    [(ngModel)]="f.remaining_tread_depth" /></label
+                ><label
+                  >Original tread depth (OTD) mm<input
+                    name="otd"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    [(ngModel)]="f.original_tread_depth" /></label
+                ><label
+                  >Percentage remaining<output>{{
+                    remaining() === null
+                      ? 'Enter RTD and OTD'
+                      : (remaining() | number: '1.0-2') + '%'
+                  }}</output></label
+                ><label
+                  >Submitted to supplier<input
+                    name="submitted"
+                    type="date"
+                    [(ngModel)]="f.supplier_submitted_date" /></label
+                ><label
+                  >Supplier status<select
+                    name="decision"
+                    [(ngModel)]="f.supplier_status"
+                    (ngModelChange)="decisionChanged()"
+                  >
+                    <option>Under review</option>
+                    <option>Accepted</option>
+                    <option>Rejected</option>
+                  </select></label
+                ><label
+                  >% Accepted<input
+                    name="accepted"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    [(ngModel)]="f.accepted_percentage"
+                    [readonly]="f.supplier_status === 'Rejected'" /></label
+                ><label
+                  >Supplier feedback date<input
+                    name="feedback_date"
+                    type="date"
+                    [(ngModel)]="f.supplier_feedback_date"
+                    [required]="f.supplier_status !== 'Under review'" /></label
+                ><label class="wide"
+                  >Supplier feedback / rejection comments<textarea
+                    name="feedback_comments"
+                    [(ngModel)]="f.supplier_feedback_comments"
+                    [required]="f.supplier_status === 'Rejected'"
+                    maxlength="5000"
+                    rows="3"
+                  ></textarea>
+                </label>
+              </div>
+            </fieldset>
+          </details>
+          <details
+            class="detail-card"
+            id="customer-credit"
+            [open]="expandedPanel() === 'customer-credit'"
+          >
+            <summary (click)="togglePanel('customer-credit', $event)">
+              <span
+                >Customer compensation<small
+                  >{{
+                    f.customer_credit_percentage === null
+                      ? 'Credit percentage not entered'
+                      : f.customer_credit_percentage + '% to credit'
+                  }}
+                  · {{ f.credit_note_reference || 'Credit note pending' }}</small
+                ></span
+              >
+            </summary>
+            <fieldset [disabled]="!canWrite() || busy()">
+              <legend>Customer compensation</legend>
+              <div class="form-grid">
+                <label
+                  >% to Credit (manual)<input
+                    name="credit_percentage"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    [(ngModel)]="f.customer_credit_percentage"
+                  /><small>Enter the agreed percentage from 0 to 100.</small></label
+                ><label
+                  >Customer credit amount (ZAR)<input
+                    name="credit_amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    [(ngModel)]="f.customer_credit_amount" /></label
+                ><label
+                  >Instruction supplier<input
+                    name="instruction_supplier"
+                    [ngModel]="f.instruction_supplier"
+                    (ngModelChange)="supplierSearch($event, true)"
+                    list="supplier-options"
+                    maxlength="200"
+                    placeholder="Same as claim supplier" /></label
+                ><label
+                  >Credit note /Invoice ref<input
+                    name="credit_ref"
+                    [(ngModel)]="f.credit_note_reference"
+                    (ngModelChange)="referenceChanged('customer')"
+                    maxlength="100" /></label
+                ><label
+                  >Date credit passed<input
+                    name="credit_date"
+                    type="date"
+                    [(ngModel)]="f.customer_credit_date"
+                /></label>
+              </div>
+            </fieldset>
+          </details>
+          <details
+            class="detail-card"
+            id="supplier-recovery"
+            [open]="expandedPanel() === 'supplier-recovery'"
+          >
+            <summary (click)="togglePanel('supplier-recovery', $event)">
+              <span
+                >Supplier compensation<small>{{
+                  f.supplier_offset_invoice || 'Supplier offset pending'
+                }}</small></span
+              >
+            </summary>
+            <fieldset [disabled]="!canWrite() || busy()">
+              <legend>Supplier compensation</legend>
+              <div class="form-grid">
+                <label
+                  >Supplier Offset Invoice no.<input
+                    name="offset_ref"
+                    [(ngModel)]="f.supplier_offset_invoice"
+                    (ngModelChange)="referenceChanged('supplier')"
+                    maxlength="100" /></label
+                ><label
+                  >Supplier offset date<input
+                    name="offset_date"
+                    type="date"
+                    [(ngModel)]="f.supplier_offset_date" /></label
+                ><label
+                  >Supplier recovered amount (ZAR)<input
+                    name="recovered_amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    [(ngModel)]="f.supplier_recovered_amount"
+                /></label>
+              </div>
+            </fieldset>
+          </details>
           @if (claimForm.invalid && claimForm.touched) {
             <p class="field-error">
               Check required fields and percentages. Percentages must be between 0 and 100.
             </p>
           }
           @if (canWrite()) {
-            <div class="actions">
+            <div class="actions save-actions">
               <button class="primary" type="submit" [disabled]="busy()">
                 {{ busy() ? 'Saving…' : 'Save tracking' }}</button
               ><small
@@ -557,112 +612,146 @@
           }
         </form>
       }
-      <section class="document-actions" id="claim-documents">
-        <h3>Reports and credit instructions</h3>
-        <div class="actions">
-          <button (click)="document('technical')" [disabled]="busy()">Technical PDF</button
-          ><button (click)="document('tracker')" [disabled]="busy()">Tracker PDF</button>
-          @if (canWrite()) {
-            <button (click)="prepareSend('technical')">Send technical report</button
-            ><button (click)="prepareSend('tracker')">Send tracker report</button>
-          }
-          @if (c.data.supplier_status === 'Rejected') {
-            <button (click)="document('rejection')">Rejection PDF</button>
+      <details
+        class="detail-card"
+        id="claim-documents"
+        [open]="expandedPanel() === 'claim-documents'"
+      >
+        <summary (click)="togglePanel('claim-documents', $event)">
+          <span
+            >Reports &amp; credit instructions<small
+              >{{ c.instructions.length }} credit instructions · PDF downloads and email</small
+            ></span
+          >
+        </summary>
+        <section class="document-actions">
+          <div class="actions">
+            <button (click)="document('technical')" [disabled]="busy()">Technical PDF</button
+            ><button (click)="document('tracker')" [disabled]="busy()">Tracker PDF</button>
             @if (canWrite()) {
-              <button (click)="prepareSend('rejection')">Send rejection report</button>
+              <button (click)="prepareSend('technical')">Send technical report</button
+              ><button (click)="prepareSend('tracker')">Send tracker report</button>
             }
+            @if (c.data.supplier_status === 'Rejected') {
+              <button (click)="document('rejection')">Rejection PDF</button>
+              @if (canWrite()) {
+                <button (click)="prepareSend('rejection')">Send rejection report</button>
+              }
+            }
+          </div>
+          @if (canWrite() && c.data.supplier_status === 'Accepted') {
+            <div class="inline-fields">
+              <label
+                >Credit instruction notes<textarea
+                  [(ngModel)]="instructionNotes"
+                  maxlength="5000"
+                  rows="2"
+                ></textarea></label
+              ><button
+                class="primary"
+                [disabled]="busy() || c.data.customer_credit_percentage === null"
+                (click)="issue()"
+              >
+                Issue revised instruction to {{ c.owner_name }}
+              </button>
+            </div>
           }
-        </div>
-        @if (canWrite() && c.data.supplier_status === 'Accepted') {
+          @for (i of c.instructions; track i.id) {
+            <article class="instruction">
+              <div>
+                <strong>{{ i.data['customer_credit_percentage'] }}% customer credit</strong
+                ><small
+                  >Issued {{ i.created_at | date: 'medium' }} ·
+                  {{
+                    i.id !== c.instructions[0]?.id
+                      ? 'Previous version'
+                      : i.acknowledged_at
+                        ? 'Received'
+                        : 'Awaiting receipt'
+                  }}</small
+                >
+              </div>
+              <div class="actions">
+                <button (click)="document('credit', i.id)">PDF</button>
+                @if (canWrite()) {
+                  <button
+                    (click)="prepareSend('credit', i.id)"
+                    [disabled]="i.id !== c.instructions[0]?.id"
+                  >
+                    Email instruction
+                  </button>
+                  @if (!i.acknowledged_at && i.id === c.instructions[0]?.id) {
+                    <button (click)="receive(c, i.id)">Mark received</button>
+                  }
+                }
+              </div>
+            </article>
+          }
+        </section>
+      </details>
+      @if (auth.hasRole('administrator')) {
+        <details
+          class="detail-card"
+          id="claim-assignment"
+          [open]="expandedPanel() === 'claim-assignment'"
+        >
+          <summary (click)="togglePanel('claim-assignment', $event)">
+            <span
+              >Assignment<small>{{ c.owner_name }}</small></span
+            >
+          </summary>
           <div class="inline-fields">
             <label
-              >Credit instruction notes<textarea
-                [(ngModel)]="instructionNotes"
-                maxlength="5000"
-                rows="2"
-              ></textarea></label
-            ><button
-              class="primary"
-              [disabled]="busy() || c.data.customer_credit_percentage === null"
-              (click)="issue()"
-            >
-              Issue revised instruction to {{ c.owner_name }}
+              >Assigned Claims Administrator<select [(ngModel)]="reassignment">
+                @for (o of owners(); track o.id) {
+                  <option [value]="o.id">{{ o.full_name }}</option>
+                }
+              </select></label
+            ><button (click)="reassign()" [disabled]="busy() || reassignment === c.assigned_to">
+              Reassign claim
             </button>
           </div>
-        }
-        @for (i of c.instructions; track i.id) {
-          <article class="instruction">
-            <div>
-              <strong>{{ i.data['customer_credit_percentage'] }}% customer credit</strong
-              ><small
-                >Issued {{ i.created_at | date: 'medium' }} ·
-                {{
-                  i.id !== c.instructions[0]?.id
-                    ? 'Previous version'
-                    : i.acknowledged_at
-                      ? 'Received'
-                      : 'Awaiting receipt'
-                }}</small
-              >
-            </div>
-            <div class="actions">
-              <button (click)="document('credit', i.id)">PDF</button>
-              @if (canWrite()) {
-                <button
-                  (click)="prepareSend('credit', i.id)"
-                  [disabled]="i.id !== c.instructions[0]?.id"
-                >
-                  Email instruction
-                </button>
-                @if (!i.acknowledged_at && i.id === c.instructions[0]?.id) {
-                  <button (click)="receive(c, i.id)">Mark received</button>
-                }
-              }
-            </div>
-          </article>
-        }
-      </section>
-      @if (auth.hasRole('administrator')) {
-        <div class="inline-fields">
-          <label
-            >Assigned Claims Administrator<select [(ngModel)]="reassignment">
-              @for (o of owners(); track o.id) {
-                <option [value]="o.id">{{ o.full_name }}</option>
-              }
-            </select></label
-          ><button (click)="reassign()" [disabled]="busy() || reassignment === c.assigned_to">
-            Reassign claim
-          </button>
-        </div>
+        </details>
       }
-      <div class="history-grid" id="claim-history">
-        <section>
-          <h3>Delivery history</h3>
-          @for (d of deliveries(); track d.id) {
-            <article>
-              <strong>{{ d.document_type }} · {{ d.status }}</strong
-              ><small>{{ d.recipient_email }} · {{ d.created_at | date: 'medium' }}</small>
-              @if (d.error_message) {
-                <p class="field-error">{{ d.error_message }}</p>
-              }
-            </article>
-          } @empty {
-            <p>No documents sent yet.</p>
-          }
-          <a routerLink="/delivery-centre">Open Delivery Centre</a>
-        </section>
-        <section>
-          <h3>Activity</h3>
-          @for (a of activity(); track a.id) {
-            <article>
-              <strong>{{ a.action.replaceAll('.', ' ').replaceAll('_', ' ') }}</strong
-              ><small>{{ a.actor }} · {{ a.occurred_at | date: 'medium' }}</small>
-            </article>
-          } @empty {
-            <p>No recorded actions.</p>
-          }
-        </section>
-      </div>
+      <details class="detail-card" id="claim-history" [open]="expandedPanel() === 'claim-history'">
+        <summary (click)="togglePanel('claim-history', $event)">
+          <span
+            >Delivery &amp; activity history<small>{{
+              opening()
+                ? 'Loading history…'
+                : deliveries().length + ' deliveries · ' + activity().length + ' activities'
+            }}</small></span
+          >
+        </summary>
+        <div class="history-grid">
+          <section>
+            <h3>Delivery history</h3>
+            @for (d of deliveries(); track d.id) {
+              <article>
+                <strong>{{ d.document_type }} · {{ d.status }}</strong
+                ><small>{{ d.recipient_email }} · {{ d.created_at | date: 'medium' }}</small>
+                @if (d.error_message) {
+                  <p class="field-error">{{ d.error_message }}</p>
+                }
+              </article>
+            } @empty {
+              <p>No documents sent yet.</p>
+            }
+            <a routerLink="/delivery-centre">Open Delivery Centre</a>
+          </section>
+          <section>
+            <h3>Activity</h3>
+            @for (a of activity(); track a.id) {
+              <article>
+                <strong>{{ a.action.replaceAll('.', ' ').replaceAll('_', ' ') }}</strong
+                ><small>{{ a.actor }} · {{ a.occurred_at | date: 'medium' }}</small>
+              </article>
+            } @empty {
+              <p>No recorded actions.</p>
+            }
+          </section>
+        </div>
+      </details>
     </section>
   }
   @if (handoverOpen()) {
