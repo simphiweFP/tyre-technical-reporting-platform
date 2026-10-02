@@ -29,6 +29,7 @@ export class ClaimsComponent {
   private readonly alerts = inject(SweetAlertService);
   private readonly route = inject(ActivatedRoute);
   readonly tab = signal('tracker');
+  readonly showAllColumns = signal(false);
   readonly items = signal<ClaimCase[]>([]);
   readonly total = signal(0);
   readonly offset = signal(0);
@@ -53,7 +54,10 @@ export class ClaimsComponent {
   );
   readonly pendingInstructions = computed(() =>
     this.items().flatMap((c) =>
-      c.instructions.filter((i) => !i.acknowledged_at).map((i) => ({ claim: c, instruction: i })),
+      c.instructions
+        .slice(0, 1)
+        .filter((i) => !i.acknowledged_at)
+        .map((i) => ({ claim: c, instruction: i })),
     ),
   );
   filters = {
@@ -120,6 +124,18 @@ export class ClaimsComponent {
     { label: 'Progress', key: 'workflow_status' },
   ];
   columns() {
+    if (!this.showAllColumns())
+      return [
+        { label: 'Claim', key: 'claim_reference' },
+        { label: 'Customer', key: 'customer_name' },
+        { label: 'Supplier', key: 'supplier' },
+        { label: 'Decision', key: 'supplier_status' },
+        ...(this.tab() === 'credit'
+          ? [{ label: '% to credit', key: 'customer_credit_percentage' }]
+          : []),
+        { label: 'Next action', key: 'next_action' },
+        { label: 'Assigned to', key: 'owner_name' },
+      ];
     return this.tab() === 'tracker'
       ? this.trackerColumns
       : [
@@ -134,7 +150,38 @@ export class ClaimsComponent {
           ),
         ];
   }
+  nextAction(item: ClaimCase): string {
+    if (item.workflow_status === 'Closed') return 'Completed';
+    if (!item.data.supplier) return 'Select supplier';
+    if (item.data.supplier_status === 'Rejected') return 'Send rejection report';
+    if (item.data.supplier_status === 'Under review')
+      return item.data.supplier_submitted_date ? 'Await supplier feedback' : 'Send to supplier';
+    if (item.data.customer_credit_percentage === null) return 'Enter credit percentage';
+    if (item.credit_outstanding) return 'Pass customer credit';
+    if (item.supplier_offset_outstanding) return 'Record supplier offset';
+    return 'Close claim';
+  }
+  today(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  referenceChanged(kind: string): void {
+    if (!this.form) return;
+    if (
+      kind === 'customer' &&
+      this.form.credit_note_reference.trim() &&
+      !this.form.customer_credit_date
+    )
+      this.form.customer_credit_date = this.today();
+    if (
+      kind === 'supplier' &&
+      this.form.supplier_offset_invoice.trim() &&
+      !this.form.supplier_offset_date
+    )
+      this.form.supplier_offset_date = this.today();
+  }
   cell(item: ClaimCase, key: string): string {
+    if (key === 'next_action') return this.nextAction(item);
     if (key === 'supplier' && this.tab() === 'credit')
       return item.data.instruction_supplier || item.data.supplier || '—';
     const value =
@@ -180,9 +227,15 @@ export class ClaimsComponent {
       this.suppliers.set(suppliers.items);
       if (this.canHandover()) this.available.set(await this.api.available());
       const reportId = this.route.snapshot.queryParamMap.get('handover');
-      if (reportId && this.available().some((r) => r.id === reportId)) {
-        this.handover.report_id = reportId;
-        this.handoverOpen.set(true);
+      if (reportId && this.selected()?.report_id !== reportId) {
+        try {
+          await this.open(await this.api.forReport(reportId));
+        } catch (e) {
+          if (this.available().some((r) => r.id === reportId)) {
+            this.handover.report_id = reportId;
+            this.handoverOpen.set(true);
+          } else this.error.set(this.message(e));
+        }
       }
     } catch (e) {
       if (request === this.loadRequest) this.error.set(this.message(e));
@@ -254,7 +307,16 @@ export class ClaimsComponent {
     return rtd !== null && rtd !== undefined && otd ? (rtd / otd) * 100 : null;
   }
   decisionChanged(): void {
-    if (this.form?.supplier_status === 'Rejected') this.form.accepted_percentage = 0;
+    if (this.form?.supplier_status === 'Rejected') {
+      this.form.accepted_percentage = 0;
+      this.form.customer_credit_percentage = 0;
+    }
+    if (
+      this.form &&
+      this.form.supplier_status !== 'Under review' &&
+      !this.form.supplier_feedback_date
+    )
+      this.form.supplier_feedback_date = this.today();
   }
   async save(form: NgForm): Promise<void> {
     const item = this.selected();
@@ -275,9 +337,19 @@ export class ClaimsComponent {
     this.busy.set(true);
     this.error.set('');
     try {
-      this.apply(await this.api.update(item, data, this.workflowStatus));
+      this.apply(
+        await this.api.update(
+          item,
+          data,
+          this.workflowStatus === 'Received' ? 'In progress' : this.workflowStatus,
+        ),
+      );
       await this.refreshMetrics();
-      this.notice.set('Claim tracking saved.');
+      this.notice.set(
+        data.supplier_status === 'Accepted' && data.customer_credit_percentage !== null
+          ? 'Saved. The credit instruction is ready in the Claims Administrator inbox.'
+          : 'Claim tracking saved.',
+      );
       await this.alerts.success('Claim updated', item.claim_reference + ' was saved.');
     } catch (e) {
       this.error.set(this.message(e));

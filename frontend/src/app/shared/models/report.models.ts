@@ -116,6 +116,7 @@ export interface TechnicalReport {
   returnedWithRim: boolean | null;
   fittedLoose: 'Fitted' | 'Loose' | '';
   brand: string;
+  tyreSize?: string;
   rimSize: string;
   pattern: string;
   dot: string;

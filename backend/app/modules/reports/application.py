@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.modules.auditing.infrastructure import AuditEvent
 from backend.app.modules.branches.infrastructure import Branch
+from backend.app.modules.claims.automation import continue_report
 from backend.app.modules.identity.domain import Role
 from backend.app.modules.identity.infrastructure import User
 from backend.app.modules.reports.customer_lookup import load_json_customers
@@ -200,8 +201,7 @@ class TechnicalReportService:
 
         return ReportListResponse(
             items=[
-                self.response(record)
-                for record in records[offset : offset + limit]
+                self.response(record) for record in records[offset : offset + limit]
             ],
             total=len(records),
             matching_total=matching_total,
@@ -222,6 +222,7 @@ class TechnicalReportService:
 
         record = self.db.get(TechnicalReportRecord, report_id)
         created = record is None
+        previous_data = dict(record.report_data) if record else None
         if record:
             self.ensure_access(record, user)
 
@@ -282,6 +283,7 @@ class TechnicalReportService:
                 },
             )
         )
+        continue_report(self.db, record, user, previous_data)
         self.db.commit()
         self.db.refresh(record)
         return self.response(record)
@@ -317,7 +319,5 @@ class TechnicalReportService:
     @staticmethod
     def as_utc(value: datetime) -> datetime:
         return (
-            value.replace(tzinfo=UTC)
-            if value.tzinfo is None
-            else value.astimezone(UTC)
+            value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
         )

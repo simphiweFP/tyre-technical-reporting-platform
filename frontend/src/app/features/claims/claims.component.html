@@ -2,7 +2,8 @@
   <header class="page-title">
     <div>
       <h1>{{ auth.hasRole('claims_administrator') ? 'My Claims' : 'Claims Management' }}</h1>
-      <p>Supplier decisions, customer credits and supplier recovery.</p>
+      <p>One claim, from inspection to customer credit and supplier recovery.</p>
+      <small>Submitted technical reports flow into this queue automatically.</small>
     </div>
     @if (canHandover()) {
       <button class="primary" (click)="handoverOpen.set(true)" [disabled]="busy()">
@@ -111,14 +112,22 @@
           <p>
             {{
               tab() === 'tracker'
-                ? 'Each row continues the original technical claim.'
+                ? 'Open a claim to continue its next action. Details are carried forward automatically.'
                 : 'Customer credit percentages are entered manually.'
             }}
           </p>
         </div>
-        <button (click)="export(tab())" [disabled]="busy()">
-          Export {{ tab() === 'tracker' ? 'tracker' : 'instructions' }}
-        </button>
+        <div class="actions">
+          <button
+            (click)="showAllColumns.set(!showAllColumns())"
+            [attr.aria-pressed]="showAllColumns()"
+          >
+            {{ showAllColumns() ? 'Compact work list' : 'All workbook columns' }}
+          </button>
+          <button (click)="export(tab())" [disabled]="busy()">
+            Export {{ tab() === 'tracker' ? 'tracker' : 'instructions' }}
+          </button>
+        </div>
       </header>
       <div class="table-scroll">
         <table>
@@ -148,7 +157,7 @@
                   {{
                     busy()
                       ? 'Loading claims…'
-                      : 'No matching claims. Submit a technical report and hand it over to a Claims Administrator.'
+                      : 'No matching claims. Submitted technical reports appear here automatically when a Claims Administrator is active.'
                   }}
                 </td>
               </tr>
@@ -300,6 +309,10 @@
         </div>
         <button (click)="selected.set(null); form = null">Close claim</button>
       </header>
+      <p class="handover-note">
+        <strong>Next action: {{ nextAction(c) }}</strong> · Customer and tyre details come from the
+        technical report.
+      </p>
       <div class="source-grid">
         @for (field of sourceFields; track field.key) {
           <div>
@@ -441,6 +454,7 @@
                 >Credit note /Invoice ref<input
                   name="credit_ref"
                   [(ngModel)]="f.credit_note_reference"
+                  (ngModelChange)="referenceChanged('customer')"
                   maxlength="100" /></label
               ><label
                 >Date credit passed<input
@@ -457,6 +471,7 @@
                 >Supplier Offset Invoice no.<input
                   name="offset_ref"
                   [(ngModel)]="f.supplier_offset_invoice"
+                  (ngModelChange)="referenceChanged('supplier')"
                   maxlength="100" /></label
               ><label
                 >Supplier offset date<input
@@ -482,7 +497,10 @@
             <div class="actions">
               <button class="primary" type="submit" [disabled]="busy()">
                 {{ busy() ? 'Saving…' : 'Save tracking' }}</button
-              ><small>Save changes before issuing or sending documents.</small>
+              ><small
+                >Saving an accepted decision and manual credit percentage creates the credit
+                instruction automatically.</small
+              >
             </div>
           }
         </form>
@@ -516,7 +534,7 @@
               [disabled]="busy() || c.data.customer_credit_percentage === null"
               (click)="issue()"
             >
-              Issue to {{ c.owner_name }}
+              Issue revised instruction to {{ c.owner_name }}
             </button>
           </div>
         }
@@ -526,14 +544,25 @@
               <strong>{{ i.data['customer_credit_percentage'] }}% customer credit</strong
               ><small
                 >Issued {{ i.created_at | date: 'medium' }} ·
-                {{ i.acknowledged_at ? 'Received' : 'Awaiting receipt' }}</small
+                {{
+                  i.id !== c.instructions[0]?.id
+                    ? 'Previous version'
+                    : i.acknowledged_at
+                      ? 'Received'
+                      : 'Awaiting receipt'
+                }}</small
               >
             </div>
             <div class="actions">
               <button (click)="document('credit', i.id)">PDF</button>
               @if (canWrite()) {
-                <button (click)="prepareSend('credit', i.id)">Email instruction</button>
-                @if (!i.acknowledged_at) {
+                <button
+                  (click)="prepareSend('credit', i.id)"
+                  [disabled]="i.id !== c.instructions[0]?.id"
+                >
+                  Email instruction
+                </button>
+                @if (!i.acknowledged_at && i.id === c.instructions[0]?.id) {
                   <button (click)="receive(c, i.id)">Mark received</button>
                 }
               }

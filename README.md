@@ -196,7 +196,7 @@ The Angular capture experience is mobile-first and responsive, but physical-devi
 
 ## Claims Management
 
-The backend seeds both administrators after applying migrations at startup. The second administrator defaults to `claims@royaltyres.co.za` with the **Claims Administrator** role. Configure `SEED_CLAIMS_ADMIN_EMAIL` and `SEED_CLAIMS_ADMIN_PASSWORD`; a blank claims password uses `SEED_ADMIN_PASSWORD`. Existing account passwords and assignments are preserved on restart. You can also create another user under **Administration → Users** with the **Claims Administrator** role. After a technical report is submitted, use **Hand over claim** to assign it to this user. Claims administrators see only their assigned claims and receive an inbox of credit instructions; the original administrator can manage and reassign all claims. Technical-report delivery status and claim-tracking progress are stored separately.
+The backend seeds both administrators after applying migrations at startup. The second administrator defaults to `claims@royaltyres.co.za` with the **Claims Administrator** role. Configure `SEED_CLAIMS_ADMIN_EMAIL` and `SEED_CLAIMS_ADMIN_PASSWORD`; a blank claims password uses `SEED_ADMIN_PASSWORD`. Existing account passwords and assignments are preserved on restart. You can also create another user under **Administration → Users** with the **Claims Administrator** role. Submitted technical reports are assigned automatically. Use **Continue in Claims** on the original report to open the same case, or use manual handover when a different owner is needed. Claims administrators see only their assigned claims and receive an inbox of credit instructions; the original administrator can manage and reassign all claims. Technical-report delivery status and claim-tracking progress are stored separately.
 
 The four screens follow the Claims Management workbook: **Claim Tracker**, **Instruction to Credit**, **Supplier Scorecard**, and **Other Metrics**. All 23 tracker columns and 15 credit-instruction columns are included in the app and exports. Customer credit percentage is entered manually from 0 to 100; remaining tread percentage is calculated as RTD / OTD × 100. Tyre size is captured separately from rim size. Supplier suggestions come from `SUPPLIER_JSON_PATH` (default `backend/data/suppliers.json`), with manual entry supported. Mock supplier codes must be replaced with real supplier codes before downstream integration.
 
@@ -219,3 +219,13 @@ python -m backend.app.seed
 ```
 
 When updating a local checkout, fetching downloads commits but does not update your working files. Use `git switch tyre-technical-reporting` followed by `git pull --ff-only origin tyre-technical-reporting`, then restart/rebuild the app.
+
+### Automatic continuation
+
+Submitted technical reports now enter Claims Management automatically under the seeded Claims Administrator. Existing submitted reports are added when the backend starts or the seed runs. Drafts and archived reports remain outside this queue; existing assignments are preserved. If the configured claims administrator is unavailable and there is more than one active claims administrator, use manual handover to choose the owner. Disable automatic handover with `CLAIMS_AUTO_HANDOVER_ENABLED=false` if needed.
+
+Customer, invoice and tyre details carry forward from the original report. Corrections to tread depth, tyre size and damage synchronize while their claim values still match the original source; values already edited by the Claims Administrator are preserved. Tyre size is captured separately from rim size and is populated by tyre-image extraction.
+
+Saving an accepted decision with the manually entered customer credit percentage creates the credit instruction automatically. Repeated saves with unchanged instruction values do not create duplicates. Revised instructions retain earlier snapshots; the inbox shows the latest version and receipt of an outdated version is blocked.
+
+The default tracker is a compact work list showing each claim's next action. All workbook columns remain available through the display toggle, detail form and exports. Feedback and settlement dates default to the local date when the relevant event is recorded and remain editable. Financial percentages, credit references and recovered amounts remain entered by the operator.

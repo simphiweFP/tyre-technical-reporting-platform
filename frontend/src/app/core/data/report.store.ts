@@ -378,6 +378,7 @@ export class ReportStore {
       returnedWithRim: null,
       fittedLoose: '',
       brand: '',
+      tyreSize: '',
       rimSize: '',
       pattern: '',
       dot: '',

@@ -137,6 +137,9 @@ export class ClaimsService {
       this.http.get<{ items: Supplier[] }>(`${this.base}/suppliers`, { params: { search } }),
     );
   }
+  forReport(id: string) {
+    return firstValueFrom(this.http.get<ClaimCase>(`${this.base}/for-report/${id}`));
+  }
   get(id: string) {
     return firstValueFrom(this.http.get<ClaimCase>(`${this.base}/${id}`));
   }

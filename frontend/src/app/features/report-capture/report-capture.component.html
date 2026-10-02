@@ -104,7 +104,10 @@
                       >
                         {{ customerRefreshBusy() ? 'Refreshing…' : '↻ Refresh customers' }}
                       </button>
-                      <small>If it is still not found after refresh, keep typing the customer name.</small>
+                      <small
+                        >If it is still not found after refresh, keep typing the customer
+                        name.</small
+                      >
                     </div>
                   }
                 </div>
@@ -170,15 +173,20 @@
                   <small class="field-error">{{ fieldError('brand') }}</small>
                 }
               </label>
+              <label class="mock-field compact"
+                ><span>Tyre size</span><i>⊗</i
+                ><input formControlName="tyreSize" placeholder="e.g. 315/80R22.5"
+              /></label>
               <label class="mock-field compact" [class.has-error]="fieldError('rimSize')">
-                <span>Rim size <em>*</em></span><i>⊗</i
-                ><input formControlName="rimSize" placeholder="e.g. 22.5" />
+                <span>Rim size <em>*</em></span
+                ><i>⊗</i><input formControlName="rimSize" placeholder="e.g. 22.5" />
                 @if (fieldError('rimSize')) {
                   <small class="field-error">{{ fieldError('rimSize') }}</small>
                 }
               </label>
               <label class="mock-field compact" [class.has-error]="fieldError('pattern')">
-                <span>Pattern <em>*</em></span><i>▥</i
+                <span>Pattern <em>*</em></span
+                ><i>▥</i
                 ><input
                   formControlName="pattern"
                   list="pattern-options"
@@ -200,32 +208,33 @@
                   <small class="field-error">{{ fieldError('dot') }}</small>
                 }
               </label>
-              <label
-                class="mock-field compact"
-                [class.has-error]="fieldError('serialNumber')"
-              >
+              <label class="mock-field compact" [class.has-error]="fieldError('serialNumber')">
                 <span>Serial number <em>*</em></span
                 ><i>▥</i><input formControlName="serialNumber" placeholder="Enter serial number" />
                 @if (fieldError('serialNumber')) {
                   <small class="field-error">{{ fieldError('serialNumber') }}</small>
                 }
               </label>
-              <label class="mock-field compact" [class.has-error]="fieldError('remainingTreadDepth')">
-                <span>Remaining tread depth (mm) <em>*</em></span><i>◔</i
-                ><input formControlName="remainingTreadDepth" placeholder="e.g. 12" />
+              <label
+                class="mock-field compact"
+                [class.has-error]="fieldError('remainingTreadDepth')"
+              >
+                <span>Remaining tread depth (mm) <em>*</em></span
+                ><i>◔</i><input formControlName="remainingTreadDepth" placeholder="e.g. 12" />
                 @if (fieldError('remainingTreadDepth')) {
                   <small class="field-error">{{ fieldError('remainingTreadDepth') }}</small>
                 }
               </label>
               <label class="mock-field compact" [class.has-error]="fieldError('inspectedPressure')">
-                <span>Inspected pressure (psi) <em>*</em></span><i>◔</i
-                ><input formControlName="inspectedPressure" placeholder="e.g. 100" />
+                <span>Inspected pressure (psi) <em>*</em></span
+                ><i>◔</i><input formControlName="inspectedPressure" placeholder="e.g. 100" />
                 @if (fieldError('inspectedPressure')) {
                   <small class="field-error">{{ fieldError('inspectedPressure') }}</small>
                 }
               </label>
               <label class="mock-field compact" [class.has-error]="fieldError('inspectedLocation')">
-                <span>Inspected location <em>*</em></span><i>●</i>
+                <span>Inspected location <em>*</em></span
+                ><i>●</i>
                 <select formControlName="inspectedLocation">
                   <option value="">Select inspected location</option>
                   <option value="RTCPHX">RTCPHX</option>
@@ -280,23 +289,20 @@
               <div class="two-column-fields">
                 <label class="mock-field compact"
                   ><span>Vehicle (make/model)</span><i>▰</i
-                  ><input formControlName="vehicleMakeModel" placeholder="Enter make / model"
-                />
+                  ><input formControlName="vehicleMakeModel" placeholder="Enter make / model" />
                 </label>
                 <label class="mock-field compact"
                   ><span>Vehicle mileage</span><i>◔</i
-                  ><input formControlName="vehicleMileage" placeholder="e.g. 120000"
-                />
+                  ><input formControlName="vehicleMileage" placeholder="e.g. 120000" />
                 </label>
               </div>
             </div>
-            <div class="mock-field tyre-position-picker" [class.has-error]="fieldError('tyrePosition')">
+            <div
+              class="mock-field tyre-position-picker"
+              [class.has-error]="fieldError('tyrePosition')"
+            >
               <span>Tyre position <em>*</em></span>
-              <button
-                type="button"
-                class="tyre-position-trigger"
-                (click)="openTyrePositionModal()"
-              >
+              <button type="button" class="tyre-position-trigger" (click)="openTyrePositionModal()">
                 <i>⊗</i>
                 <strong>{{ form.controls.tyrePosition.value || 'Select position' }}</strong>
                 <b>›</b>
@@ -331,7 +337,9 @@
             >
               <header>
                 <h2>Select Tyre Position</h2>
-                <button type="button" aria-label="Close" (click)="closeTyrePositionModal()">×</button>
+                <button type="button" aria-label="Close" (click)="closeTyrePositionModal()">
+                  ×
+                </button>
               </header>
 
               <div class="vehicle-tabs">
@@ -350,47 +358,117 @@
                 @if (tyreVehicleType() === 'Car') {
                   <div class="axle-row car-row">
                     <span class="axle-label">Front</span>
-                    <button type="button" class="wheel" [class.selected]="isTyrePosition('Front left')" (click)="selectTyrePosition('Front left')"></button>
+                    <button
+                      type="button"
+                      class="wheel"
+                      [class.selected]="isTyrePosition('Front left')"
+                      (click)="selectTyrePosition('Front left')"
+                    ></button>
                     <span class="axle-bar"></span>
-                    <button type="button" class="wheel" [class.selected]="isTyrePosition('Front right')" (click)="selectTyrePosition('Front right')"></button>
+                    <button
+                      type="button"
+                      class="wheel"
+                      [class.selected]="isTyrePosition('Front right')"
+                      (click)="selectTyrePosition('Front right')"
+                    ></button>
                   </div>
                   <div class="axle-row car-row">
                     <span class="axle-label">Rear</span>
-                    <button type="button" class="wheel" [class.selected]="isTyrePosition('Rear left')" (click)="selectTyrePosition('Rear left')"></button>
+                    <button
+                      type="button"
+                      class="wheel"
+                      [class.selected]="isTyrePosition('Rear left')"
+                      (click)="selectTyrePosition('Rear left')"
+                    ></button>
                     <span class="axle-bar"></span>
-                    <button type="button" class="wheel" [class.selected]="isTyrePosition('Rear right')" (click)="selectTyrePosition('Rear right')"></button>
+                    <button
+                      type="button"
+                      class="wheel"
+                      [class.selected]="isTyrePosition('Rear right')"
+                      (click)="selectTyrePosition('Rear right')"
+                    ></button>
                   </div>
                 } @else if (tyreVehicleType() === 'Horse') {
                   <div class="axle-row">
                     <span class="axle-label">Steer</span>
-                    <button type="button" class="wheel" [class.selected]="isTyrePosition('Steer left')" (click)="selectTyrePosition('Steer left')"></button>
+                    <button
+                      type="button"
+                      class="wheel"
+                      [class.selected]="isTyrePosition('Steer left')"
+                      (click)="selectTyrePosition('Steer left')"
+                    ></button>
                     <span class="axle-bar"></span>
-                    <button type="button" class="wheel" [class.selected]="isTyrePosition('Steer right')" (click)="selectTyrePosition('Steer right')"></button>
+                    <button
+                      type="button"
+                      class="wheel"
+                      [class.selected]="isTyrePosition('Steer right')"
+                      (click)="selectTyrePosition('Steer right')"
+                    ></button>
                   </div>
 
                   <div class="axle-row dual">
                     <span class="axle-label">Drive 1</span>
                     <div class="dual-wheel">
-                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 1 left outer')" (click)="selectTyrePosition('Drive 1 left outer')"></button>
-                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 1 left inner')" (click)="selectTyrePosition('Drive 1 left inner')"></button>
+                      <button
+                        type="button"
+                        class="wheel"
+                        [class.selected]="isTyrePosition('Drive 1 left outer')"
+                        (click)="selectTyrePosition('Drive 1 left outer')"
+                      ></button>
+                      <button
+                        type="button"
+                        class="wheel"
+                        [class.selected]="isTyrePosition('Drive 1 left inner')"
+                        (click)="selectTyrePosition('Drive 1 left inner')"
+                      ></button>
                     </div>
                     <span class="axle-bar"></span>
                     <div class="dual-wheel">
-                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 1 right inner')" (click)="selectTyrePosition('Drive 1 right inner')"></button>
-                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 1 right outer')" (click)="selectTyrePosition('Drive 1 right outer')"></button>
+                      <button
+                        type="button"
+                        class="wheel"
+                        [class.selected]="isTyrePosition('Drive 1 right inner')"
+                        (click)="selectTyrePosition('Drive 1 right inner')"
+                      ></button>
+                      <button
+                        type="button"
+                        class="wheel"
+                        [class.selected]="isTyrePosition('Drive 1 right outer')"
+                        (click)="selectTyrePosition('Drive 1 right outer')"
+                      ></button>
                     </div>
                   </div>
 
                   <div class="axle-row dual">
                     <span class="axle-label">Drive 2</span>
                     <div class="dual-wheel">
-                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 2 left outer')" (click)="selectTyrePosition('Drive 2 left outer')"></button>
-                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 2 left inner')" (click)="selectTyrePosition('Drive 2 left inner')"></button>
+                      <button
+                        type="button"
+                        class="wheel"
+                        [class.selected]="isTyrePosition('Drive 2 left outer')"
+                        (click)="selectTyrePosition('Drive 2 left outer')"
+                      ></button>
+                      <button
+                        type="button"
+                        class="wheel"
+                        [class.selected]="isTyrePosition('Drive 2 left inner')"
+                        (click)="selectTyrePosition('Drive 2 left inner')"
+                      ></button>
                     </div>
                     <span class="axle-bar"></span>
                     <div class="dual-wheel">
-                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 2 right inner')" (click)="selectTyrePosition('Drive 2 right inner')"></button>
-                      <button type="button" class="wheel" [class.selected]="isTyrePosition('Drive 2 right outer')" (click)="selectTyrePosition('Drive 2 right outer')"></button>
+                      <button
+                        type="button"
+                        class="wheel"
+                        [class.selected]="isTyrePosition('Drive 2 right inner')"
+                        (click)="selectTyrePosition('Drive 2 right inner')"
+                      ></button>
+                      <button
+                        type="button"
+                        class="wheel"
+                        [class.selected]="isTyrePosition('Drive 2 right outer')"
+                        (click)="selectTyrePosition('Drive 2 right outer')"
+                      ></button>
                     </div>
                   </div>
                 } @else {
@@ -398,13 +476,33 @@
                     <div class="axle-row dual">
                       <span class="axle-label">Axle {{ axle }}</span>
                       <div class="dual-wheel">
-                        <button type="button" class="wheel" [class.selected]="isTyrePosition('Axle ' + axle + ' left outer')" (click)="selectTyrePosition('Axle ' + axle + ' left outer')"></button>
-                        <button type="button" class="wheel" [class.selected]="isTyrePosition('Axle ' + axle + ' left inner')" (click)="selectTyrePosition('Axle ' + axle + ' left inner')"></button>
+                        <button
+                          type="button"
+                          class="wheel"
+                          [class.selected]="isTyrePosition('Axle ' + axle + ' left outer')"
+                          (click)="selectTyrePosition('Axle ' + axle + ' left outer')"
+                        ></button>
+                        <button
+                          type="button"
+                          class="wheel"
+                          [class.selected]="isTyrePosition('Axle ' + axle + ' left inner')"
+                          (click)="selectTyrePosition('Axle ' + axle + ' left inner')"
+                        ></button>
                       </div>
                       <span class="axle-bar"></span>
                       <div class="dual-wheel">
-                        <button type="button" class="wheel" [class.selected]="isTyrePosition('Axle ' + axle + ' right inner')" (click)="selectTyrePosition('Axle ' + axle + ' right inner')"></button>
-                        <button type="button" class="wheel" [class.selected]="isTyrePosition('Axle ' + axle + ' right outer')" (click)="selectTyrePosition('Axle ' + axle + ' right outer')"></button>
+                        <button
+                          type="button"
+                          class="wheel"
+                          [class.selected]="isTyrePosition('Axle ' + axle + ' right inner')"
+                          (click)="selectTyrePosition('Axle ' + axle + ' right inner')"
+                        ></button>
+                        <button
+                          type="button"
+                          class="wheel"
+                          [class.selected]="isTyrePosition('Axle ' + axle + ' right outer')"
+                          (click)="selectTyrePosition('Axle ' + axle + ' right outer')"
+                        ></button>
                       </div>
                     </div>
                   }
@@ -489,11 +587,7 @@
           } @else {
             <button type="button" class="outline-action" (click)="previous()">‹ &nbsp; Back</button>
           }
-          <button
-            type="submit"
-            class="primary-action"
-            [disabled]="step() === 2 && submitting()"
-          >
+          <button type="submit" class="primary-action" [disabled]="step() === 2 && submitting()">
             {{ step() === 2 ? (submitting() ? 'Saving…' : 'Preview report') : 'Next' }} &nbsp; ›
           </button>
         </footer>
@@ -516,7 +610,8 @@
 
         <div class="summary-card summary-grid">
           <div>
-            <small>Claim reference</small><strong>{{ report().claimReference || 'Pending' }}</strong>
+            <small>Claim reference</small
+            ><strong>{{ report().claimReference || 'Pending' }}</strong>
           </div>
           <div>
             <small>Updated</small><strong>{{ report().updatedAt }}</strong>
@@ -652,7 +747,8 @@
         <h2>{{ report().claimReference || 'Pending' }}</h2>
         <p>
           @if (deliveryStatus() === 'Queued') {
-            The report is safely stored on this device and will be sent automatically when you reconnect.
+            The report is safely stored on this device and will be sent automatically when you
+            reconnect.
           } @else {
             The report is stored by the API and the email delivery status is shown below.
           }
@@ -662,7 +758,8 @@
             <i>☁</i>
             <div>
               @if (deliveryStatus() === 'Queued') {
-                <strong>Saved on this device</strong><small>Will sync when the connection returns</small>
+                <strong>Saved on this device</strong
+                ><small>Will sync when the connection returns</small>
               } @else {
                 <strong>Saved to server</strong><small>Available across authorised devices</small>
               }
@@ -693,7 +790,8 @@
             <i>▤</i>
             <div>
               @if (deliveryStatus() === 'Queued') {
-                <strong>PDF waiting to send</strong><small>Will be generated/attached after sync</small>
+                <strong>PDF waiting to send</strong
+                ><small>Will be generated/attached after sync</small>
               } @else {
                 <strong>PDF handled by API</strong><small>Attached to the email delivery</small>
               }

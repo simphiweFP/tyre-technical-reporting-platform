@@ -1,5 +1,6 @@
 from collections import Counter, defaultdict
 from datetime import date
+from math import isfinite
 from statistics import mean
 from uuid import UUID
 
@@ -72,6 +73,8 @@ def initial_data(report: TechnicalReportRecord) -> dict:
     source = report.report_data
     try:
         rtd = float(source.get("remainingTreadDepth"))
+        if not isfinite(rtd) or rtd < 0:
+            rtd = None
     except (ValueError, TypeError):
         rtd = None
     return ClaimData(

@@ -15,7 +15,7 @@
       <nav>
         @if (auth.hasRole('administrator', 'report_capturer') && r.status !== 'Draft') {
           <a class="handover-link" routerLink="/claims" [queryParams]="{ handover: r.id }"
-            >Hand over to Claims</a
+            >Continue in Claims</a
           >
         }
         <button (click)="generatePdf()" [disabled]="!!busy()">▤ &nbsp; Generate PDF</button>

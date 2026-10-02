@@ -4,6 +4,7 @@ from backend.app.core.config import get_settings
 from backend.app.core.database import SessionLocal
 from backend.app.core.security import hash_password
 from backend.app.modules.branches.infrastructure import Branch
+from backend.app.modules.claims.automation import continue_existing_reports
 from backend.app.modules.identity.domain import Role
 from backend.app.modules.identity.infrastructure import User
 
@@ -55,6 +56,8 @@ def seed() -> None:
                     branch_id=branch.id,
                 )
             )
+        db.flush()
+        continue_existing_reports(db)
         db.commit()
 
 

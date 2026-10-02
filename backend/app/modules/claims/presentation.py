@@ -22,6 +22,7 @@ from backend.app.modules.claims.application import (
     required_owner,
     visible_cases,
 )
+from backend.app.modules.claims.automation import ensure_credit_instruction
 from backend.app.modules.claims.documents import (
     EXTRA_COLUMNS,
     INSTRUCTION_COLUMNS,
@@ -381,6 +382,18 @@ async def import_claims(
     return import_workbook(db, content, owner, user)
 
 
+@router.get("/for-report/{report_id}")
+def claim_for_report(
+    report_id: UUID, db: Session = Depends(get_db), user: User = Depends(read_access)
+):
+    case_id = db.scalar(select(ClaimCase.id).where(ClaimCase.report_id == report_id))
+    if not case_id:
+        raise HTTPException(
+            status_code=404, detail="This report has not entered Claims yet"
+        )
+    return case_view(db, check_case(db, case_id, user))
+
+
 @router.get("/{case_id}")
 def get_claim(
     case_id: UUID, db: Session = Depends(get_db), user: User = Depends(read_access)
@@ -440,6 +453,7 @@ def update_claim(
                 ),
             )
     case.updated_at = datetime.now(UTC)
+    ensure_credit_instruction(db, case, user)
     audit(
         db,
         user,
@@ -546,6 +560,16 @@ def receive_instruction(
     if user.role != Role.ADMINISTRATOR and instruction.assigned_to != user.id:
         raise HTTPException(
             status_code=403, detail="This instruction is assigned to another user"
+        )
+    latest = db.scalar(
+        select(CreditInstruction)
+        .where(CreditInstruction.case_id == case.id)
+        .order_by(CreditInstruction.created_at.desc())
+    )
+    if latest.id != instruction.id:
+        raise HTTPException(
+            status_code=409,
+            detail="A newer credit instruction exists. Open the latest one.",
         )
     if not instruction.acknowledged_at:
         instruction.acknowledged_at = datetime.now(UTC)

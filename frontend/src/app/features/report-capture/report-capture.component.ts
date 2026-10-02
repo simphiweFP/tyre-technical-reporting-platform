@@ -78,6 +78,7 @@ export class ReportCaptureComponent implements OnDestroy {
     returnedWithRim: [this.report().returnedWithRim],
     fittedLoose: [this.report().fittedLoose],
     brand: [this.report().brand],
+    tyreSize: [this.report().tyreSize ?? ''],
     rimSize: [this.report().rimSize],
     pattern: [this.report().pattern],
     dot: [this.report().dot],
@@ -197,8 +198,7 @@ export class ReportCaptureComponent implements OnDestroy {
 
     const normalized = term.toLowerCase();
     const localMatches = this.referenceData()
-      .customers
-      .filter((customer) => customer.toLowerCase().includes(normalized))
+      .customers.filter((customer) => customer.toLowerCase().includes(normalized))
       .slice(0, 20);
 
     if (localMatches.length) {
@@ -340,14 +340,12 @@ export class ReportCaptureComponent implements OnDestroy {
         } catch (error) {
           const detail =
             error instanceof HttpErrorResponse
-              ? (typeof error.error?.detail === 'string'
-                  ? error.error.detail
-                  : `AI request failed (HTTP ${error.status || 'network'}).`)
+              ? typeof error.error?.detail === 'string'
+                ? error.error.detail
+                : `AI request failed (HTTP ${error.status || 'network'}).`
               : 'AI image analysis failed.';
 
-          this.captureMessage.set(
-            `AI could not populate the fields: ${detail}`,
-          );
+          this.captureMessage.set(`AI could not populate the fields: ${detail}`);
         }
       } else {
         this.captureMessage.set(
@@ -362,7 +360,12 @@ export class ReportCaptureComponent implements OnDestroy {
       };
       this.report.set(current);
       await this.workflow.saveNow(current);
-      const stored = await this.workflow.uploadImage(current.id, category, optimized.blob, file.name);
+      const stored = await this.workflow.uploadImage(
+        current.id,
+        category,
+        optimized.blob,
+        file.name,
+      );
       if (stored) {
         this.report.update((r) => ({
           ...r,
@@ -381,40 +384,49 @@ export class ReportCaptureComponent implements OnDestroy {
   async removePhoto(category: string): Promise<void> {
     const photo = this.photoFor(category);
     if (!photo) return;
-    if (!(await this.alerts.confirm(
-      'Remove photo?',
-      `${photo.label} will be removed from this technical report.`,
-      'Remove photo',
-      'warning',
-      true,
-    ))) return;
+    if (
+      !(await this.alerts.confirm(
+        'Remove photo?',
+        `${photo.label} will be removed from this technical report.`,
+        'Remove photo',
+        'warning',
+        true,
+      ))
+    )
+      return;
     try {
       if (photo.storageId) {
         await this.workflow.deleteImage(this.report().id, photo.storageId);
       } else {
         await this.workflow.removeQueuedImage(this.report().id, category);
       }
-      this.report.update((r) => ({ ...r, photos: r.photos.filter((p) => p.category !== category) }));
+      this.report.update((r) => ({
+        ...r,
+        photos: r.photos.filter((p) => p.category !== category),
+      }));
       this.persist();
       await this.alerts.success('Photo removed', `${photo.label} was removed successfully.`);
     } catch {
       await this.alerts.error('Photo not removed', 'The photo could not be removed.');
     }
   }
-  private applyOcrResult(ai: {
-    brand: string;
-    size: string;
-    pattern: string;
-    dot: string;
-    serialNumber: string;
-    vehicleMakeModel: string;
-    rtd: string;
-    comment: string;
-  }, category: string): void {
+  private applyOcrResult(
+    ai: {
+      brand: string;
+      size: string;
+      pattern: string;
+      dot: string;
+      serialNumber: string;
+      vehicleMakeModel: string;
+      rtd: string;
+      comment: string;
+    },
+    category: string,
+  ): void {
     const patch: Record<string, string> = {};
 
     if (ai.brand && !this.form.controls.brand.value.trim()) patch['brand'] = ai.brand;
-    if (ai.size && !this.form.controls.rimSize.value.trim()) patch['rimSize'] = ai.size;
+    if (ai.size && !this.form.controls.tyreSize.value.trim()) patch['tyreSize'] = ai.size;
     if (ai.pattern && !this.form.controls.pattern.value.trim()) patch['pattern'] = ai.pattern;
     if (ai.dot && !this.form.controls.dot.value.trim()) patch['dot'] = ai.dot;
 
@@ -478,8 +490,7 @@ export class ReportCaptureComponent implements OnDestroy {
   }
 
   isTyrePosition(position: string): boolean {
-    return this.form.controls.tyrePosition.value ===
-      `${this.tyreVehicleType()} - ${position}`;
+    return this.form.controls.tyrePosition.value === `${this.tyreVehicleType()} - ${position}`;
   }
 
   fieldError(field: string): string {
@@ -514,6 +525,7 @@ export class ReportCaptureComponent implements OnDestroy {
     const values = this.form.getRawValue();
     return [
       { label: 'Brand', value: values.brand || 'Not captured' },
+      { label: 'Tyre size', value: values.tyreSize || 'Not captured' },
       { label: 'Rim size', value: values.rimSize || 'Not captured' },
       { label: 'DOT', value: values.dot || 'Not captured' },
       { label: 'Serial number', value: values.serialNumber || 'Not captured' },
@@ -580,11 +592,12 @@ export class ReportCaptureComponent implements OnDestroy {
     const result = await this.workflow.deliver(current, recipientEmail, cc);
     const updated = {
       ...this.report(),
-      status: result.status === 'Sent'
-        ? ('Email Sent' as const)
-        : result.status === 'Failed'
-          ? ('Email Failed' as const)
-          : ('Submitted' as const),
+      status:
+        result.status === 'Sent'
+          ? ('Email Sent' as const)
+          : result.status === 'Failed'
+            ? ('Email Failed' as const)
+            : ('Submitted' as const),
     };
     this.report.set(updated);
     await this.workflow.saveNow(updated);
@@ -594,7 +607,9 @@ export class ReportCaptureComponent implements OnDestroy {
   }
   async downloadPdf(): Promise<void> {
     if (!this.offline.online()) {
-      this.captureMessage.set('PDF generation requires the API. Reconnect first; your offline changes are safe.');
+      this.captureMessage.set(
+        'PDF generation requires the API. Reconnect first; your offline changes are safe.',
+      );
       return;
     }
     if (!(await this.validateStep(3))) return;
@@ -607,7 +622,10 @@ export class ReportCaptureComponent implements OnDestroy {
       this.alerts.loading('Generating PDF…', 'Building the Royal Tyres technical report.');
       await this.workflow.downloadPdf(current);
       this.alerts.close();
-      await this.alerts.success('PDF ready', `${current.claimReference} was generated successfully.`);
+      await this.alerts.success(
+        'PDF ready',
+        `${current.claimReference} was generated successfully.`,
+      );
     } catch {
       this.alerts.close();
       this.captureMessage.set('PDF generation failed. Check the API connection and try again.');
@@ -685,9 +703,7 @@ export class ReportCaptureComponent implements OnDestroy {
           ? `The delivery could not complete and will be retried automatically. ${result.error_message}`
           : 'The delivery could not complete and will be retried automatically. You can track it in Delivery Centre.',
       );
-      this.captureMessage.set(
-        'Email is waiting for retry. Track the delivery in Delivery Centre.',
-      );
+      this.captureMessage.set('Email is waiting for retry. Track the delivery in Delivery Centre.');
     } catch {
       this.alerts.close();
       await this.alerts.error(
@@ -702,11 +718,14 @@ export class ReportCaptureComponent implements OnDestroy {
     }
   }
   async startAnotherReport(): Promise<void> {
-    if (!(await this.alerts.confirm(
-      'Start another report?',
-      'A new blank technical report will be opened.',
-      'Start new report',
-    ))) return;
+    if (
+      !(await this.alerts.confirm(
+        'Start another report?',
+        'A new blank technical report will be opened.',
+        'Start new report',
+      ))
+    )
+      return;
     void this.router.navigate(['/reports/new']).then(() => window.location.reload());
   }
   private async loadCustomerSuggestions(term: string): Promise<void> {
@@ -780,7 +799,10 @@ export class ReportCaptureComponent implements OnDestroy {
 
     this.validationErrors.set(errors);
 
-    if (!Object.keys(errors).length && this.captureMessage() === 'Correct the highlighted fields before continuing.') {
+    if (
+      !Object.keys(errors).length &&
+      this.captureMessage() === 'Correct the highlighted fields before continuing.'
+    ) {
       this.captureMessage.set('');
     }
   }
