@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.config import get_settings
 from backend.app.modules.auditing.infrastructure import AuditEvent
 from backend.app.modules.delivery.domain import EmailGateway, EmailMessage
-from backend.app.modules.delivery.infrastructure import DeliveryAttempt, Recipient
+from backend.app.modules.delivery.infrastructure import DeliveryAttempt
 from backend.app.modules.document_generation.application import GenerateTechnicalReport
 from backend.app.modules.reports.infrastructure import (
     ReportImage,
@@ -173,9 +173,6 @@ class ReportDeliveryService:
         return base64.b64decode(attempt.sent_pdf_base64)
 
     def deliver(self, attempt: DeliveryAttempt, actor_id) -> DeliveryAttempt:
-        recipient = self.db.get(Recipient, attempt.recipient_id)
-        if not recipient or not recipient.is_active:
-            raise ValueError("The selected recipient is not active")
         report_record = self.db.scalar(
             select(TechnicalReportRecord).where(
                 TechnicalReportRecord.claim_reference == attempt.claim_reference
@@ -229,7 +226,7 @@ class ReportDeliveryService:
         message = EmailMessage(
             subject=subject,
             body=body,
-            to=(recipient.email,),
+            to=(attempt.recipient_email,),
             cc=tuple(attempt.cc),
             attachment_name=attachment_name,
             attachment=pdf,
@@ -260,7 +257,7 @@ class ReportDeliveryService:
             )
             attempt.error_message = _delivery_error_message(
                 exc,
-                recipient.email,
+                attempt.recipient_email,
             )[:1000]
             attempt.next_attempt_at = datetime.now(UTC) + timedelta(
                 minutes=settings.delivery_retry_minutes * attempt.attempt_count
@@ -279,7 +276,7 @@ class ReportDeliveryService:
                 entity_id=claim,
                 details={
                     "delivery_id": str(attempt.id),
-                    "recipient": recipient.email,
+                    "recipient": attempt.recipient_email,
                     "attempt": attempt.attempt_count,
                 },
             )
