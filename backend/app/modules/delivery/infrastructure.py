@@ -18,14 +18,20 @@ def _royal_tyres_signature_html(body: str) -> tuple[str, dict[str, Path]]:
     """Build the standard Royal Tyres email signature used by company mail."""
     assets_dir = Path(__file__).resolve().parents[3] / "assets" / "email"
 
+    logo = assets_dir / "royal-tyres-logo.png"
     aeo = assets_dir / "aeo.png"
     rmi = assets_dir / "rmi.png"
+    social = assets_dir / "social-media.png"
 
     inline_images: dict[str, Path] = {}
+    if logo.exists():
+        inline_images["royal-tyres-logo"] = logo
     if aeo.exists():
         inline_images["aeo-logo"] = aeo
     if rmi.exists():
         inline_images["rmi-logo"] = rmi
+    if social.exists():
+        inline_images["social-media"] = social
 
     safe_body = escape(body).replace("\n", "<br>")
 
@@ -42,6 +48,31 @@ def _royal_tyres_signature_html(body: str) -> tuple[str, dict[str, Path]]:
         else '<strong style="font-size:14px;color:#30369a;">RMI</strong>'
     )
 
+    logo_html = (
+        '<img src="cid:royal-tyres-logo" alt="Royal Tyres" width="291" '
+        'style="display:block;border:0;width:291px;max-width:100%;height:auto;">'
+        if logo.exists()
+        else '<strong style="font-size:34px;color:#30369a;">ROYAL TYRES</strong>'
+    )
+    aeo_html = (
+        '<img src="cid:aeo-logo" alt="AEO" width="61" '
+        'style="display:block;border:0;width:61px;height:auto;">'
+        if aeo.exists()
+        else '<strong style="font-size:14px;color:#777777;">AEO</strong>'
+    )
+    rmi_html = (
+        '<img src="cid:rmi-logo" alt="RMI" width="64" '
+        'style="display:block;border:0;width:64px;height:auto;">'
+        if rmi.exists()
+        else '<strong style="font-size:14px;color:#30369a;">RMI</strong>'
+    )
+    social_html = (
+        '<img src="cid:social-media" alt="Follow us on Facebook, Instagram and YouTube" width="245" '
+        'style="display:block;border:0;width:245px;max-width:100%;height:auto;">'
+        if social.exists()
+        else '<strong style="font-size:14px;">Follow us</strong>'
+    )
+
     html = f"""<!doctype html>
 <html>
 <body style="margin:0;padding:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#111111;">
@@ -53,33 +84,8 @@ def _royal_tyres_signature_html(body: str) -> tuple[str, dict[str, Path]]:
     <table role="presentation" cellpadding="0" cellspacing="0" border="0"
            style="width:515px;max-width:100%;margin-top:24px;border-collapse:collapse;">
       <tr>
-        <td align="center" style="padding:0 0 18px 0;">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0"
-                 style="border-collapse:collapse;margin:0 auto;">
-            <tr>
-              <td align="center">
-                <div style="width:108px;height:108px;line-height:108px;border-radius:54px;
-                            background:#ed1c24;color:#ffffff;text-align:center;
-                            font-family:Georgia,'Times New Roman',serif;font-size:66px;">
-                  ♕
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td align="center"
-                  style="padding-top:14px;color:#30369a;font-family:Arial Black,Arial,Helvetica,sans-serif;
-                         font-size:44px;line-height:48px;font-weight:900;letter-spacing:-2px;
-                         white-space:nowrap;">
-                ROYAL TYRES
-              </td>
-            </tr>
-            <tr>
-              <td align="center"
-                  style="padding-top:6px;color:#ed1c24;font-size:18px;line-height:22px;font-weight:800;">
-                EST. 1939
-              </td>
-            </tr>
-          </table>
+        <td align="left" style="padding:0 0 14px 0;">
+          {logo_html}
         </td>
       </tr>
 
@@ -103,36 +109,8 @@ def _royal_tyres_signature_html(body: str) -> tuple[str, dict[str, Path]]:
       </tr>
 
       <tr>
-        <td style="padding:16px 0 0 38px;">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0"
-                 style="border-collapse:collapse;">
-            <tr>
-              <td style="font-size:14px;font-weight:700;padding-right:10px;vertical-align:middle;">
-                Follow us
-              </td>
-              <td style="padding-right:8px;vertical-align:middle;">
-                <a href="https://www.facebook.com/RoyalTyresGroup"
-                   style="display:inline-block;width:28px;height:28px;line-height:28px;
-                          border:2px solid #ed1c24;border-radius:50%;text-align:center;
-                          text-decoration:none;color:#30369a;font-family:Arial,sans-serif;
-                          font-size:18px;font-weight:700;">f</a>
-              </td>
-              <td style="padding-right:8px;vertical-align:middle;">
-                <a href="https://www.instagram.com/royaltyresza/"
-                   style="display:inline-block;width:28px;height:28px;line-height:28px;
-                          border:2px solid #ed1c24;border-radius:50%;text-align:center;
-                          text-decoration:none;color:#30369a;font-family:Arial,sans-serif;
-                          font-size:18px;font-weight:700;">◎</a>
-              </td>
-              <td style="vertical-align:middle;">
-                <a href="https://www.youtube.com/@RoyalVulcanizing"
-                   style="display:inline-block;width:28px;height:28px;line-height:28px;
-                          border:2px solid #ed1c24;border-radius:50%;text-align:center;
-                          text-decoration:none;color:#30369a;font-family:Arial,sans-serif;
-                          font-size:14px;font-weight:700;">▶</a>
-              </td>
-            </tr>
-          </table>
+        <td style="padding:14px 0 0 38px;">
+          {social_html}
         </td>
       </tr>
 
