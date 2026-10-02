@@ -557,17 +557,69 @@
           </div>
         </section>
 
-        <label class="preview-recipient">
-          <span>Send PDF to</span>
-          <input
-            type="email"
-            autocomplete="email"
-            placeholder="Enter recipient email address"
-            [value]="recipientEmail()"
-            (input)="recipientEmail.set($any($event.target).value)"
-          />
-          <small>Enter the email address that should receive this technical report.</small>
-        </label>
+        <section class="preview-email-card" aria-label="Email delivery">
+          <label class="email-field">
+            <span>Email</span>
+            <input
+              type="email"
+              autocomplete="email"
+              placeholder="name@company.co.za"
+              [value]="recipientEmail()"
+              (input)="recipientEmail.set($any($event.target).value)"
+            />
+            @if (recipientEmail().trim() && !hasRecipientEmail()) {
+              <small class="email-error">Enter a valid email address.</small>
+            }
+          </label>
+
+          <div class="cc-field">
+            <div class="cc-heading">
+              <span>Default CC</span>
+              <small>Add one or multiple email addresses.</small>
+            </div>
+
+            <div class="cc-entry">
+              <input
+                type="email"
+                autocomplete="email"
+                placeholder="name@company.co.za"
+                [value]="ccInput()"
+                [disabled]="ccRecipients().length >= 5"
+                (input)="ccInput.set($any($event.target).value); ccError.set('')"
+                (keydown)="onCcKeydown($event)"
+              />
+              <button
+                type="button"
+                class="cc-add-button"
+                [disabled]="!ccInput().trim() || ccRecipients().length >= 5"
+                (click)="addCcRecipient()"
+              >
+                + Add
+              </button>
+            </div>
+
+            @if (ccRecipients().length) {
+              <div class="cc-list" aria-label="CC recipients">
+                @for (email of ccRecipients(); track email) {
+                  <span class="cc-chip">
+                    {{ email }}
+                    <button
+                      type="button"
+                      aria-label="Remove CC recipient"
+                      (click)="removeCcRecipient(email)"
+                    >
+                      ×
+                    </button>
+                  </span>
+                }
+              </div>
+            }
+
+            @if (ccError()) {
+              <small class="email-error">{{ ccError() }}</small>
+            }
+          </div>
+        </section>
 
         <footer class="wizard-actions preview-actions">
           <button
