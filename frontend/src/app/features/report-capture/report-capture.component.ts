@@ -41,6 +41,9 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly tyreVehicleType = signal<'Car' | 'Horse' | 'Trailer'>('Horse');
   readonly readonlyView = computed(() => this.auth.hasRole('viewer'));
   readonly recipientEmail = signal('');
+  readonly ccInput = signal('');
+  readonly ccRecipients = signal<string[]>([]);
+  readonly ccError = signal('');
   readonly hasRecipientEmail = computed(() =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.recipientEmail().trim()),
   );
@@ -510,8 +513,46 @@ export class ReportCaptureComponent implements OnDestroy {
       { label: 'Serial number', value: values.serialNumber || 'Not captured' },
     ];
   }
+  addCcRecipient(): void {
+    const email = this.ccInput().trim().toLowerCase();
+    this.ccError.set('');
+
+    if (!email) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.ccError.set('Enter a valid email address.');
+      return;
+    }
+    if (email === this.recipientEmail().trim().toLowerCase()) {
+      this.ccError.set('This email is already the main recipient.');
+      return;
+    }
+    if (this.ccRecipients().includes(email)) {
+      this.ccError.set('This CC email has already been added.');
+      return;
+    }
+    if (this.ccRecipients().length >= 5) {
+      this.ccError.set('You can add up to 5 CC email addresses.');
+      return;
+    }
+
+    this.ccRecipients.update((recipients) => [...recipients, email]);
+    this.ccInput.set('');
+  }
+
+  removeCcRecipient(email: string): void {
+    this.ccRecipients.update((recipients) => recipients.filter((item) => item !== email));
+    this.ccError.set('');
+  }
+
+  onCcKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Enter' && event.key !== ',') return;
+    event.preventDefault();
+    this.addCcRecipient();
+  }
+
   async sendReport(): Promise<'Queued' | DeliveryAttempt> {
     const recipientEmail = this.recipientEmail().trim().toLowerCase();
+    const cc = this.ccRecipients();
     if (!(await this.validateStep(3)) || !this.hasRecipientEmail()) {
       throw new Error('Enter a valid recipient email address before sending.');
     }
@@ -524,13 +565,13 @@ export class ReportCaptureComponent implements OnDestroy {
     await this.workflow.saveNow(current);
 
     if (!this.offline.online()) {
-      await this.workflow.queueDelivery(current, recipientEmail);
+      await this.workflow.queueDelivery(current, recipientEmail, cc);
       this.deliveryStatus.set('Queued');
       this.deliveryEmail.set(recipientEmail);
       return 'Queued';
     }
 
-    const result = await this.workflow.deliver(current, recipientEmail);
+    const result = await this.workflow.deliver(current, recipientEmail, cc);
     const updated = {
       ...this.report(),
       status: result.status === 'Sent'
