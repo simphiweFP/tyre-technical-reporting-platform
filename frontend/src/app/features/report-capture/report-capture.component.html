@@ -559,18 +559,14 @@
 
         <label class="preview-recipient">
           <span>Send PDF to</span>
-          <select
-            [value]="selectedRecipient()"
-            (change)="selectedRecipient.set($any($event.target).value)"
-          >
-            <option value="">No configured recipient</option>
-            @for (recipient of recipients(); track recipient.id) {
-              <option [value]="recipient.id">
-                {{ recipient.company }} · {{ recipient.email }}
-              </option>
-            }
-          </select>
-          <small>The configured branch recipient will receive the generated PDF.</small>
+          <input
+            type="email"
+            autocomplete="email"
+            placeholder="Enter recipient email address"
+            [value]="recipientEmail()"
+            (input)="recipientEmail.set($any($event.target).value)"
+          />
+          <small>Enter the email address that should receive this technical report.</small>
         </label>
 
         <footer class="wizard-actions preview-actions">
@@ -582,14 +578,16 @@
           >
             ▤ &nbsp; {{ pdfBusy() ? 'Generating…' : 'Download PDF' }}
           </button>
-          <button
-            type="button"
-            class="primary-action"
-            [disabled]="!hasSelectedRecipient() || submitting()"
-            (click)="sendFromPreview()"
-          >
-            ✉ &nbsp; {{ submitting() ? 'Sending…' : 'Send report' }}
-          </button>
+          @if (hasRecipientEmail()) {
+            <button
+              type="button"
+              class="primary-action"
+              [disabled]="submitting()"
+              (click)="sendFromPreview()"
+            >
+              ✉ &nbsp; {{ submitting() ? 'Sending…' : 'Send report' }}
+            </button>
+          }
         </footer>
       </section>
     }
