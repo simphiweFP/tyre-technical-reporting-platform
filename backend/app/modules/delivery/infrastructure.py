@@ -6,7 +6,7 @@ from email.message import EmailMessage as SmtpMessage
 from email.utils import make_msgid
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.core.config import Settings
@@ -160,34 +160,13 @@ def _attach_inline_image(html_part, cid: str, path: Path) -> None:
     )
 
 
-class Recipient(Base):
-    __tablename__ = "report_recipients"
-
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    company: Mapped[str] = mapped_column(String(150))
-    contact_name: Mapped[str] = mapped_column(String(150), default="")
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    default_cc: Mapped[str] = mapped_column(Text, default="")
-    branch_code: Mapped[str] = mapped_column(String(20), default="All Branches")
-    category: Mapped[str] = mapped_column(String(100), default="All Categories")
-    escalation_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC)
-    )
-    deleted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, index=True
-    )
-
 
 class DeliveryAttempt(Base):
     __tablename__ = "report_delivery_attempts"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     claim_reference: Mapped[str] = mapped_column(String(80), index=True)
-    recipient_id: Mapped[UUID] = mapped_column(
-        ForeignKey("report_recipients.id"), index=True
-    )
+    recipient_id: Mapped[UUID | None] = mapped_column(nullable=True, index=True)
     recipient_email: Mapped[str] = mapped_column(String(255))
     cc: Mapped[list] = mapped_column(JSON, default=list)
     report_payload: Mapped[dict] = mapped_column(JSON)
