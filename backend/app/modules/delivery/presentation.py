@@ -13,7 +13,6 @@ from backend.app.modules.auditing.infrastructure import AuditEvent
 from backend.app.modules.delivery.application import ReportDeliveryService
 from backend.app.modules.delivery.infrastructure import (
     DeliveryAttempt,
-    Recipient,
     SmtpEmailGateway,
 )
 from backend.app.modules.delivery.schemas import (
@@ -21,9 +20,6 @@ from backend.app.modules.delivery.schemas import (
     DeliveryRequest,
     DeliveryResponse,
     FollowUpRequest,
-    RecipientCreate,
-    RecipientResponse,
-    RecipientUpdate,
 )
 from backend.app.modules.document_generation.application import GenerateTechnicalReport
 from backend.app.modules.document_generation.infrastructure import (
@@ -38,177 +34,6 @@ from backend.app.modules.reports.infrastructure import (
 )
 
 router = APIRouter(tags=["Report delivery"])
-
-
-def _store_cc(addresses) -> str:
-    return ",".join(dict.fromkeys(str(address).lower() for address in addresses))
-
-
-def _read_cc(addresses: str) -> list[str]:
-    return [address.strip() for address in addresses.split(",") if address.strip()]
-
-
-@router.get("/recipients", response_model=list[RecipientResponse])
-def recipients(
-    active_only: bool = Query(default=True),
-    branch: str = "",
-    category: str = "",
-    db: Session = Depends(get_db),
-    _: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
-):
-    query = (
-        select(Recipient)
-        .where(Recipient.deleted_at.is_(None))
-        .order_by(Recipient.company)
-    )
-    if active_only:
-        query = query.where(Recipient.is_active.is_(True))
-    if branch:
-        query = query.where(Recipient.branch_code.in_(("All Branches", branch)))
-    if category:
-        query = query.where(Recipient.category.in_(("All Categories", category)))
-    return db.scalars(query).all()
-
-
-@router.post(
-    "/recipients", response_model=RecipientResponse, status_code=status.HTTP_201_CREATED
-)
-def create_recipient(
-    request: RecipientCreate,
-    db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.ADMINISTRATOR)),
-):
-    email = str(request.email).lower()
-    recipient = db.scalar(select(Recipient).where(Recipient.email == email))
-    if recipient and recipient.deleted_at is None:
-        raise HTTPException(
-            status_code=409,
-            detail="A recipient with this email already exists",
-        )
-
-    restored = recipient is not None
-    if restored:
-        recipient.company = request.company.strip()
-        recipient.contact_name = request.contact_name.strip()
-        recipient.default_cc = _store_cc(request.default_cc)
-        recipient.branch_code = request.branch_code.strip()
-        recipient.category = request.category.strip()
-        recipient.escalation_enabled = request.escalation_enabled
-        recipient.is_active = True
-        recipient.deleted_at = None
-    else:
-        recipient = Recipient(
-            company=request.company.strip(),
-            contact_name=request.contact_name.strip(),
-            email=email,
-            default_cc=_store_cc(request.default_cc),
-            branch_code=request.branch_code.strip(),
-            category=request.category.strip(),
-            escalation_enabled=request.escalation_enabled,
-        )
-        db.add(recipient)
-        db.flush()
-
-    db.add(
-        AuditEvent(
-            actor_id=user.id,
-            action="recipient.restored" if restored else "recipient.created",
-            entity_type="recipient",
-            entity_id=str(recipient.id),
-            details={"email": recipient.email},
-        )
-    )
-    db.commit()
-    db.refresh(recipient)
-    return recipient
-
-
-@router.put("/recipients/{recipient_id}", response_model=RecipientResponse)
-def update_recipient(
-    recipient_id: UUID,
-    request: RecipientUpdate,
-    db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.ADMINISTRATOR)),
-):
-    recipient = db.get(Recipient, recipient_id)
-    if not recipient or recipient.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Recipient not found")
-    duplicate = db.scalar(
-        select(Recipient).where(
-            Recipient.email == str(request.email).lower(),
-            Recipient.id != recipient.id,
-        )
-    )
-    if duplicate:
-        raise HTTPException(
-            status_code=409, detail="A recipient with this email already exists"
-        )
-    for field, value in request.model_dump().items():
-        if field == "email":
-            value = str(value or "").lower()
-        elif field == "default_cc":
-            value = _store_cc(value)
-        setattr(recipient, field, value)
-    db.add(
-        AuditEvent(
-            actor_id=user.id,
-            action="recipient.updated",
-            entity_type="recipient",
-            entity_id=str(recipient.id),
-            details={},
-        )
-    )
-    db.commit()
-    db.refresh(recipient)
-    return recipient
-
-
-@router.patch("/recipients/{recipient_id}/status", response_model=RecipientResponse)
-def set_recipient_status(
-    recipient_id: UUID,
-    is_active: bool,
-    db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.ADMINISTRATOR)),
-):
-    recipient = db.get(Recipient, recipient_id)
-    if not recipient or recipient.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Recipient not found")
-    recipient.is_active = is_active
-    db.add(
-        AuditEvent(
-            actor_id=user.id,
-            action="recipient.status_changed",
-            entity_type="recipient",
-            entity_id=str(recipient.id),
-            details={"is_active": is_active},
-        )
-    )
-    db.commit()
-    db.refresh(recipient)
-    return recipient
-
-
-@router.delete("/recipients/{recipient_id}", status_code=status.HTTP_204_NO_CONTENT)
-def soft_delete_recipient(
-    recipient_id: UUID,
-    db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.ADMINISTRATOR)),
-):
-    recipient = db.get(Recipient, recipient_id)
-    if not recipient or recipient.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Recipient not found")
-    recipient.is_active = False
-    recipient.deleted_at = datetime.now(UTC)
-    db.add(
-        AuditEvent(
-            actor_id=user.id,
-            action="recipient.soft_deleted",
-            entity_type="recipient",
-            entity_id=str(recipient.id),
-            details={"email": recipient.email},
-        )
-    )
-    db.commit()
 
 
 @router.post("/reports/deliver", response_model=DeliveryResponse)
@@ -234,22 +59,13 @@ def deliver_report(
     if user.role == Role.REPORT_CAPTURER and record.created_by != user.id:
         raise HTTPException(status_code=404, detail="Report not found")
 
-    recipient = db.get(Recipient, request.recipient_id)
-    if not recipient:
-        raise HTTPException(status_code=422, detail="Recipient not found")
+    recipient_email = str(request.recipient_email).strip().lower()
+    cc = list(dict.fromkeys(str(address).lower() for address in request.cc))
 
-    cc = [str(address).lower() for address in request.cc]
-    for address in _read_cc(recipient.default_cc):
-        if address not in cc:
-            cc.append(address)
-
-    # Create and commit the delivery row before *any* delivery/preflight work.
-    # From this point forward, every send attempt is visible in Delivery Centre,
-    # even when validation, PDF generation or SMTP delivery fails.
     attempt = DeliveryAttempt(
         claim_reference=claim,
-        recipient_id=recipient.id,
-        recipient_email=recipient.email,
+        recipient_id=None,
+        recipient_email=recipient_email,
         cc=cc,
         report_payload={"claimReference": claim},
         status="Pending",
@@ -262,7 +78,7 @@ def deliver_report(
             action="report.email_queued",
             entity_type="technical_report",
             entity_id=claim,
-            details={"recipient": recipient.email},
+            details={"recipient": recipient_email},
         )
     )
     db.commit()
@@ -284,7 +100,7 @@ def deliver_report(
                 entity_id=claim,
                 details={
                     "delivery_id": str(attempt.id),
-                    "recipient": recipient.email,
+                    "recipient": recipient_email,
                     "attempt": attempt.attempt_count,
                     "error": attempt.error_message,
                 },
@@ -295,25 +111,7 @@ def deliver_report(
         return attempt
 
     if record.status == "Draft":
-        return fail_attempt(
-            "The report must pass API validation before delivery."
-        )
-
-    if recipient.deleted_at is not None or not recipient.is_active:
-        return fail_attempt("The selected recipient is not active.")
-
-    report_branch = str(record.report_data.get("branch") or "")
-    report_category = str(record.report_data.get("category") or "")
-
-    if recipient.branch_code not in {"All Branches", report_branch}:
-        return fail_attempt(
-            "Recipient is not configured for this branch."
-        )
-
-    if recipient.category not in {"All Categories", report_category}:
-        return fail_attempt(
-            "Recipient is not configured for this claim category."
-        )
+        return fail_attempt("The report must pass API validation before delivery.")
 
     try:
         return _service(db).deliver(attempt, user.id)
@@ -346,7 +144,7 @@ def deliver_report(
                 entity_id=claim,
                 details={
                     "delivery_id": str(persisted.id),
-                    "recipient": recipient.email,
+                    "recipient": recipient_email,
                     "attempt": persisted.attempt_count,
                     "error": persisted.error_message,
                 },
