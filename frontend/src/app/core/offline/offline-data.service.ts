@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ReportRecipient, TechnicalReport } from '../../shared/models/report.models';
+import { TechnicalReport } from '../../shared/models/report.models';
 import { AuthService } from '../auth/auth.service';
 import type { ReportReferenceData } from '../data/report.store';
 
@@ -38,7 +38,6 @@ interface PendingDelivery {
   ownerId: string;
   reportId: string;
   claimReference: string;
-  recipientId: string;
   recipientEmail: string;
   report: TechnicalReport;
   queuedAt: string;
@@ -180,33 +179,17 @@ export class OfflineDataService {
   }
 
 
-  async cacheRecipients(recipients: ReportRecipient[]): Promise<void> {
-    await this.put('meta', { key: this.userMetaKey('report-recipients'), value: recipients } satisfies MetaRecord);
-  }
-
-  async cachedRecipients(branch = '', category = ''): Promise<ReportRecipient[]> {
-    const record = await this.getItem<MetaRecord>('meta', this.userMetaKey('report-recipients'));
-    const recipients = (record?.value as ReportRecipient[] | undefined) ?? [];
-    return recipients.filter(
-      (recipient) =>
-        recipient.is_active &&
-        (!branch || recipient.branch_code === 'All Branches' || recipient.branch_code === branch) &&
-        (!category || recipient.category === 'All Categories' || recipient.category === category),
-    );
-  }
-
   async queueDelivery(
     report: TechnicalReport,
-    recipientId: string,
     recipientEmail: string,
   ): Promise<void> {
+    const normalizedEmail = recipientEmail.trim().toLowerCase();
     await this.put('deliveries', {
-      key: `${report.id}:${recipientId}`,
+      key: `${report.id}:${normalizedEmail}`,
       ownerId: this.currentUserId(),
       reportId: report.id,
       claimReference: report.claimReference,
-      recipientId,
-      recipientEmail,
+      recipientEmail: normalizedEmail,
       report,
       queuedAt: new Date().toISOString(),
       error: '',
@@ -304,7 +287,7 @@ export class OfflineDataService {
         try {
           const result = await firstValueFrom(
             this.http.post<{ status: string }>(`${environment.apiUrl}/reports/deliver`, {
-              recipient_id: item.recipientId,
+              recipient_email: item.recipientEmail,
               report: item.report,
               cc: [],
             }),
