@@ -326,6 +326,10 @@ def delivery_details(
         "subject": attempt.email_subject or f"Royal Tyres technical report {claim}",
         "body": attempt.email_body or "",
         "attachment_name": attempt.attachment_name or f"Technical_Report_{claim}.pdf",
+        "attachment_names": [
+            entry["filename"]
+            for entry in attempt.report_payload.get("attachmentManifest") or []
+        ],
         "attachment_sha256": attempt.sent_pdf_sha256,
         "status": attempt.status,
         "message_id": attempt.message_id,
@@ -366,7 +370,7 @@ def delivery_pdf(
                 "attachmentContentType", "application/pdf"
             ),
             headers={
-                "Content-Disposition": f'{"attachment" if filename.endswith(".csv") else "inline"}; filename="{filename}"',
+                "Content-Disposition": f'{"attachment" if filename.endswith((".csv", ".zip")) else "inline"}; filename="{filename}"',
                 "X-Content-SHA256": attempt.sent_pdf_sha256 or "",
             },
         )

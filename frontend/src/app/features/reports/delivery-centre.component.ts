@@ -96,7 +96,10 @@ export class DeliveryCentreComponent implements OnDestroy {
     this.alerts.loading('Loading attachment…', 'Loading the saved report securely.');
     try {
       const detail = this.selected();
-      if (detail?.attachment_name.endsWith('.csv'))
+      if (
+        detail &&
+        (detail.attachment_name.endsWith('.csv') || detail.attachment_name.endsWith('.zip'))
+      )
         await this.delivery.downloadAttachment(id, detail.attachment_name);
       else await this.delivery.openDeliveryPdf(id);
       this.alerts.close();

@@ -202,19 +202,22 @@ export class ClaimsService {
       }),
     );
   }
-  sendWorkbook(
-    section: string,
-    filters: Record<string, string>,
+  sendClaim(
+    id: string,
+    attachments: string[],
     recipient_email: string,
     cc: string[],
     body: string,
+    instruction_id?: string,
   ) {
     return firstValueFrom(
-      this.http.post<ClaimDelivery>(
-        `${this.base}/workbook/${section}/send`,
-        { recipient_email, cc, body },
-        { params: filters },
-      ),
+      this.http.post<ClaimDelivery>(`${this.base}/${id}/email`, {
+        attachments,
+        recipient_email,
+        cc,
+        body,
+        instruction_id,
+      }),
     );
   }
   sendScorecard(

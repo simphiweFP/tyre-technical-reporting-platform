@@ -98,3 +98,9 @@ class DocumentSendRequest(BaseModel):
 class ReassignRequest(BaseModel):
     assigned_to: UUID
     notes: str = Field(default="", max_length=5000)
+
+
+class ClaimEmailRequest(DocumentSendRequest):
+    attachments: list[
+        Literal["technical", "tracker", "credit", "rejection", "tracker_csv"]
+    ] = Field(min_length=1, max_length=5)

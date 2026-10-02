@@ -38,6 +38,7 @@ from backend.app.modules.claims.documents import (
 )
 from backend.app.modules.claims.infrastructure import ClaimCase, CreditInstruction
 from backend.app.modules.claims.schemas import (
+    ClaimEmailRequest,
     ClaimUpdate,
     DocumentSendRequest,
     HandoverRequest,
@@ -308,33 +309,6 @@ def _workbook_csv(items, section):
             rows, [("Metric", "metric"), ("Value", "value")], "Other_Metrics.csv"
         )
     raise HTTPException(status_code=404, detail="Unknown workbook section")
-
-
-@router.post("/workbook/{section}/send", response_model=DeliveryResponse)
-def send_workbook(
-    section: str,
-    request: DocumentSendRequest,
-    supplier: str = "",
-    branch: str = "",
-    date_from: date | None = None,
-    date_to: date | None = None,
-    db: Session = Depends(get_db),
-    user: User = Depends(write_access),
-):
-    items = _views(
-        db, user, supplier=supplier, branch=branch, date_from=date_from, date_to=date_to
-    )
-    payload, filename = _workbook_csv(items, section)
-    return _send(
-        db,
-        user,
-        f"{section}_{date.today().isoformat()}",
-        f"{section}_csv",
-        payload,
-        filename,
-        request,
-        content_type="text/csv",
-    )
 
 
 @router.get("/scorecard/pdf")
@@ -704,6 +678,7 @@ def _send(
     request,
     case=None,
     content_type="application/pdf",
+    manifest=None,
 ):
     attempt = DeliveryAttempt(
         claim_reference=claim,
@@ -716,11 +691,18 @@ def _send(
             "claimReference": claim,
             "documentType": kind,
             "attachmentContentType": content_type,
+            "attachmentManifest": manifest,
         },
         document_type=kind,
-        email_subject=f"Royal Tyres {kind.replace('_', ' ')} {claim}",
+        email_subject=f"Royal Tyres claim {claim}"
+        if kind == "claim_email"
+        else f"Royal Tyres {kind.replace('_', ' ')} {claim}",
         email_body=request.body.strip()
-        or f"Please find the Royal Tyres {kind.replace('_', ' ')} attached.",
+        or (
+            f"Please find the selected documents for claim {claim} attached."
+            if kind == "claim_email"
+            else f"Please find the Royal Tyres {kind.replace('_', ' ')} attached."
+        ),
         attachment_name=filename,
         sent_pdf_base64=base64.b64encode(pdf).decode("ascii"),
         sent_pdf_sha256=hashlib.sha256(pdf).hexdigest(),
@@ -799,3 +781,70 @@ def activity(
             .order_by(AuditEvent.occurred_at.desc())
         ).all()
     ]
+
+
+@router.post("/{case_id}/email", response_model=DeliveryResponse)
+def email_claim(
+    case_id: UUID,
+    request: ClaimEmailRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(write_access),
+):
+    from zipfile import ZipFile
+
+    case = check_case(db, case_id, user)
+    selected = list(dict.fromkeys(request.attachments))
+    files = []
+    for kind in selected:
+        if kind == "tracker_csv":
+            content, filename = _workbook_csv([case_view(db, case)], "tracker")
+            filename = f"Claim_Tracker_{case_view(db, case)['claim_reference']}.csv"
+            content_type = "text/csv"
+        else:
+            if kind == "credit" and request.instruction_id:
+                latest = db.scalar(
+                    select(CreditInstruction)
+                    .where(CreditInstruction.case_id == case.id)
+                    .order_by(CreditInstruction.created_at.desc())
+                )
+                if not latest or latest.id != request.instruction_id:
+                    raise HTTPException(
+                        status_code=409, detail="Select the latest credit instruction"
+                    )
+            content, filename = _document(db, case, kind, request.instruction_id)
+            content_type = "application/pdf"
+        files.append((content, filename, content_type))
+    claim = case_view(db, case)["claim_reference"]
+    if len(files) == 1:
+        content, filename, content_type = files[0]
+        return _send(
+            db,
+            user,
+            claim,
+            "claim_email",
+            content,
+            filename,
+            request,
+            case,
+            content_type,
+        )
+    bundle = BytesIO()
+    with ZipFile(bundle, "w") as archive:
+        for content, filename, _ in files:
+            archive.writestr(filename, content)
+    manifest = [
+        {"filename": filename, "content_type": content_type}
+        for _, filename, content_type in files
+    ]
+    return _send(
+        db,
+        user,
+        claim,
+        "claim_email",
+        bundle.getvalue(),
+        f"Claim_Documents_{claim}.zip",
+        request,
+        case,
+        "application/zip",
+        manifest,
+    )

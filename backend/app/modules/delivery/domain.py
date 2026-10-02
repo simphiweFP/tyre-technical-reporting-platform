@@ -3,6 +3,13 @@ from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
+class EmailAttachment:
+    filename: str
+    content: bytes
+    content_type: str = "application/pdf"
+
+
+@dataclass(frozen=True, slots=True)
 class EmailMessage:
     subject: str
     body: str
@@ -13,6 +20,7 @@ class EmailMessage:
     in_reply_to: str | None = None
     references: str | None = None
     attachment_content_type: str = "application/pdf"
+    attachments: tuple[EmailAttachment, ...] = ()
 
 
 class EmailGateway(Protocol):

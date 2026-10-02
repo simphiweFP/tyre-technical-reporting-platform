@@ -872,3 +872,48 @@ fieldset:disabled select {
     border-top-color: #078a4e;
   }
 }
+
+#claims-management {
+  .claim-email-action {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
+    small {
+      color: #5c6e88;
+    }
+  }
+  .attachment-picker {
+    margin: 0 0 18px;
+    border: 1px solid #d0dbe8;
+    border-radius: 6px;
+    padding: 12px 14px;
+    legend {
+      font-weight: 700;
+    }
+    p {
+      margin: 0 0 10px;
+      font-size: 11px;
+      color: #5c6e88;
+    }
+  }
+  .attachment-option {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    font-size: 11px;
+    input {
+      min-height: 0;
+      width: 16px;
+      height: 16px;
+      accent-color: #0872d3;
+    }
+    small {
+      display: block;
+      margin-top: 3px;
+    }
+  }
+}

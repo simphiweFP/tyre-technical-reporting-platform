@@ -49,7 +49,14 @@ export class ClaimsComponent {
   readonly notice = signal('');
   readonly handoverOpen = signal(false);
   readonly sendOpen = signal(false);
-  readonly workbookSend = signal(false);
+  attachmentSelection: Record<string, boolean> = {};
+  readonly attachmentOptions = [
+    { key: 'technical', label: 'Technical report (PDF)' },
+    { key: 'tracker', label: 'Claim tracker (PDF)' },
+    { key: 'credit', label: 'Credit instruction (PDF)' },
+    { key: 'rejection', label: 'Rejection report (PDF)' },
+    { key: 'tracker_csv', label: 'Claim tracker (CSV)' },
+  ];
   readonly canWrite = computed(() => this.auth.hasRole('claims_administrator'));
   readonly canHandover = computed(() => this.auth.hasRole('administrator', 'report_capturer'));
   readonly credits = computed(() =>
@@ -474,13 +481,23 @@ export class ClaimsComponent {
       this.busy.set(false);
     }
   }
-  prepareWorkbookEmail(section = this.tab()): void {
-    this.prepareSend(section);
-    this.workbookSend.set(true);
-    this.sendForm.email = '';
+  selectedAttachments(): string[] {
+    return this.attachmentOptions
+      .filter(
+        (option) => this.attachmentSelection[option.key] && this.attachmentAvailable(option.key),
+      )
+      .map((option) => option.key);
   }
-  prepareSend(kind: string, instruction?: string): void {
-    this.workbookSend.set(false);
+  attachmentAvailable(key: string): boolean {
+    const claim = this.selected();
+    if (!claim) return false;
+    if (key === 'credit') return claim.instructions.length > 0;
+    if (key === 'rejection') return claim.data.supplier_status === 'Rejected';
+    return true;
+  }
+  prepareSend(kind = 'technical', instruction?: string): void {
+    if (!this.selected()) return;
+    this.attachmentSelection = { [kind]: true };
     this.sendForm = {
       kind,
       email: kind === 'credit' ? (this.selected()?.owner_email ?? '') : '',
@@ -504,25 +521,20 @@ export class ClaimsComponent {
     this.error.set('');
     try {
       const item = this.selected();
-      const result = this.workbookSend()
-        ? await this.api.sendWorkbook(
-            this.sendForm.kind,
-            this.activeFilters(true),
-            this.sendForm.email,
-            cc,
-            this.sendForm.body,
-          )
-        : await this.api.send(
-            item!.id,
-            this.sendForm.kind,
-            this.sendForm.email,
-            cc,
-            this.sendForm.body,
-            this.sendForm.instruction_id || undefined,
-          );
+      if (!item || !this.selectedAttachments().length) {
+        this.error.set('Select at least one attachment for this claim.');
+        return;
+      }
+      const result = await this.api.sendClaim(
+        item.id,
+        this.selectedAttachments(),
+        this.sendForm.email,
+        cc,
+        this.sendForm.body,
+        this.sendForm.instruction_id || undefined,
+      );
       this.sendOpen.set(false);
-      if (item && !this.workbookSend())
-        this.deliveries.set(await this.api.deliveries(item.claim_reference));
+      this.deliveries.set(await this.api.deliveries(item.claim_reference));
       if (result.status === 'Sent')
         await this.alerts.success(
           'Report accepted',

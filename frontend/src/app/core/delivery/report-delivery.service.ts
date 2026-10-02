@@ -22,6 +22,7 @@ export interface DeliveryDetail {
   subject: string;
   body: string;
   attachment_name: string;
+  attachment_names?: string[];
   document_type: string;
   status: string;
   message_id: string | null;

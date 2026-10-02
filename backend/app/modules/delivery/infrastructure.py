@@ -274,6 +274,14 @@ class SmtpEmailGateway:
                 subtype=subtype,
                 filename=message.attachment_name,
             )
+        for attachment in message.attachments:
+            maintype, subtype = attachment.content_type.split("/", 1)
+            email.add_attachment(
+                attachment.content,
+                maintype=maintype,
+                subtype=subtype,
+                filename=attachment.filename,
+            )
         with smtplib.SMTP(
             self.settings.smtp_host, self.settings.smtp_port, timeout=20
         ) as client:

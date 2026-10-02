@@ -3,6 +3,8 @@ import hashlib
 import re
 import smtplib
 from datetime import UTC, datetime, timedelta
+from io import BytesIO
+from zipfile import ZipFile
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -10,7 +12,11 @@ from sqlalchemy.orm import Session
 from backend.app.core.config import get_settings
 from backend.app.modules.auditing.infrastructure import AuditEvent
 from backend.app.modules.claims.automation import continue_report
-from backend.app.modules.delivery.domain import EmailGateway, EmailMessage
+from backend.app.modules.delivery.domain import (
+    EmailAttachment,
+    EmailGateway,
+    EmailMessage,
+)
 from backend.app.modules.delivery.infrastructure import DeliveryAttempt
 from backend.app.modules.document_generation.application import GenerateTechnicalReport
 from backend.app.modules.identity.infrastructure import User
@@ -225,13 +231,25 @@ class ReportDeliveryService:
             attempt.sent_pdf_base64 = base64.b64encode(pdf).decode("ascii")
             attempt.sent_pdf_sha256 = hashlib.sha256(pdf).hexdigest()
 
+        attachments = ()
+        if attempt.report_payload.get("attachmentManifest"):
+            with ZipFile(BytesIO(pdf)) as archive:
+                attachments = tuple(
+                    EmailAttachment(
+                        entry["filename"],
+                        archive.read(entry["filename"]),
+                        entry["content_type"],
+                    )
+                    for entry in attempt.report_payload["attachmentManifest"]
+                )
         message = EmailMessage(
             subject=subject,
             body=body,
             to=(attempt.recipient_email,),
             cc=tuple(attempt.cc),
             attachment_name=attachment_name,
-            attachment=pdf,
+            attachment=None if attachments else pdf,
+            attachments=attachments,
             attachment_content_type=attempt.report_payload.get(
                 "attachmentContentType", "application/pdf"
             ),

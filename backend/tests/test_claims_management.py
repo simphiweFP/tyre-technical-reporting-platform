@@ -563,48 +563,41 @@ def test_manual_handover_waits_for_sent_email(client, claims_setup):
     assert response.status_code == 422
 
 
-@pytest.mark.parametrize("section", ["tracker", "credit", "scorecard", "metrics"])
-def test_workbook_csv_email_matches_export_and_is_scoped(
-    client, claims_setup, monkeypatch, section
+def test_claim_email_only_attaches_selected_files_and_one_claim_csv(
+    client, claims_setup, monkeypatch
 ):
     crew = claims_setup
     claim = handover(client, crew)
-    update(
-        client,
-        crew,
-        claim,
-        supplier="=Unsafe Supplier",
-        supplier_status="Accepted",
-        supplier_feedback_date="2026-10-02",
-        accepted_percentage=100,
-        customer_credit_percentage=75,
-    )
     captured = []
     monkeypatch.setattr(
         delivery_presentation.SmtpEmailGateway,
         "send",
-        lambda self, message: captured.append(message) or "csv-message",
+        lambda self, message: captured.append(message) or "claim-mail",
     )
-    exported = client.get(f"/api/v1/claims/export/{section}", headers=crew["claims"])
-    response = client.post(
-        f"/api/v1/claims/workbook/{section}/send",
+    sent = client.post(
+        f"/api/v1/claims/{claim['id']}/email",
         headers=crew["claims"],
         json={
             "recipient_email": "accounts@example.com",
-            "cc": ["manager@example.com"],
-            "body": "Claim report",
+            "attachments": ["tracker", "tracker_csv"],
         },
     )
-    assert response.status_code == 200 and response.json()["status"] == "Sent", (
-        response.text
-    )
-    assert captured[0].attachment == exported.content
-    assert captured[0].attachment_name.endswith(".csv")
-    assert captured[0].attachment_content_type == "text/csv"
-    delivery_id = response.json()["id"]
+    assert sent.status_code == 200 and sent.json()["status"] == "Sent", sent.text
+    message = captured[0]
+    assert message.attachment is None
+    assert len(message.attachments) == 2
+    assert {a.filename for a in message.attachments} == {
+        "Claim_Tracker_I000291.pdf",
+        "Claim_Tracker_I000291.csv",
+    }
+    csv_file = next(a for a in message.attachments if a.content_type == "text/csv")
+    rows = list(csv.reader(StringIO(csv_file.content.decode("utf-8-sig"))))
+    assert len(rows) == 2 and rows[1][1] == "I000291"
+    delivery_id = sent.json()["id"]
     saved = client.get(f"/api/v1/deliveries/{delivery_id}/pdf", headers=crew["claims"])
-    assert saved.status_code == 200 and saved.content == exported.content
-    assert saved.headers["content-type"].startswith("text/csv")
+    assert saved.headers["content-type"] == "application/zip"
+    with ZipFile(BytesIO(saved.content)) as archive:
+        assert set(archive.namelist()) == {a.filename for a in message.attachments}
     assert (
         client.get(
             f"/api/v1/deliveries/{delivery_id}/pdf", headers=crew["other"]
@@ -613,17 +606,32 @@ def test_workbook_csv_email_matches_export_and_is_scoped(
     )
     assert (
         client.post(
-            f"/api/v1/claims/workbook/{section}/send",
+            f"/api/v1/claims/{claim['id']}/email",
             headers=crew["admin"],
-            json={"recipient_email": "accounts@example.com"},
+            json={
+                "recipient_email": "accounts@example.com",
+                "attachments": ["tracker"],
+            },
         ).status_code
         == 403
     )
-    history = client.get("/api/v1/deliveries", headers=crew["claims"]).json()["items"]
-    assert any(item["id"] == delivery_id for item in history)
 
 
-def test_csv_retry_preserves_original_attachment(client, claims_setup, monkeypatch):
+def test_claim_email_rejects_empty_or_unavailable_attachments(client, claims_setup):
+    crew = claims_setup
+    claim = handover(client, crew)
+    for selections in [[], ["credit"], ["rejection"], ["scorecard"]]:
+        response = client.post(
+            f"/api/v1/claims/{claim['id']}/email",
+            headers=crew["claims"],
+            json={"recipient_email": "accounts@example.com", "attachments": selections},
+        )
+        assert response.status_code == 422, response.text
+
+
+def test_claim_email_retry_keeps_selected_attachments(
+    client, claims_setup, monkeypatch
+):
     crew = claims_setup
     claim = handover(client, crew)
     captured = []
@@ -636,26 +644,28 @@ def test_csv_retry_preserves_original_attachment(client, claims_setup, monkeypat
 
     monkeypatch.setattr(delivery_presentation.SmtpEmailGateway, "send", fail)
     response = client.post(
-        "/api/v1/claims/workbook/tracker/send",
+        f"/api/v1/claims/{claim['id']}/email",
         headers=crew["claims"],
-        json={"recipient_email": "accounts@example.com"},
+        json={
+            "recipient_email": "accounts@example.com",
+            "attachments": ["tracker", "tracker_csv"],
+        },
     )
-    assert response.status_code == 200 and response.json()["status"] == "Failed"
-    update(client, crew, claim, supplier="Changed after email")
+    assert response.status_code == 200 and response.json()["status"] == "Failed", (
+        response.text
+    )
+    update(client, crew, claim, supplier="Changed after sending")
     monkeypatch.setattr(
         delivery_presentation.SmtpEmailGateway,
         "send",
-        lambda self, message: captured.append(message) or "retry-csv",
+        lambda self, message: captured.append(message) or "retry",
     )
-    retried = client.post(
+    retry = client.post(
         f"/api/v1/reports/deliveries/{response.json()['id']}/retry",
         headers=crew["claims"],
     )
-    assert retried.status_code == 200 and retried.json()["status"] == "Sent", (
-        retried.text
-    )
-    assert captured[0].attachment == captured[1].attachment
-    assert captured[1].attachment_content_type == "text/csv"
+    assert retry.status_code == 200 and retry.json()["status"] == "Sent", retry.text
+    assert captured[0].attachments == captured[1].attachments
 
 
 @pytest.mark.parametrize(
@@ -664,7 +674,7 @@ def test_csv_retry_preserves_original_attachment(client, claims_setup, monkeypat
 )
 def test_smtp_attachment_uses_correct_mime_type(monkeypatch, content_type, filename):
     from backend.app.core.config import Settings
-    from backend.app.modules.delivery.domain import EmailMessage
+    from backend.app.modules.delivery.domain import EmailAttachment, EmailMessage
     from backend.app.modules.delivery.infrastructure import SmtpEmailGateway
 
     sent = []
@@ -698,9 +708,42 @@ def test_smtp_attachment_uses_correct_mime_type(monkeypatch, content_type, filen
             attachment_name=filename,
             attachment=b"report-content",
             attachment_content_type=content_type,
+            attachments=(EmailAttachment("Extra.csv", b"extra-csv", "text/csv"),),
         )
     )
-    attachment = next(sent[0].iter_attachments())
+    attachments = list(sent[0].iter_attachments())
+    assert len(attachments) == 2
+    assert attachments[1].get_filename() == "Extra.csv"
+    assert attachments[1].get_payload(decode=True) == b"extra-csv"
+    attachment = attachments[0]
     assert attachment.get_content_type() == content_type
     assert attachment.get_filename() == filename
     assert attachment.get_payload(decode=True) == b"report-content"
+
+
+def test_single_claim_csv_is_attached_without_a_bundle(
+    client, claims_setup, monkeypatch
+):
+    crew = claims_setup
+    claim = handover(client, crew)
+    captured = []
+    monkeypatch.setattr(
+        delivery_presentation.SmtpEmailGateway,
+        "send",
+        lambda self, message: captured.append(message) or "csv-only",
+    )
+    sent = client.post(
+        f"/api/v1/claims/{claim['id']}/email",
+        headers=crew["claims"],
+        json={
+            "recipient_email": "accounts@example.com",
+            "attachments": ["tracker_csv"],
+        },
+    )
+    assert sent.status_code == 200 and sent.json()["status"] == "Sent", sent.text
+    assert captured[0].attachment_name == "Claim_Tracker_I000291.csv"
+    assert captured[0].attachment_content_type == "text/csv"
+    assert not captured[0].attachments
+    assert (
+        len(list(csv.reader(StringIO(captured[0].attachment.decode("utf-8-sig"))))) == 2
+    )

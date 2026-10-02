@@ -161,10 +161,20 @@
       <section class="attachment-card">
         <div>
           <small>Attachment</small>
-          <strong>{{ detail.attachment_name }}</strong>
+          <strong>{{
+            detail.attachment_names?.length
+              ? detail.attachment_names?.join(' · ')
+              : detail.attachment_name
+          }}</strong>
         </div>
         <button type="button" (click)="viewPdf(detail.id)">
-          {{ detail.attachment_name.endsWith('.csv') ? 'Download CSV' : 'View PDF' }}
+          {{
+            detail.attachment_name.endsWith('.zip')
+              ? 'Download attachments'
+              : detail.attachment_name.endsWith('.csv')
+                ? 'Download CSV'
+                : 'View PDF'
+          }}
         </button>
       </section>
 
