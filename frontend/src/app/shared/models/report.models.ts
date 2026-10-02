@@ -86,17 +86,6 @@ export interface ReportPhoto {
   storageId?: string;
   aiComment?: string;
 }
-export interface ReportRecipient {
-  id: string;
-  company: string;
-  contact_name: string;
-  email: string;
-  default_cc: string[];
-  is_active: boolean;
-  branch_code: string;
-  category: string;
-  escalation_enabled: boolean;
-}
 export interface DeliveryAttempt {
   id: string;
   claim_reference: string;
