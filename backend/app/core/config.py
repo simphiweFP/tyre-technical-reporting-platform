@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     microsoft_client_id: str = ""
     microsoft_client_secret: str = ""
     microsoft_redirect_uri: str = "http://localhost:8000/api/v1/auth/microsoft/callback"
+    bounce_monitor_enabled: bool = False
+    bounce_monitor_mailbox: str = ""
+    bounce_monitor_poll_seconds: int = 60
+    bounce_monitor_lookback_hours: int = 72
+    bounce_monitor_batch_size: int = 25
+    bounce_monitor_timeout_seconds: float = 15.0
     jwt_secret_file: str = ""
     smtp_password_file: str = ""
     microsoft_client_secret_file: str = ""
