@@ -10,9 +10,16 @@
     </div>
     <nav aria-label="Primary navigation">
       <a routerLink="/dashboard" routerLinkActive="active"><span>⌂</span>Overview</a>
-      <a routerLink="/reports" routerLinkActive="active"><span>▤</span>Technical Claims</a>
+      @if (canViewReports()) {
+        <a routerLink="/reports" routerLinkActive="active"><span>▤</span>Technical Claims</a>
+      }
+      @if (auth.hasRole('administrator', 'claims_administrator', 'report_capturer')) {
+        <a routerLink="/claims" routerLinkActive="active"><span>▦</span>Claims Management</a>
+      }
       <a routerLink="/delivery-centre" routerLinkActive="active"><span>✉</span>Delivery Centre</a>
-      <a routerLink="/audit-viewer" routerLinkActive="active"><span>▣</span>Audit Viewer</a>
+      @if (canViewReports()) {
+        <a routerLink="/audit-viewer" routerLinkActive="active"><span>▣</span>Audit Viewer</a>
+      }
       @if (auth.hasRole('administrator')) {
         <a routerLink="/admin/users" routerLinkActive="active"><span>♟</span>User Administration</a>
         <a routerLink="/admin/branches" routerLinkActive="active"><span>●</span>Branches</a>

@@ -1,0 +1,501 @@
+import { DatePipe, DecimalPipe, CurrencyPipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, computed, inject, signal } from '@angular/core';
+import { FormsModule, NgForm } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { AuthService } from '../../core/auth/auth.service';
+import {
+  ClaimsService,
+  ClaimCase,
+  ClaimData,
+  ClaimOwner,
+  AvailableReport,
+  Supplier,
+  ClaimMetrics,
+  ClaimDelivery,
+  ClaimActivity,
+} from '../../core/claims/claims.service';
+import { SweetAlertService } from '../../core/ui/sweet-alert.service';
+
+@Component({
+  selector: 'app-claims',
+  imports: [FormsModule, DatePipe, DecimalPipe, CurrencyPipe, RouterLink],
+  templateUrl: './claims.component.html',
+  styleUrl: './claims.component.scss',
+})
+export class ClaimsComponent {
+  readonly auth = inject(AuthService);
+  private readonly api = inject(ClaimsService);
+  private readonly alerts = inject(SweetAlertService);
+  private readonly route = inject(ActivatedRoute);
+  readonly tab = signal('tracker');
+  readonly items = signal<ClaimCase[]>([]);
+  readonly total = signal(0);
+  readonly offset = signal(0);
+  readonly selected = signal<ClaimCase | null>(null);
+  readonly owners = signal<ClaimOwner[]>([]);
+  readonly available = signal<AvailableReport[]>([]);
+  readonly suppliers = signal<Supplier[]>([]);
+  readonly stats = signal<ClaimMetrics | null>(null);
+  readonly deliveries = signal<ClaimDelivery[]>([]);
+  readonly activity = signal<ClaimActivity[]>([]);
+  readonly busy = signal(false);
+  readonly error = signal('');
+  readonly notice = signal('');
+  readonly handoverOpen = signal(false);
+  readonly sendOpen = signal(false);
+  readonly canWrite = computed(() => this.auth.hasRole('administrator', 'claims_administrator'));
+  readonly canHandover = computed(() => this.auth.hasRole('administrator', 'report_capturer'));
+  readonly credits = computed(() =>
+    this.items().filter(
+      (i) => i.data.supplier_status === 'Accepted' || i.data.supplier_status === 'Rejected',
+    ),
+  );
+  readonly pendingInstructions = computed(() =>
+    this.items().flatMap((c) =>
+      c.instructions.filter((i) => !i.acknowledged_at).map((i) => ({ claim: c, instruction: i })),
+    ),
+  );
+  filters = {
+    search: '',
+    supplier: '',
+    branch: '',
+    decision: '',
+    workflow_status: '',
+    date_from: '',
+    date_to: '',
+  };
+  form: ClaimData | null = null;
+  workflowStatus = 'In progress';
+  handover = { report_id: '', assigned_to: '', notes: '' };
+  reassignment = '';
+  instructionNotes = '';
+  sendForm = { kind: 'tracker', email: '', cc: '', body: '', instruction_id: '' };
+  importFile: File | null = null;
+  importOwner = '';
+  private searchTimer?: ReturnType<typeof setTimeout>;
+  private supplierRequest = 0;
+  private loadRequest = 0;
+  selectTab(key: string): void {
+    this.tab.set(key);
+    this.offset.set(0);
+    void this.load();
+  }
+
+  readonly tabs = [
+    { key: 'tracker', label: 'Claim Tracker' },
+    { key: 'credit', label: 'Instruction to Credit' },
+    { key: 'scorecard', label: 'Supplier Scorecard' },
+    { key: 'metrics', label: 'Other Metrics' },
+  ];
+  readonly sourceFields = [
+    { label: 'Customer Invoice no.', key: 'customer_invoice_number' },
+    { label: 'Branch', key: 'branch' },
+    { label: 'Brand', key: 'brand' },
+    { label: 'Tyre size', key: 'tyre_size' },
+    { label: 'Pattern', key: 'pattern' },
+    { label: 'Serial number', key: 'serial_number' },
+  ];
+  readonly trackerColumns = [
+    { label: 'Date', key: 'claim_date' },
+    { label: 'Claim Reference', key: 'claim_reference' },
+    { label: 'Supplier', key: 'supplier' },
+    { label: 'Customer name', key: 'customer_name' },
+    ...this.sourceFields.slice(0, 1),
+    ...this.sourceFields.slice(1),
+    { label: 'Damage', key: 'damage' },
+    { label: 'RTD mm', key: 'remaining_tread_depth' },
+    { label: 'OTD mm', key: 'original_tread_depth' },
+    { label: '% remaining', key: 'remaining_percentage' },
+    { label: 'Submitted to Supplier', key: 'supplier_submitted_date' },
+    { label: 'Status', key: 'supplier_status' },
+    { label: '% Accepted', key: 'accepted_percentage' },
+    { label: 'Feedback date', key: 'supplier_feedback_date' },
+    { label: '% to Credit', key: 'customer_credit_percentage' },
+    { label: 'Credit note /Invoice ref', key: 'credit_note_reference' },
+    { label: 'Credit date', key: 'customer_credit_date' },
+    { label: 'Supplier Offset Invoice no.', key: 'supplier_offset_invoice' },
+    { label: 'Offset date', key: 'supplier_offset_date' },
+    { label: 'Assigned to', key: 'owner_name' },
+    { label: 'Progress', key: 'workflow_status' },
+  ];
+  columns() {
+    return this.tab() === 'tracker'
+      ? this.trackerColumns
+      : [
+          ...this.trackerColumns.slice(0, 11),
+          ...this.trackerColumns.filter((c) =>
+            [
+              'supplier_status',
+              'customer_credit_percentage',
+              'credit_note_reference',
+              'customer_credit_date',
+            ].includes(c.key),
+          ),
+        ];
+  }
+  cell(item: ClaimCase, key: string): string {
+    if (key === 'supplier' && this.tab() === 'credit')
+      return item.data.instruction_supplier || item.data.supplier || '—';
+    const value =
+      (item as unknown as Record<string, unknown>)[key] ??
+      (item.data as unknown as Record<string, unknown>)[key];
+    if (value === null || value === undefined || value === '')
+      return key === 'credit_note_reference' && item.data.supplier_status === 'Rejected'
+        ? 'Send rejection report'
+        : '—';
+    if (['remaining_percentage', 'accepted_percentage', 'customer_credit_percentage'].includes(key))
+      return Number(value).toFixed(2) + '%';
+    return String(value);
+  }
+  constructor() {
+    void this.load();
+  }
+  activeFilters(metrics = false): Record<string, string> {
+    const filters = Object.fromEntries(
+      Object.entries(this.filters).filter(
+        ([key, value]) =>
+          value && (!metrics || ['supplier', 'branch', 'date_from', 'date_to'].includes(key)),
+      ),
+    );
+    if (!metrics && this.tab() === 'credit') filters['credit_only'] = 'true';
+    return filters;
+  }
+  async load(): Promise<void> {
+    const request = ++this.loadRequest;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      const [list, stats, owners, suppliers] = await Promise.all([
+        this.api.list(this.activeFilters(), this.offset()),
+        this.api.metrics(this.activeFilters(true)),
+        this.api.owners(),
+        this.api.suppliers(),
+      ]);
+      if (request !== this.loadRequest) return;
+      this.items.set(list.items);
+      this.total.set(list.total);
+      this.stats.set(stats);
+      this.owners.set(owners);
+      this.suppliers.set(suppliers.items);
+      if (this.canHandover()) this.available.set(await this.api.available());
+      const reportId = this.route.snapshot.queryParamMap.get('handover');
+      if (reportId && this.available().some((r) => r.id === reportId)) {
+        this.handover.report_id = reportId;
+        this.handoverOpen.set(true);
+      }
+    } catch (e) {
+      if (request === this.loadRequest) this.error.set(this.message(e));
+    } finally {
+      if (request === this.loadRequest) this.busy.set(false);
+    }
+  }
+  search(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      this.offset.set(0);
+      void this.load();
+    }, 300);
+  }
+  async page(direction: number) {
+    this.offset.set(Math.max(0, this.offset() + direction * 100));
+    await this.load();
+  }
+  async open(item: ClaimCase): Promise<void> {
+    this.error.set('');
+    try {
+      const fresh = await this.api.get(item.id);
+      this.apply(fresh);
+      setTimeout(() =>
+        document
+          .getElementById('claim-editor')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      );
+      const [deliveries, activity] = await Promise.all([
+        this.api.deliveries(fresh.claim_reference),
+        this.api.activity(fresh.id),
+      ]);
+      this.deliveries.set(deliveries);
+      this.activity.set(activity);
+    } catch (e) {
+      this.error.set(this.message(e));
+    }
+  }
+  apply(item: ClaimCase): void {
+    this.selected.set(item);
+    this.form = structuredClone(item.data);
+    this.workflowStatus = item.workflow_status;
+    this.reassignment = item.assigned_to;
+    this.items.update((items) => items.map((i) => (i.id === item.id ? item : i)));
+  }
+  async supplierSearch(name: string, instruction = false): Promise<void> {
+    if (!this.form) return;
+    if (instruction) this.form.instruction_supplier = name;
+    else {
+      this.form.supplier = name;
+      this.form.supplier_code = '';
+    }
+    const request = ++this.supplierRequest;
+    try {
+      const result = await this.api.suppliers(name);
+      if (request !== this.supplierRequest) return;
+      this.suppliers.set(result.items);
+      if (!instruction && this.form)
+        this.form.supplier_code = result.items.find((i) => i.CardName === name)?.CardCode ?? '';
+    } catch {
+      this.error.set(
+        'Supplier suggestions could not be loaded. You can still type the supplier name.',
+      );
+    }
+  }
+  remaining(): number | null {
+    const rtd = this.form?.remaining_tread_depth;
+    const otd = this.form?.original_tread_depth;
+    return rtd !== null && rtd !== undefined && otd ? (rtd / otd) * 100 : null;
+  }
+  decisionChanged(): void {
+    if (this.form?.supplier_status === 'Rejected') this.form.accepted_percentage = 0;
+  }
+  async save(form: NgForm): Promise<void> {
+    const item = this.selected();
+    if (!item || !this.form || !this.canWrite()) return;
+    if (form.invalid) {
+      form.control.markAllAsTouched();
+      this.error.set('Complete the highlighted fields.');
+      return;
+    }
+    const data = { ...this.form };
+    for (const key of [
+      'supplier_submitted_date',
+      'supplier_feedback_date',
+      'customer_credit_date',
+      'supplier_offset_date',
+    ] as const)
+      data[key] ||= null;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      this.apply(await this.api.update(item, data, this.workflowStatus));
+      await this.refreshMetrics();
+      this.notice.set('Claim tracking saved.');
+      await this.alerts.success('Claim updated', item.claim_reference + ' was saved.');
+    } catch (e) {
+      this.error.set(this.message(e));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+  async handOver(): Promise<void> {
+    if (!this.handover.report_id || !this.handover.assigned_to) return;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      const item = await this.api.handover(
+        this.handover.report_id,
+        this.handover.assigned_to,
+        this.handover.notes,
+      );
+      this.handoverOpen.set(false);
+      await this.load();
+      await this.open(item);
+      this.notice.set('Claim assigned to ' + item.owner_name);
+    } catch (e) {
+      this.error.set(this.message(e));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+  async reassign(): Promise<void> {
+    const item = this.selected();
+    if (!item) return;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      this.apply(
+        await this.api.reassign(item.id, this.reassignment, 'Reassigned in Claims Management'),
+      );
+      this.notice.set('Claim owner updated.');
+    } catch (e) {
+      this.error.set(this.message(e));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+  async issue(): Promise<void> {
+    const item = this.selected();
+    if (!item) return;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      this.apply(
+        await this.api.issue(item.id, item.data.instruction_supplier, this.instructionNotes),
+      );
+      this.notice.set('Credit instruction delivered to the Claims Administrator inbox.');
+    } catch (e) {
+      this.error.set(this.message(e));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+  async receive(item: ClaimCase, instruction: string): Promise<void> {
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      const updated = await this.api.receive(item.id, instruction);
+      this.items.update((items) => items.map((i) => (i.id === updated.id ? updated : i)));
+      if (this.selected()?.id === updated.id) this.apply(updated);
+    } catch (e) {
+      this.error.set(this.message(e));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+  async document(kind: string, instruction?: string): Promise<void> {
+    const item = this.selected();
+    if (!item) return;
+    const prefixes: Record<string, string> = {
+      technical: 'Technical_Report',
+      tracker: 'Claim_Tracker',
+      credit: 'Instruction_to_Credit',
+      rejection: 'Rejection_Report',
+    };
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      await this.api.download(
+        `${item.id}/documents/${kind}`,
+        `${prefixes[kind]}_${item.claim_reference}.pdf`,
+        instruction ? { instruction_id: instruction } : {},
+      );
+    } catch (e) {
+      this.error.set(await this.downloadError(e));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+  prepareSend(kind: string, instruction?: string): void {
+    this.sendForm = {
+      kind,
+      email: kind === 'credit' ? (this.selected()?.owner_email ?? '') : '',
+      cc: '',
+      body: '',
+      instruction_id: instruction ?? '',
+    };
+    this.sendOpen.set(true);
+  }
+  async send(form: NgForm): Promise<void> {
+    if (form.invalid) {
+      form.control.markAllAsTouched();
+      return;
+    }
+    const cc = this.sendForm.cc.split(/[,;\s]+/).filter(Boolean);
+    if (cc.length > 5 || cc.some((e) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))) {
+      this.error.set('Enter up to five valid CC addresses.');
+      return;
+    }
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      const item = this.selected();
+      const result =
+        this.sendForm.kind === 'scorecard'
+          ? await this.api.sendScorecard(
+              this.activeFilters(true),
+              this.sendForm.email,
+              cc,
+              this.sendForm.body,
+            )
+          : await this.api.send(
+              item!.id,
+              this.sendForm.kind,
+              this.sendForm.email,
+              cc,
+              this.sendForm.body,
+              this.sendForm.instruction_id || undefined,
+            );
+      this.sendOpen.set(false);
+      if (item && this.sendForm.kind !== 'scorecard')
+        this.deliveries.set(await this.api.deliveries(item.claim_reference));
+      if (result.status === 'Sent')
+        await this.alerts.success(
+          'Report accepted',
+          'The mail server accepted the report. Delivery is recorded in Delivery Centre.',
+        );
+      else {
+        this.error.set(
+          result.error_message ||
+            'Email could not be delivered. The attempt is recorded in Delivery Centre.',
+        );
+        await this.alerts.error('Email delivery failed', this.error());
+      }
+    } catch (e) {
+      this.error.set(this.message(e));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+  async export(section: string): Promise<void> {
+    this.error.set('');
+    this.busy.set(true);
+    try {
+      await this.api.download(`export/${section}`, `${section}.csv`, this.activeFilters(true));
+    } catch (e) {
+      this.error.set(await this.downloadError(e));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+  async scorecardPdf(): Promise<void> {
+    try {
+      await this.api.download('scorecard/pdf', 'Supplier_Scorecard.pdf', this.activeFilters(true));
+    } catch (e) {
+      this.error.set(await this.downloadError(e));
+    }
+  }
+  async importWorkbook(): Promise<void> {
+    if (!this.importFile || !this.importOwner) return;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      const r = await this.api.import(this.importFile, this.importOwner);
+      this.notice.set(
+        `${r.imported} claims imported. ${r.skipped} skipped. ${r.warnings.join(' ')}`,
+      );
+      await this.load();
+    } catch (e) {
+      this.error.set(this.message(e));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+  fileChanged(event: Event): void {
+    this.importFile = (event.target as HTMLInputElement).files?.[0] ?? null;
+  }
+  rank(values: { name: string; count: number }[]): string {
+    return values.map((v) => `${v.name} (${v.count})`).join(', ') || 'No claims';
+  }
+  private async refreshMetrics() {
+    this.stats.set(await this.api.metrics(this.activeFilters(true)));
+  }
+  private async downloadError(e: unknown): Promise<string> {
+    if (e instanceof HttpErrorResponse && e.error instanceof Blob) {
+      try {
+        return JSON.parse(await e.error.text()).detail || 'Download failed.';
+      } catch {
+        return 'Download failed.';
+      }
+    }
+    return this.message(e);
+  }
+  private message(e: unknown): string {
+    if (e instanceof HttpErrorResponse) {
+      const detail = e.error?.detail;
+      if (typeof detail === 'string') return detail;
+      if (Array.isArray(detail))
+        return detail.map((d) => `${d.loc?.slice(1).join(' ')}: ${d.msg}`).join('. ');
+      if (e.status === 0)
+        return 'Connect to the network to manage claims. Your entered values are still on this screen.';
+    }
+    return 'The action could not be completed. Please try again.';
+  }
+}

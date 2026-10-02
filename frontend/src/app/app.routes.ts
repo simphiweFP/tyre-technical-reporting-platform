@@ -1,3 +1,6 @@
+import { inject } from '@angular/core';
+import { AuthService } from './core/auth/auth.service';
+import { Router } from '@angular/router';
 import { Routes } from '@angular/router';
 import { authGuard, roleGuard } from './core/auth/auth.guard';
 import { AppShellComponent } from './core/layout/app-shell.component';
@@ -35,7 +38,19 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       {
+        path: 'claims',
+        canActivate: [roleGuard('administrator', 'claims_administrator', 'report_capturer')],
+        loadComponent: () =>
+          import('./features/claims/claims.component').then((m) => m.ClaimsComponent),
+      },
+      {
         path: 'dashboard',
+        canActivate: [
+          () =>
+            inject(AuthService).hasRole('claims_administrator')
+              ? inject(Router).createUrlTree(['/claims'])
+              : true,
+        ],
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
       },
@@ -61,7 +76,9 @@ export const routes: Routes = [
       },
       {
         path: 'delivery-centre',
-        canActivate: [roleGuard('administrator', 'report_capturer', 'viewer')],
+        canActivate: [
+          roleGuard('administrator', 'report_capturer', 'viewer', 'claims_administrator'),
+        ],
         loadComponent: () =>
           import('./features/reports/delivery-centre.component').then(
             (m) => m.DeliveryCentreComponent,

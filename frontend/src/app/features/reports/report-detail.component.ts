@@ -1,17 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ReportStore } from '../../core/data/report.store';
 import { ReportDeliveryService } from '../../core/delivery/report-delivery.service';
 import { ReportIntelligenceService } from '../../core/media/report-intelligence.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { SweetAlertService } from '../../core/ui/sweet-alert.service';
-import {
-  DeliveryAttempt,
-  TechnicalReport,
-} from '../../shared/models/report.models';
+import { DeliveryAttempt, TechnicalReport } from '../../shared/models/report.models';
 
 @Component({
   selector: 'app-report-detail',
+  imports: [RouterLink],
   templateUrl: './report-detail.component.html',
   styleUrl: './report-detail.component.scss',
 })
@@ -147,9 +145,7 @@ export class ReportDetailComponent {
       }
 
       if (result.status === 'Failed') {
-        this.message.set(
-          'Email delivery failed. The failed attempt was saved in Delivery Centre.',
-        );
+        this.message.set('Email delivery failed. The failed attempt was saved in Delivery Centre.');
         await this.alerts.error(
           'Email delivery failed',
           result.error_message ||
@@ -158,9 +154,7 @@ export class ReportDetailComponent {
         return;
       }
 
-      this.message.set(
-        'Email delivery is waiting for retry. Track it in Delivery Centre.',
-      );
+      this.message.set('Email delivery is waiting for retry. Track it in Delivery Centre.');
       await this.alerts.warning(
         'Email not delivered yet',
         result.error_message
@@ -177,9 +171,7 @@ export class ReportDetailComponent {
       if (latest && latest.status === 'Failed') {
         const updated = { ...r, status: 'Email Failed' as const };
         this.report.set(updated);
-        this.message.set(
-          'Email delivery failed. The failed attempt was saved in Delivery Centre.',
-        );
+        this.message.set('Email delivery failed. The failed attempt was saved in Delivery Centre.');
         await this.alerts.error(
           'Email delivery failed',
           latest.error_message ||
@@ -196,7 +188,15 @@ export class ReportDetailComponent {
     }
   }
   async retry(attempt: DeliveryAttempt) {
-    if (!(await this.alerts.confirm('Retry delivery?', `Retry the original email to ${attempt.recipient_email}?`, 'Retry email', 'warning'))) return;
+    if (
+      !(await this.alerts.confirm(
+        'Retry delivery?',
+        `Retry the original email to ${attempt.recipient_email}?`,
+        'Retry email',
+        'warning',
+      ))
+    )
+      return;
     this.busy.set(`retry-${attempt.id}`);
     this.alerts.loading('Retrying email…', 'Using the original saved delivery snapshot.');
     try {
@@ -204,7 +204,10 @@ export class ReportDetailComponent {
       this.alerts.close();
       await this.loadDeliveries(attempt.claim_reference);
       this.message.set(`Delivery to ${attempt.recipient_email} was retried.`);
-      await this.alerts.success('Retry complete', `Delivery to ${attempt.recipient_email} was retried.`);
+      await this.alerts.success(
+        'Retry complete',
+        `Delivery to ${attempt.recipient_email} was retried.`,
+      );
     } catch {
       this.alerts.close();
       await this.alerts.error('Retry failed', 'The email could not be retried.');
@@ -215,17 +218,23 @@ export class ReportDetailComponent {
   async archive() {
     const r = this.report();
     if (!r) return;
-    if (!(await this.alerts.confirm(
-      'Archive technical report?',
-      `${r.claimReference} will leave the active list but remain available for audit history.`,
-      'Archive report',
-      'warning',
-      true,
-    ))) return;
+    if (
+      !(await this.alerts.confirm(
+        'Archive technical report?',
+        `${r.claimReference} will leave the active list but remain available for audit history.`,
+        'Archive report',
+        'warning',
+        true,
+      ))
+    )
+      return;
     this.busy.set('archive');
     try {
       await this.store.archive(r.id);
-      await this.alerts.success('Report archived', `${r.claimReference} was archived successfully.`);
+      await this.alerts.success(
+        'Report archived',
+        `${r.claimReference} was archived successfully.`,
+      );
       await this.router.navigate(['/reports']);
     } catch {
       await this.alerts.error('Archive failed', 'The report could not be archived.');

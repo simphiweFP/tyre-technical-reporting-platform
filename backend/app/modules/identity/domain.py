@@ -6,6 +6,7 @@ from uuid import UUID
 class Role(StrEnum):
     PENDING = "pending"
     ADMINISTRATOR = "administrator"
+    CLAIMS_ADMINISTRATOR = "claims_administrator"
     REPORT_CAPTURER = "report_capturer"
     VIEWER = "viewer"
 

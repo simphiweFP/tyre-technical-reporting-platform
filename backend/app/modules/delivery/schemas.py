@@ -14,6 +14,7 @@ class DeliveryRequest(BaseModel):
 class DeliveryResponse(BaseModel):
     id: UUID
     claim_reference: str
+    document_type: str = "technical"
     recipient_email: str
     cc: list[str]
     status: str

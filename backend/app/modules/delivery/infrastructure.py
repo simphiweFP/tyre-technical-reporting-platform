@@ -192,6 +192,7 @@ class DeliveryAttempt(Base):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     claim_reference: Mapped[str] = mapped_column(String(80), index=True)
+    document_type: Mapped[str] = mapped_column(String(40), default="technical", server_default="technical")
     recipient_id: Mapped[UUID | None] = mapped_column(nullable=True, index=True)
     recipient_email: Mapped[str] = mapped_column(String(255))
     cc: Mapped[list] = mapped_column(JSON, default=list)

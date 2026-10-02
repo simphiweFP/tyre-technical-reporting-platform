@@ -1,6 +1,5 @@
 @use './operations.component.scss';
 
-
 .direct-recipient {
   display: grid;
   gap: 6px;
@@ -54,4 +53,15 @@
 
 .detail-email-error {
   color: #c7192c;
+}
+
+.handover-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 7px;
+  background: #2f3398;
+  color: white;
+  text-decoration: none;
+  font-size: 13px;
 }

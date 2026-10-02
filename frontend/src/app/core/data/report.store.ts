@@ -95,7 +95,7 @@ export class ReportStore {
       const userId = this.auth.user()?.id ?? '';
       this.resetVisibleState();
 
-      if (!userId) return;
+      if (!userId || this.auth.hasRole('claims_administrator')) return;
 
       if (this.offline.online()) {
         void this.refresh();
@@ -106,7 +106,7 @@ export class ReportStore {
 
     if (typeof window !== 'undefined') {
       window.addEventListener('online', () => {
-        if (!this.auth.user()) return;
+        if (!this.auth.user() || this.auth.hasRole('claims_administrator')) return;
         void this.offline.syncNow().then(() => this.refresh());
       });
     }
@@ -325,10 +325,9 @@ export class ReportStore {
     if (!term || !this.offline.online()) return Promise.resolve([]);
 
     return firstValueFrom(
-      this.http.get<string[]>(
-        `${environment.apiUrl}/reports/customers`,
-        { params: { search: term } },
-      ),
+      this.http.get<string[]>(`${environment.apiUrl}/reports/customers`, {
+        params: { search: term },
+      }),
     );
   }
 

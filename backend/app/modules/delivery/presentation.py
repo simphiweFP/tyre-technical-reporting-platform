@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from backend.app.core.config import get_settings
 from backend.app.core.database import get_db
 from backend.app.modules.auditing.infrastructure import AuditEvent
+from backend.app.modules.claims.infrastructure import ClaimCase
 from backend.app.modules.delivery.application import ReportDeliveryService
 from backend.app.modules.delivery.infrastructure import (
     DeliveryAttempt,
@@ -34,6 +35,33 @@ from backend.app.modules.reports.infrastructure import (
 )
 
 router = APIRouter(tags=["Report delivery"])
+
+
+def _check_delivery_access(db: Session, attempt: DeliveryAttempt, user: User):
+    if user.role == Role.CLAIMS_ADMINISTRATOR:
+        assigned = db.scalar(
+            select(ClaimCase.id)
+            .join(
+                TechnicalReportRecord, ClaimCase.report_id == TechnicalReportRecord.id
+            )
+            .where(
+                TechnicalReportRecord.claim_reference == attempt.claim_reference,
+                ClaimCase.assigned_to == user.id,
+            )
+        )
+        if not assigned and not (
+            attempt.document_type == "scorecard" and attempt.requested_by == user.id
+        ):
+            raise HTTPException(status_code=404, detail="Delivery not found")
+    if user.role == Role.REPORT_CAPTURER:
+        owned = db.scalar(
+            select(TechnicalReportRecord.id).where(
+                TechnicalReportRecord.claim_reference == attempt.claim_reference,
+                TechnicalReportRecord.created_by == user.id,
+            )
+        )
+        if not owned:
+            raise HTTPException(status_code=404, detail="Delivery not found")
 
 
 @router.post("/reports/deliver", response_model=DeliveryResponse)
@@ -162,15 +190,21 @@ def deliver_report(
         db.refresh(persisted)
         return persisted
 
+
 @router.post("/reports/deliveries/{delivery_id}/retry", response_model=DeliveryResponse)
 def retry_delivery(
     delivery_id: UUID,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
+    user: User = Depends(
+        require_roles(
+            Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.CLAIMS_ADMINISTRATOR
+        )
+    ),
 ):
     attempt = db.get(DeliveryAttempt, delivery_id)
-    if not attempt:
+    if not attempt or attempt.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Delivery not found")
+    _check_delivery_access(db, attempt, user)
     if user.role == Role.REPORT_CAPTURER:
         record = db.scalar(
             select(TechnicalReportRecord).where(
@@ -206,11 +240,16 @@ def follow_up_delivery(
     delivery_id: UUID,
     request: FollowUpRequest,
     db: Session = Depends(get_db),
-    user: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
+    user: User = Depends(
+        require_roles(
+            Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.CLAIMS_ADMINISTRATOR
+        )
+    ),
 ):
     attempt = db.get(DeliveryAttempt, delivery_id)
     if not attempt or attempt.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Delivery not found")
+    _check_delivery_access(db, attempt, user)
 
     record = db.scalar(
         select(TechnicalReportRecord).where(
@@ -244,12 +283,18 @@ def delivery_details(
     delivery_id: UUID,
     db: Session = Depends(get_db),
     user: User = Depends(
-        require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
+        require_roles(
+            Role.ADMINISTRATOR,
+            Role.REPORT_CAPTURER,
+            Role.VIEWER,
+            Role.CLAIMS_ADMINISTRATOR,
+        )
     ),
 ):
     attempt = db.get(DeliveryAttempt, delivery_id)
     if not attempt or attempt.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Delivery not found")
+    _check_delivery_access(db, attempt, user)
 
     record = db.scalar(
         select(TechnicalReportRecord).where(
@@ -266,6 +311,7 @@ def delivery_details(
     return {
         "id": str(attempt.id),
         "claim_reference": claim,
+        "document_type": attempt.document_type,
         "from": f"{settings.email_from_name} <{settings.email_from}>",
         "to": [attempt.recipient_email],
         "cc": attempt.cc,
@@ -288,16 +334,24 @@ def delivery_pdf(
     delivery_id: UUID,
     db: Session = Depends(get_db),
     user: User = Depends(
-        require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
+        require_roles(
+            Role.ADMINISTRATOR,
+            Role.REPORT_CAPTURER,
+            Role.VIEWER,
+            Role.CLAIMS_ADMINISTRATOR,
+        )
     ),
 ):
     attempt = db.get(DeliveryAttempt, delivery_id)
     if not attempt or attempt.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Delivery not found")
+    _check_delivery_access(db, attempt, user)
 
     snapshot = _service(db).snapshot_pdf(attempt)
     if snapshot is not None:
-        filename = attempt.attachment_name or f"Technical_Report_{attempt.claim_reference}.pdf"
+        filename = (
+            attempt.attachment_name or f"Technical_Report_{attempt.claim_reference}.pdf"
+        )
         return StreamingResponse(
             BytesIO(snapshot),
             media_type="application/pdf",
@@ -329,9 +383,7 @@ def delivery_pdf(
             {
                 "category": image.category,
                 "label": image.category.replace("_", " ").title(),
-                "previewUrl": (
-                    f"data:{image.content_type};base64,{image.base64_data}"
-                ),
+                "previewUrl": (f"data:{image.content_type};base64,{image.base64_data}"),
                 "comment": str(comments.get(image.category) or ""),
             }
             for image in images
@@ -353,8 +405,9 @@ def soft_delete_delivery(
     user: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
     attempt = db.get(DeliveryAttempt, delivery_id)
-    if not attempt:
+    if not attempt or attempt.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Delivery not found")
+    _check_delivery_access(db, attempt, user)
     _service(db).soft_delete(attempt, user.id)
 
 
@@ -365,7 +418,12 @@ def delivery_history(
     claim_reference: str,
     db: Session = Depends(get_db),
     user: User = Depends(
-        require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
+        require_roles(
+            Role.ADMINISTRATOR,
+            Role.REPORT_CAPTURER,
+            Role.VIEWER,
+            Role.CLAIMS_ADMINISTRATOR,
+        )
     ),
 ):
     if user.role == Role.REPORT_CAPTURER:
@@ -376,6 +434,17 @@ def delivery_history(
             )
         )
         if not record:
+            raise HTTPException(status_code=404, detail="Report not found")
+    if user.role == Role.CLAIMS_ADMINISTRATOR:
+        assigned = db.scalar(
+            select(ClaimCase.id)
+            .join(TechnicalReportRecord)
+            .where(
+                TechnicalReportRecord.claim_reference == claim_reference,
+                ClaimCase.assigned_to == user.id,
+            )
+        )
+        if not assigned:
             raise HTTPException(status_code=404, detail="Report not found")
     query = (
         select(DeliveryAttempt)
@@ -396,7 +465,12 @@ def list_deliveries(
     limit: int = Query(default=100, ge=1, le=250),
     db: Session = Depends(get_db),
     user: User = Depends(
-        require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER, Role.VIEWER)
+        require_roles(
+            Role.ADMINISTRATOR,
+            Role.REPORT_CAPTURER,
+            Role.VIEWER,
+            Role.CLAIMS_ADMINISTRATOR,
+        )
     ),
 ):
     statement = (
@@ -409,6 +483,19 @@ def list_deliveries(
             TechnicalReportRecord.created_by == user.id
         )
         statement = statement.where(DeliveryAttempt.claim_reference.in_(owned_claims))
+    if user.role == Role.CLAIMS_ADMINISTRATOR:
+        assigned_claims = (
+            select(TechnicalReportRecord.claim_reference)
+            .join(ClaimCase, ClaimCase.report_id == TechnicalReportRecord.id)
+            .where(ClaimCase.assigned_to == user.id)
+        )
+        statement = statement.where(
+            DeliveryAttempt.claim_reference.in_(assigned_claims)
+            | (
+                (DeliveryAttempt.document_type == "scorecard")
+                & (DeliveryAttempt.requested_by == user.id)
+            )
+        )
     if delivery_status:
         statement = statement.where(DeliveryAttempt.status == delivery_status)
     if query:

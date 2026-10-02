@@ -45,6 +45,7 @@
               <tr>
                 <th>Date / Time</th>
                 <th>Claim Ref</th>
+                <th>Document</th>
                 <th>Recipient(s)</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -55,6 +56,7 @@
                 <tr>
                   <td>{{ row.created_at }}</td>
                   <td class="reference">{{ row.claim_reference }}</td>
+                  <td>{{ row.document_type.replaceAll('_', ' ') }}</td>
                   <td>{{ row.recipient_email }}</td>
                   <td>
                     <span
@@ -67,23 +69,23 @@
                   </td>
                   <td>
                     <div class="delivery-actions">
-                      <button class="view-button" type="button" (click)="view(row.id)">
-                        View
-                      </button>
+                      <button class="view-button" type="button" (click)="view(row.id)">View</button>
                       @if (row.status === 'Failed' || row.status === 'Retrying') {
                         <button class="retry-button" type="button" (click)="retry(row.id)">
                           Retry
                         </button>
                       }
-                      <button class="delete-button" type="button" (click)="remove(row.id)">
-                        Delete
-                      </button>
+                      @if (auth.hasRole('administrator')) {
+                        <button class="delete-button" type="button" (click)="remove(row.id)">
+                          Delete
+                        </button>
+                      }
                     </div>
                   </td>
                 </tr>
               } @empty {
                 <tr class="empty-row">
-                  <td colspan="5">
+                  <td colspan="6">
                     <div class="empty-state">
                       <span>✉</span><strong>No delivery records found</strong
                       ><small
@@ -123,7 +125,6 @@
   </div>
 </section>
 
-
 @if (selected(); as detail) {
   <div class="delivery-detail-backdrop" (click)="closeDetails()">
     <section class="delivery-detail-modal" (click)="$event.stopPropagation()">
@@ -137,10 +138,19 @@
       </header>
 
       <div class="email-meta">
-        <div><small>From</small><strong>{{ detail.from }}</strong></div>
-        <div><small>To</small><strong>{{ detail.to.join(', ') }}</strong></div>
-        <div><small>CC</small><strong>{{ detail.cc.length ? detail.cc.join(', ') : 'None' }}</strong></div>
-        <div><small>Accepted / Last attempt</small><strong>{{ detail.last_attempt_at | date:'medium' }}</strong></div>
+        <div>
+          <small>From</small><strong>{{ detail.from }}</strong>
+        </div>
+        <div>
+          <small>To</small><strong>{{ detail.to.join(', ') }}</strong>
+        </div>
+        <div>
+          <small>CC</small><strong>{{ detail.cc.length ? detail.cc.join(', ') : 'None' }}</strong>
+        </div>
+        <div>
+          <small>Accepted / Last attempt</small
+          ><strong>{{ detail.last_attempt_at | date: 'medium' }}</strong>
+        </div>
       </div>
 
       <section class="email-body">
@@ -176,7 +186,7 @@
               <article>
                 <header>
                   <strong>Follow-up sent</strong>
-                  <span>{{ followUp.sent_at | date:'medium' }}</span>
+                  <span>{{ followUp.sent_at | date: 'medium' }}</span>
                 </header>
                 <p>{{ followUp.body }}</p>
                 <small>To: {{ followUp.recipient }}</small>
@@ -196,7 +206,10 @@
             (ngModelChange)="followUpMessage.set($event)"
             placeholder="Type your follow-up message..."
           ></textarea>
-          <small>The follow-up will be sent as a reply to the original email thread where supported.</small>
+          <small
+            >The follow-up will be sent as a reply to the original email thread where
+            supported.</small
+          >
         </section>
       }
 

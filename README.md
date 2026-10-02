@@ -193,3 +193,21 @@ The Angular capture experience is mobile-first and responsive, but physical-devi
 - Restrict CORS to the deployed Angular origin.
 - Review delivery/audit retention with the business before enabling automatic cleanup.
 - Run backend tests, Angular tests/build and container validation in CI on every change.
+
+## Claims Management
+
+Create the second administrator under **Administration → Users** with the **Claims Administrator** role. After a technical report is submitted, use **Hand over claim** to assign it to this user. Claims administrators see only their assigned claims and receive an inbox of credit instructions; the original administrator can manage and reassign all claims. Technical-report delivery status and claim-tracking progress are stored separately.
+
+The four screens follow the Claims Management workbook: **Claim Tracker**, **Instruction to Credit**, **Supplier Scorecard**, and **Other Metrics**. All 23 tracker columns and 15 credit-instruction columns are included in the app and exports. Customer credit percentage is entered manually from 0 to 100; remaining tread percentage is calculated as RTD / OTD × 100. Tyre size is captured separately from rim size. Supplier suggestions come from `SUPPLIER_JSON_PATH` (default `backend/data/suppliers.json`), with manual entry supported. Mock supplier codes must be replaced with real supplier codes before downstream integration.
+
+Administrators can import the source `.xlsx` workbook and select a claims owner. Valid `I000001`-format references are retained; existing references are skipped without overwriting. Rows without references or with invalid values are reported for correction. Tracker and instruction suppliers can differ, and source rows are retained for traceability. Workbook scorecards and metrics are recomputed from claim records.
+
+PDFs include the technical report, claim tracker, credit instruction, rejection report and supplier scorecard. Email delivery saves the PDF snapshot, recipient, CC addresses and delivery outcome; retries use that same snapshot. Credit instruction snapshots retain the values at issue time. Credits and supplier offsets are recorded manually through references, dates and amounts.
+
+Scorecard acceptance/rejection rates use all claims in the selected period. Response days run from supplier submission to feedback; resolution days run from claim date to customer credit date. Recovered credit value sums entered amounts only for completed supplier offsets, with missing amounts highlighted. Other metrics show under-review claims, outstanding supplier offsets, unpassed customer credits, and highest/lowest claim suppliers and customers (including ties).
+
+Deploy the backend migration before opening the new screens:
+
+```bash
+python -m alembic -c backend/alembic.ini upgrade head
+```

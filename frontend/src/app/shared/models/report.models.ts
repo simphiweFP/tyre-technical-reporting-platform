@@ -89,6 +89,7 @@ export interface ReportPhoto {
 export interface DeliveryAttempt {
   id: string;
   claim_reference: string;
+  document_type: string;
   recipient_email: string;
   cc: string[];
   status: 'Pending' | 'Processing' | 'Retrying' | 'Sent' | 'Failed';

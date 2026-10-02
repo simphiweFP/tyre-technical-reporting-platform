@@ -237,7 +237,7 @@ class ReportDeliveryService:
             attempt.message_id = self.gateway.send(message)
             attempt.status = "Sent"
             attempt.error_message = None
-            if report_record:
+            if report_record and attempt.document_type == "technical":
                 report_record.status = "Email Sent"
         except Exception as exc:
             settings = get_settings()
@@ -262,7 +262,7 @@ class ReportDeliveryService:
             attempt.next_attempt_at = datetime.now(UTC) + timedelta(
                 minutes=settings.delivery_retry_minutes * attempt.attempt_count
             )
-            if report_record and attempt.status == "Failed":
+            if report_record and attempt.status == "Failed" and attempt.document_type == "technical":
                 report_record.status = "Email Failed"
         self.db.add(
             AuditEvent(

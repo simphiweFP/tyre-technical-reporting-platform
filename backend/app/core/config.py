@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     microsoft_client_secret_file: str = ""
     gemini_api_key_file: str = ""
     customer_json_path: str = "backend/data/customers.json"
+    supplier_json_path: str = "backend/data/suppliers.json"
     sap_customer_endpoint: str = ""
     sap_customer_company_db: str = ""
     sap_customer_search_param: str = ""

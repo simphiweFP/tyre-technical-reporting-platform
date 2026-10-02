@@ -196,7 +196,7 @@ def _mark_delivery_failed(delivery_id, notice: BounceNotice) -> bool:
                 TechnicalReportRecord.claim_reference == attempt.claim_reference
             )
         )
-        if record:
+        if record and attempt.document_type == "technical":
             record.status = "Email Failed"
             db.add(record)
 

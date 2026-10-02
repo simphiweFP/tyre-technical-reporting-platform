@@ -1,0 +1,449 @@
+:host {
+  display: block;
+  color: #24283c;
+}
+.claims-page {
+  padding: 28px;
+  max-width: 1800px;
+  margin: auto;
+}
+.page-title,
+.card > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+h1 {
+  font-size: 28px;
+  margin: 0 0 6px;
+}
+h2 {
+  font-size: 19px;
+  margin: 0 0 5px;
+}
+h3 {
+  font-size: 16px;
+}
+p {
+  line-height: 1.5;
+}
+.page-title p,
+.card header p {
+  color: #747a8e;
+  margin: 0;
+}
+.tabs {
+  display: flex;
+  gap: 5px;
+  border-bottom: 1px solid #dce0eb;
+  margin: 24px 0;
+  overflow: auto;
+}
+.tabs button {
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  padding: 14px 18px;
+  background: transparent;
+  white-space: nowrap;
+}
+.tabs .active {
+  color: #2f3398;
+  border-bottom-color: #2f3398;
+  font-weight: 700;
+}
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: end;
+  margin-bottom: 20px;
+}
+.filters label {
+  min-width: 135px;
+  flex: 1;
+}
+.filters label:first-child {
+  flex: 2;
+  min-width: 200px;
+}
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+}
+input,
+select,
+textarea,
+output {
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  background: white;
+  border: 1px solid #d9ddea;
+  border-radius: 7px;
+  min-width: 0;
+  box-sizing: border-box;
+  color: #24283c;
+}
+textarea {
+  resize: vertical;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #bbbfe8;
+  border-color: #2f3398;
+}
+.ng-invalid.ng-touched {
+  border-color: #b42330;
+  background: #fff5f5;
+}
+button {
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid #d9ddea;
+  border-radius: 7px;
+  padding: 10px 15px;
+  background: white;
+  color: #30364b;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.primary {
+  background: #2f3398;
+  color: white;
+  border-color: #2f3398;
+}
+.card {
+  background: white;
+  border: 1px solid #e1e5ef;
+  border-radius: 12px;
+  margin: 18px 0;
+  overflow: hidden;
+}
+.card > header {
+  padding: 20px;
+}
+.table-scroll {
+  overflow: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12px;
+}
+th {
+  background: #f6f7fb;
+  color: #697188;
+  padding: 13px;
+  white-space: nowrap;
+  font-weight: 600;
+}
+td {
+  padding: 13px;
+  border-bottom: 1px solid #edf0f5;
+  white-space: nowrap;
+  vertical-align: top;
+}
+td small {
+  display: block;
+  margin-top: 4px;
+  color: #777f93;
+}
+.reference {
+  border: 0;
+  padding: 0;
+  color: #2f3398;
+  font-weight: 700;
+  background: transparent;
+}
+.empty {
+  text-align: center;
+  padding: 40px;
+  color: #747b90;
+}
+.card footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  font-size: 12px;
+  color: #757d92;
+}
+.notice {
+  background: #eef0ff;
+  color: #2f3398;
+  border-radius: 8px;
+  padding: 13px 16px;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.notice button {
+  padding: 0 5px;
+  background: transparent;
+  border: 0;
+}
+.error,
+.field-error {
+  color: #a9273c;
+}
+.error {
+  background: #fff0f2;
+}
+.warning {
+  color: #99630f !important;
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.metric-grid article {
+  padding: 24px;
+  background: white;
+  border: 1px solid #e1e5ef;
+  border-radius: 12px;
+}
+.metric-grid small {
+  color: #777e93;
+  font-size: 11px;
+  font-weight: 700;
+}
+.metric-grid strong {
+  display: block;
+  font-size: 38px;
+  color: #2f3398;
+  margin-top: 10px;
+}
+.metric-grid p {
+  font-weight: 600;
+  margin-bottom: 0;
+}
+.definition {
+  color: #777e93;
+  font-size: 12px;
+  padding: 12px 20px;
+}
+.source-grid,
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.source-grid {
+  margin: 0 20px;
+  padding: 20px;
+  background: #f8f9fc;
+  border-radius: 8px;
+}
+.source-grid small,
+.instruction small,
+.history-grid small {
+  display: block;
+  color: #7a8195;
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+.source-grid strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.claim-editor form {
+  padding: 20px;
+}
+.claim-editor fieldset {
+  border: 1px solid #e2e5ee;
+  border-radius: 9px;
+  padding: 18px;
+  margin-bottom: 18px;
+  min-width: 0;
+}
+.claim-editor legend {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2f3398;
+  padding: 0 7px;
+}
+.wide {
+  grid-column: 1/-1;
+}
+.form-grid small,
+label small {
+  font-weight: 400;
+  color: #7a8195;
+  font-size: 11px;
+  line-height: 1.5;
+}
+output {
+  background: #eef0ff;
+  color: #2f3398;
+}
+.actions {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.document-actions {
+  padding: 0 20px 20px;
+}
+.instruction,
+.inbox article {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 15px 0;
+  border-top: 1px solid #edf0f5;
+  margin-top: 12px;
+}
+.inline-fields {
+  display: flex;
+  align-items: end;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 20px;
+}
+.inline-fields label {
+  flex: 1;
+  min-width: 200px;
+}
+.history-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+  padding: 20px;
+  border-top: 1px solid #e5e8ef;
+}
+.history-grid article {
+  padding: 12px 0;
+  border-bottom: 1px solid #edf0f5;
+  font-size: 12px;
+}
+.history-grid a {
+  display: inline-block;
+  margin-top: 12px;
+  color: #2f3398;
+}
+.handover-note {
+  padding: 0 20px;
+}
+.inbox {
+  padding: 0 20px 20px;
+}
+.import-card {
+  padding: 20px;
+}
+.import-card summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.import-card p {
+  font-size: 12px;
+  color: #777e93;
+}
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #17204280;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 18px;
+}
+.modal {
+  background: white;
+  border-radius: 14px;
+  width: 520px;
+  max-height: 90vh;
+  overflow: auto;
+  padding: 24px;
+  box-shadow: 0 15px 70px #15203a40;
+}
+.modal header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.modal label {
+  margin: 16px 0;
+}
+.modal > button {
+  width: 100%;
+}
+fieldset:disabled input,
+fieldset:disabled textarea,
+fieldset:disabled select {
+  background: #f6f7fa;
+}
+.field-error {
+  font-size: 12px;
+  line-height: 1.5;
+}
+@media (max-width: 1000px) {
+  .metric-grid,
+  .source-grid,
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .claims-page {
+    padding: 20px;
+  }
+}
+@media (max-width: 600px) {
+  .claims-page {
+    padding: 15px;
+  }
+  .metric-grid,
+  .source-grid,
+  .form-grid,
+  .history-grid {
+    grid-template-columns: 1fr;
+  }
+  .page-title h1 {
+    font-size: 24px;
+  }
+  .filters label {
+    min-width: 140px;
+  }
+  .tabs button {
+    padding: 12px;
+  }
+  .card > header {
+    padding: 16px;
+  }
+  .actions button {
+    flex: 1;
+  }
+  .claim-editor form {
+    padding: 12px;
+  }
+  .inline-fields {
+    margin: 16px;
+  }
+  .modal {
+    padding: 20px;
+  }
+  .card footer {
+    flex-wrap: wrap;
+  }
+  .backdrop {
+    align-items: flex-start;
+    padding-top: 8vh;
+  }
+}
