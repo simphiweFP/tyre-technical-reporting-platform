@@ -39,6 +39,7 @@ interface PendingDelivery {
   reportId: string;
   claimReference: string;
   recipientEmail: string;
+  cc: string[];
   report: TechnicalReport;
   queuedAt: string;
   error: string;
@@ -182,14 +183,20 @@ export class OfflineDataService {
   async queueDelivery(
     report: TechnicalReport,
     recipientEmail: string,
+    cc: string[] = [],
   ): Promise<void> {
     const normalizedEmail = recipientEmail.trim().toLowerCase();
+    const normalizedCc = [
+      ...new Set(cc.map((address) => address.trim().toLowerCase()).filter(Boolean)),
+    ];
+
     await this.put('deliveries', {
       key: `${report.id}:${normalizedEmail}`,
       ownerId: this.currentUserId(),
       reportId: report.id,
       claimReference: report.claimReference,
       recipientEmail: normalizedEmail,
+      cc: normalizedCc,
       report,
       queuedAt: new Date().toISOString(),
       error: '',
@@ -289,7 +296,7 @@ export class OfflineDataService {
             this.http.post<{ status: string }>(`${environment.apiUrl}/reports/deliver`, {
               recipient_email: item.recipientEmail,
               report: item.report,
-              cc: [],
+              cc: item.cc ?? [],
             }),
           );
           await this.remove('deliveries', item.key);
