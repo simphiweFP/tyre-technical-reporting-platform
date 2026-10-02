@@ -61,7 +61,7 @@ export class ReportIntelligenceService {
   }
 
   async downloadPdf(report: TechnicalReport): Promise<void> {
-    const filename = `${report.claimReference}.pdf`;
+    const filename = `Technical_Report_${report.claimReference}.pdf`;
     const pdf = await firstValueFrom(
       this.http.post(
         `${environment.apiUrl}/reports/generate-pdf`,

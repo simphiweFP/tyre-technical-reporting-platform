@@ -91,14 +91,14 @@ def test_report_validation_is_server_side_and_invoice_is_optional(client):
 def test_report_search_filters_real_branch_codes_and_dot_data(client):
     headers = login_headers(client)
     reports = [
-        ("11111111-1111-4111-8111-111111111111", "TR-PHX-CODE", "PHX", "DOT-CODE-1"),
+        ("11111111-1111-4111-8111-111111111111", "I000001", "PHX", "DOT-CODE-1"),
         (
             "22222222-2222-4222-8222-222222222222",
-            "TR-PHX-NAME",
+            "I000002",
             "Phoenix",
             "DOT-NAME-2",
         ),
-        ("33333333-3333-4333-8333-333333333333", "TR-OTHER", "DBN", "DOT-OTHER-3"),
+        ("33333333-3333-4333-8333-333333333333", "I000003", "DBN", "DOT-OTHER-3"),
     ]
     for report_id, claim, branch, dot in reports:
         response = client.put(
@@ -122,8 +122,8 @@ def test_report_search_filters_real_branch_codes_and_dot_data(client):
     )
     assert by_branch.status_code == 200
     assert {item["report"]["claimReference"] for item in by_branch.json()["items"]} == {
-        "TR-PHX-CODE",
-        "TR-PHX-NAME",
+        "I000001",
+        "I000002",
     }
     assert by_branch.json()["matching_total"] == 2
     assert by_branch.json()["status_counts"] == {"Draft": 2}
@@ -143,7 +143,7 @@ def test_report_search_filters_real_branch_codes_and_dot_data(client):
     )
     assert by_dot.status_code == 200
     assert [item["report"]["claimReference"] for item in by_dot.json()["items"]] == [
-        "TR-PHX-NAME"
+        "I000002"
     ]
 
 
@@ -208,7 +208,7 @@ def test_recipient_rules_are_applied_to_claim_delivery(client):
     report_id = "d09e7d92-d5df-487b-a9b6-9996925866de"
     report = {
         "id": report_id,
-        "claimReference": "TR-ROUTING-001",
+        "claimReference": "I000001",
         "status": "Ready to Submit",
         "branch": "Cape Town",
         "category": "Manufacturing",

@@ -209,7 +209,7 @@ class ReportDeliveryService:
             f"Please find the Royal Tyres technical report {claim} attached.\n\n"
             "This is an automated delivery."
         )
-        attachment_name = attempt.attachment_name or f"{claim}.pdf"
+        attachment_name = attempt.attachment_name or f"Technical_Report_{claim}.pdf"
 
         # The first send creates an immutable snapshot. Retries reuse the exact
         # same PDF bytes and email content rather than regenerating a changed report.

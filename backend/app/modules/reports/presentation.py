@@ -1,4 +1,5 @@
 import base64
+import re
 import hashlib
 from datetime import date
 from io import BytesIO
@@ -342,10 +343,14 @@ def generate_pdf(
     pdf = GenerateTechnicalReport(ReportLabTechnicalReportGenerator()).execute(
         request.report
     )
+    claim = re.sub(
+        r"[^A-Za-z0-9_-]", "", str(request.report.get("claimReference") or "report")
+    )
+    filename = f"Technical_Report_{claim}.pdf"
     return StreamingResponse(
         BytesIO(pdf),
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{request.filename}"'},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

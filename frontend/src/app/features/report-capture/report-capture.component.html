@@ -516,7 +516,7 @@
 
         <div class="summary-card summary-grid">
           <div>
-            <small>Claim reference</small><strong>{{ report().claimReference }}</strong>
+            <small>Claim reference</small><strong>{{ report().claimReference || 'Pending' }}</strong>
           </div>
           <div>
             <small>Updated</small><strong>{{ report().updatedAt }}</strong>
@@ -649,7 +649,7 @@
         <div class="success-check">✓</div>
         <span class="preview-kicker">Submission complete</span>
         <h1>Report submitted</h1>
-        <h2>{{ report().claimReference }}</h2>
+        <h2>{{ report().claimReference || 'Pending' }}</h2>
         <p>
           @if (deliveryStatus() === 'Queued') {
             The report is safely stored on this device and will be sent automatically when you reconnect.

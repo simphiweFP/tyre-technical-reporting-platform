@@ -56,7 +56,7 @@ def test_report_crud_search_image_analytics_and_archive(client):
     report_id = "8bc7be31-8f4e-42cf-89ec-dc759971e20d"
     report = {
         "id": report_id,
-        "claimReference": "TR-SEARCH-001",
+        "claimReference": "I000001",
         "status": "Draft",
         "customerName": "Example Fleet",
         "customerInvoiceNumber": "INV-42",
@@ -139,7 +139,7 @@ def test_report_capturer_only_sees_owned_claims_and_audit(client):
         json={
             "report": {
                 "id": admin_report_id,
-                "claimReference": "TR-ADMIN-ONLY",
+                "claimReference": "I000001",
                 "status": "Draft",
                 "customerName": "Admin Fleet",
                 "branch": "PHX",
@@ -153,7 +153,7 @@ def test_report_capturer_only_sees_owned_claims_and_audit(client):
         json={
             "report": {
                 "id": own_report_id,
-                "claimReference": "TR-MY-CLAIM",
+                "claimReference": "I000002",
                 "status": "Draft",
                 "customerName": "My Fleet",
                 "branch": "PHX",
@@ -177,5 +177,5 @@ def test_report_capturer_only_sees_owned_claims_and_audit(client):
     references = {
         item["details"].get("claim_reference") for item in audit.json()["items"]
     }
-    assert "TR-MY-CLAIM" in references
-    assert "TR-ADMIN-ONLY" not in references
+    assert "I000002" in references
+    assert "I000001" not in references

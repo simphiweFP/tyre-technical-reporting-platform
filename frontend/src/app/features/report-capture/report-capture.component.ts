@@ -116,6 +116,12 @@ export class ReportCaptureComponent implements OnDestroy {
   });
   constructor() {
     effect(() => {
+      const saved = this.workflow.reports().find((item) => item.id === this.report().id);
+      if (saved?.claimReference && saved.claimReference !== this.report().claimReference) {
+        this.report.update((report) => ({ ...report, claimReference: saved.claimReference }));
+      }
+    });
+    effect(() => {
       const result = this.offline.lastDeliveryResult();
       if (!result || result.claimReference !== this.report().claimReference) return;
       this.deliveryStatus.set(result.status);

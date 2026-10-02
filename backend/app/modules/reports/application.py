@@ -2,7 +2,7 @@ from datetime import UTC, date, datetime, time
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
 
 from backend.app.modules.auditing.infrastructure import AuditEvent
@@ -237,21 +237,28 @@ class TechnicalReportService:
             )
 
         if created:
-            duplicate = self.db.scalar(
-                select(TechnicalReportRecord).where(
-                    TechnicalReportRecord.claim_reference
-                    == str(data.get("claimReference", ""))
-                )
-            )
-            if duplicate:
-                raise HTTPException(
-                    status_code=409, detail="Claim reference already exists"
-                )
+            # Serialize allocation across PostgreSQL API workers. Archived and
+            # soft-deleted reports still reserve their reference numbers.
+            if self.db.get_bind().dialect.name == "postgresql":
+                self.db.execute(text("SELECT pg_advisory_xact_lock(749291)"))
+            references = self.db.scalars(
+                select(TechnicalReportRecord.claim_reference)
+            ).all()
+            numbers = [
+                int(ref[1:])
+                for ref in references
+                if len(ref) == 7 and ref.startswith("I") and ref[1:].isdigit()
+            ]
+            number = max(numbers, default=0) + 1
+            if number > 999999:
+                raise HTTPException(status_code=409, detail="Claim numbers exhausted")
             record = TechnicalReportRecord(
                 id=report_id,
-                claim_reference=str(data.get("claimReference") or report_id),
+                claim_reference=f"I{number:06d}",
                 created_by=user.id,
             )
+
+        data = {**data, "claimReference": record.claim_reference}
 
         record.status = str(data.get("status") or "Draft")
         record.customer_name = str(data.get("customerName") or "")

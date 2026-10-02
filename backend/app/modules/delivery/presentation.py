@@ -43,8 +43,16 @@ def deliver_report(
     user: User = Depends(require_roles(Role.ADMINISTRATOR, Role.REPORT_CAPTURER)),
 ):
     claim = str(request.report.get("claimReference") or "").strip()
+    report_id = request.report.get("id")
+    if report_id:
+        try:
+            saved_record = db.get(TechnicalReportRecord, UUID(str(report_id)))
+        except ValueError:
+            saved_record = None
+        if saved_record:
+            claim = saved_record.claim_reference
     if not claim:
-        raise HTTPException(status_code=422, detail="A claim reference is required")
+        raise HTTPException(status_code=422, detail="Save the report first")
 
     record = db.scalar(
         select(TechnicalReportRecord).where(
@@ -263,7 +271,7 @@ def delivery_details(
         "cc": attempt.cc,
         "subject": attempt.email_subject or f"Royal Tyres technical report {claim}",
         "body": attempt.email_body or "",
-        "attachment_name": attempt.attachment_name or f"{claim}.pdf",
+        "attachment_name": attempt.attachment_name or f"Technical_Report_{claim}.pdf",
         "attachment_sha256": attempt.sent_pdf_sha256,
         "status": attempt.status,
         "message_id": attempt.message_id,
@@ -289,7 +297,7 @@ def delivery_pdf(
 
     snapshot = _service(db).snapshot_pdf(attempt)
     if snapshot is not None:
-        filename = attempt.attachment_name or f"{attempt.claim_reference}.pdf"
+        filename = attempt.attachment_name or f"Technical_Report_{attempt.claim_reference}.pdf"
         return StreamingResponse(
             BytesIO(snapshot),
             media_type="application/pdf",
@@ -330,7 +338,7 @@ def delivery_pdf(
         ],
     }
     pdf = GenerateTechnicalReport(ReportLabTechnicalReportGenerator()).execute(report)
-    filename = f"{attempt.claim_reference}.pdf"
+    filename = f"Technical_Report_{attempt.claim_reference}.pdf"
     return StreamingResponse(
         BytesIO(pdf),
         media_type="application/pdf",

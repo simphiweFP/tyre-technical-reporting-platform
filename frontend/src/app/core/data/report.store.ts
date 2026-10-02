@@ -136,6 +136,7 @@ export class ReportStore {
           report,
         }),
       );
+      report.claimReference = response.report.claimReference;
       this.serverUpdatedAt.set(report.id, response.updated_at);
       await this.offline.removePendingReport(report.id);
       this.updateLocal(this.mapReport(response));
@@ -364,7 +365,7 @@ export class ReportStore {
     const now = new Date().toISOString();
     return {
       id: crypto.randomUUID(),
-      claimReference: `TR-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`,
+      claimReference: '',
       createdAt: now,
       updatedAt: now,
       status: 'Draft',

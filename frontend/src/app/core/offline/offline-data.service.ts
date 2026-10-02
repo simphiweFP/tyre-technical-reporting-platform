@@ -293,7 +293,7 @@ export class OfflineDataService {
         if (remainingReports.has(item.reportId) || remainingPhotos.has(item.reportId)) continue;
         try {
           const result = await firstValueFrom(
-            this.http.post<{ status: string }>(`${environment.apiUrl}/reports/deliver`, {
+            this.http.post<{ status: string; claim_reference: string }>(`${environment.apiUrl}/reports/deliver`, {
               recipient_email: item.recipientEmail,
               report: item.report,
               cc: item.cc ?? [],
@@ -301,7 +301,7 @@ export class OfflineDataService {
           );
           await this.remove('deliveries', item.key);
           this.lastDeliveryResult.set({
-            claimReference: item.claimReference,
+            claimReference: result.claim_reference,
             recipientEmail: item.recipientEmail,
             status: result.status,
           });
