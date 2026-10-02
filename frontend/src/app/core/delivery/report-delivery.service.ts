@@ -1,11 +1,10 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { OfflineDataService } from '../offline/offline-data.service';
 import {
   DeliveryAttempt,
-  ReportRecipient,
   TechnicalReport,
 } from '../../shared/models/report.models';
 
@@ -35,59 +34,11 @@ export interface DeliveryDetail {
   follow_ups: DeliveryFollowUp[];
 }
 
-export interface RecipientInput {
-  company: string;
-  contact_name: string;
-  email: string;
-  default_cc: string[];
-  branch_code: string;
-  category: string;
-  escalation_enabled: boolean;
-}
-
 @Injectable({ providedIn: 'root' })
 export class ReportDeliveryService {
   private readonly http = inject(HttpClient);
   private readonly offline = inject(OfflineDataService);
 
-  async recipients(activeOnly = true, branch = '', category = ''): Promise<ReportRecipient[]> {
-    if (!this.offline.online()) {
-      return this.offline.cachedRecipients(branch, category);
-    }
-
-    const params = new HttpParams()
-      .set('active_only', activeOnly)
-      .set('branch', branch)
-      .set('category', category);
-    const recipients = await firstValueFrom(
-      this.http.get<ReportRecipient[]>(`${environment.apiUrl}/recipients`, { params }),
-    );
-    await this.offline.cacheRecipients(recipients);
-    return recipients;
-  }
-
-  createRecipient(input: RecipientInput): Promise<ReportRecipient> {
-    return firstValueFrom(
-      this.http.post<ReportRecipient>(`${environment.apiUrl}/recipients`, input),
-    );
-  }
-
-  setRecipientStatus(id: string, active: boolean): Promise<ReportRecipient> {
-    const params = new HttpParams().set('is_active', active);
-    return firstValueFrom(
-      this.http.patch<ReportRecipient>(`${environment.apiUrl}/recipients/${id}/status`, null, {
-        params,
-      }),
-    );
-  }
-  updateRecipient(
-    id: string,
-    input: RecipientInput & { is_active: boolean },
-  ): Promise<ReportRecipient> {
-    return firstValueFrom(
-      this.http.put<ReportRecipient>(`${environment.apiUrl}/recipients/${id}`, input),
-    );
-  }
   deliveries(query = '', status = ''): Promise<{ items: DeliveryAttempt[]; total: number }> {
     return firstValueFrom(
       this.http.get<{ items: DeliveryAttempt[]; total: number }>(
@@ -97,10 +48,10 @@ export class ReportDeliveryService {
     );
   }
 
-  deliver(report: TechnicalReport, recipientId: string): Promise<DeliveryAttempt> {
+  deliver(report: TechnicalReport, recipientEmail: string): Promise<DeliveryAttempt> {
     return firstValueFrom(
       this.http.post<DeliveryAttempt>(`${environment.apiUrl}/reports/deliver`, {
-        recipient_id: recipientId,
+        recipient_email: recipientEmail,
         report,
         cc: [],
       }),
@@ -168,12 +119,6 @@ export class ReportDeliveryService {
         `${environment.apiUrl}/deliveries/${deliveryId}/follow-up`,
         { message },
       ),
-    );
-  }
-
-  softDeleteRecipient(recipientId: string): Promise<void> {
-    return firstValueFrom(
-      this.http.delete<void>(`${environment.apiUrl}/recipients/${recipientId}`),
     );
   }
 
