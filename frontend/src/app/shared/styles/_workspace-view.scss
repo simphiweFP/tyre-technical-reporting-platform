@@ -1,0 +1,293 @@
+// Shared presentation for the three claim-workflow workspaces.
+@mixin layout {
+  :is(#technical-claims, #claims-management, #delivery-centre) {
+    display: block;
+    color: #0a2148;
+    width: 100%;
+    max-width: 1800px;
+    margin: 0 auto;
+    padding: 28px;
+    font-size: 14px;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .workspace-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .workspace-heading h1 {
+    margin: 0 0 6px;
+    font-size: 26px;
+    line-height: 1.25;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .workspace-heading p {
+    margin: 0;
+    color: #5c6e88;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .workspace-heading small {
+    display: block;
+    margin-top: 4px;
+    color: #5c6e88;
+    font-size: 12px;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) button,
+  :is(#technical-claims, #claims-management, #delivery-centre) .new-claim,
+  :is(#technical-claims, #claims-management, #delivery-centre) .archive-view {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    height: auto;
+    padding: 9px 14px;
+    border: 1px solid #d0dbe8;
+    border-radius: 6px;
+    background: #fff;
+    color: #173158;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .primary,
+  :is(#technical-claims, #claims-management, #delivery-centre) .new-claim {
+    border-color: var(--royal-blue);
+    background: var(--royal-blue);
+    color: #fff;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) button:focus-visible,
+  :is(#technical-claims, #claims-management, #delivery-centre) a:focus-visible {
+    outline: 3px solid #b9bcef;
+    outline-offset: 2px;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .filter-card,
+  :is(#technical-claims, #claims-management, #delivery-centre) .filter-panel,
+  :is(#technical-claims, #claims-management, #delivery-centre) .filters {
+    padding: 16px;
+    margin: 0 0 16px;
+    border: 1px solid #d0dbe8;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: none;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .filters,
+  :is(#technical-claims, #claims-management, #delivery-centre) .filter-grid,
+  :is(#technical-claims, #claims-management, #delivery-centre) .filter-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    align-items: end;
+    gap: 12px;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .filter-grid {
+    margin-top: 12px;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) label {
+    display: grid;
+    min-width: 0;
+    gap: 6px;
+    color: #173158;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) input,
+  :is(#technical-claims, #claims-management, #delivery-centre) select,
+  :is(#technical-claims, #claims-management, #delivery-centre) textarea,
+  :is(#technical-claims, #claims-management, #delivery-centre) output {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 10px 12px;
+    border: 1px solid #ccd8e6;
+    border-radius: 6px;
+    background: #fff;
+    color: #173158;
+    font-size: 14px;
+    line-height: 1.3;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) input:focus,
+  :is(#technical-claims, #claims-management, #delivery-centre) select:focus,
+  :is(#technical-claims, #claims-management, #delivery-centre) textarea:focus {
+    outline: 2px solid #b9bcef;
+    border-color: var(--royal-blue);
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .filters > label:first-child,
+  :is(#technical-claims, #claims-management, #delivery-centre) .filter-row > .search-field {
+    grid-column: 1 / -1;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .wide-search {
+    display: grid;
+    height: auto;
+    padding: 0;
+    border: 0;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .search-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid #ccd8e6;
+    border-radius: 6px;
+    background: #fff;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .search-control input {
+    height: 100%;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .search-control:focus-within {
+    outline: 2px solid #b9bcef;
+    border-color: var(--royal-blue);
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .card,
+  :is(#technical-claims, #claims-management, #delivery-centre) .claims-table,
+  :is(#technical-claims, #claims-management, #delivery-centre) .delivery-table,
+  :is(#technical-claims, #claims-management, #delivery-centre) .delivery-status {
+    border: 1px solid #d0dbe8;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: none;
+    overflow: hidden;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .card > header {
+    padding: 18px;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .card h2,
+  :is(#technical-claims, #claims-management, #delivery-centre) .delivery-status h2 {
+    font-size: 18px;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) th {
+    height: 44px;
+    padding: 12px 14px;
+    border-right: 0;
+    background: #eaf2fc;
+    color: #173158;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) td {
+    height: 56px;
+    padding: 12px 14px;
+    border-right: 0;
+    border-bottom: 1px solid #e0e7f0;
+    font-size: 13px;
+    vertical-align: middle;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) tbody tr:hover {
+    background: #f8fbff;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .reference,
+  :is(#technical-claims, #claims-management, #delivery-centre) td a:not(.new-claim) {
+    color: var(--royal-blue);
+    font-weight: 600;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) button.reference {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) td:last-child a,
+  :is(#technical-claims, #claims-management, #delivery-centre) td:last-child button {
+    min-height: 36px;
+    height: auto;
+    font-size: 12px;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) footer,
+  :is(#technical-claims, #claims-management, #delivery-centre) .table-footer {
+    min-height: 56px;
+    height: auto;
+    padding: 14px;
+    color: #5c6e88;
+    font-size: 12px;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .claim-state,
+  :is(#technical-claims, #claims-management, #delivery-centre) .delivery-state,
+  :is(#technical-claims, #claims-management, #delivery-centre) .decision-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 20px;
+    background: #edf1f6;
+    color: #526581;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .decision-state.accepted,
+  :is(#technical-claims, #claims-management, #delivery-centre) .delivery-state.sent,
+  :is(#technical-claims, #claims-management, #delivery-centre) .claim-state.email-sent {
+    color: #087a49;
+    background: #e6f8ed;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .decision-state.rejected,
+  :is(#technical-claims, #claims-management, #delivery-centre) .delivery-state.failed,
+  :is(#technical-claims, #claims-management, #delivery-centre) .claim-state.email-failed {
+    color: #b51529;
+    background: #ffeaed;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .status-tabs button,
+  :is(#technical-claims, #claims-management, #delivery-centre) .tabs button {
+    min-height: 38px;
+    font-size: 13px;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .status-tabs button.active {
+    background: var(--royal-blue);
+    color: #fff;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .tabs button {
+    border: 0;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    background: transparent;
+  }
+  :is(#technical-claims, #claims-management, #delivery-centre) .tabs button.active {
+    border-bottom-color: var(--royal-blue);
+    color: var(--royal-blue);
+  }
+  @media (max-width: 900px) {
+    :is(#technical-claims, #claims-management, #delivery-centre) {
+      padding: 20px;
+    }
+    :is(#technical-claims, #claims-management, #delivery-centre) .delivery-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (max-width: 600px) {
+    :is(#technical-claims, #claims-management, #delivery-centre) {
+      padding: 16px 12px;
+    }
+    :is(#technical-claims, #claims-management, #delivery-centre) .workspace-heading h1 {
+      font-size: 24px;
+    }
+    :is(#technical-claims, #claims-management, #delivery-centre) .filters,
+    :is(#technical-claims, #claims-management, #delivery-centre) .filter-grid,
+    :is(#technical-claims, #claims-management, #delivery-centre) .filter-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    :is(#technical-claims, #claims-management, #delivery-centre) .claims-table footer {
+      min-width: 0;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+  }
+}

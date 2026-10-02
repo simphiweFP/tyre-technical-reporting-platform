@@ -1,5 +1,5 @@
-<section class="claims-page">
-  <header class="page-title">
+<section id="claims-management" class="claims-page workspace-view">
+  <header class="page-title workspace-heading">
     <div>
       <h1>{{ auth.hasRole('claims_administrator') ? 'My Claims' : 'Claims Management' }}</h1>
       <p>One claim, from inspection to customer credit and supplier recovery.</p>
@@ -66,6 +66,7 @@
         </select></label
       >
     }
+    <button type="button" (click)="clearFilters()" [disabled]="busy()">Clear filters</button>
     <button (click)="load()" [disabled]="busy()">{{ busy() ? 'Loading…' : 'Refresh' }}</button>
   </div>
   <datalist id="supplier-options">
@@ -145,6 +146,13 @@
                   <td>
                     @if (col.key === 'claim_reference') {
                       <button class="reference" (click)="open(c)">{{ c.claim_reference }}</button>
+                    } @else if (col.key === 'supplier_status') {
+                      <span
+                        class="decision-state"
+                        [class.accepted]="c.data.supplier_status === 'Accepted'"
+                        [class.rejected]="c.data.supplier_status === 'Rejected'"
+                        >{{ cell(c, col.key) }}</span
+                      >
                     } @else {
                       {{ cell(c, col.key) }}
                     }

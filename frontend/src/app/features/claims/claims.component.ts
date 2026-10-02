@@ -243,6 +243,20 @@ export class ClaimsComponent {
       if (request === this.loadRequest) this.busy.set(false);
     }
   }
+  clearFilters(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.filters = {
+      search: '',
+      supplier: '',
+      branch: '',
+      decision: '',
+      workflow_status: '',
+      date_from: '',
+      date_to: '',
+    };
+    this.offset.set(0);
+    void this.load();
+  }
   search(): void {
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => {
