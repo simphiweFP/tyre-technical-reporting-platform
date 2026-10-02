@@ -21,6 +21,7 @@ from backend.app.modules.delivery.presentation import router as delivery_router
 from backend.app.modules.identity.presentation import router as auth_router
 from backend.app.modules.reports.customer_lookup import refresh_customer_cache_if_due
 from backend.app.modules.reports.presentation import router as reports_router
+from backend.app.seed import seed
 
 settings = get_settings()
 logger = logging.getLogger("tyre-reporting-api")
@@ -51,6 +52,7 @@ async def lifespan(_: FastAPI):
     settings.validate_for_startup()
     if settings.environment != "test":
         run_database_migrations()
+        seed()
     customer_sync_task = asyncio.create_task(customer_cache_scheduler())
     bounce_monitor_task = asyncio.create_task(bounce_monitor_scheduler())
     try:

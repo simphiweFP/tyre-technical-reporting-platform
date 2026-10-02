@@ -196,7 +196,7 @@ The Angular capture experience is mobile-first and responsive, but physical-devi
 
 ## Claims Management
 
-Create the second administrator under **Administration → Users** with the **Claims Administrator** role. After a technical report is submitted, use **Hand over claim** to assign it to this user. Claims administrators see only their assigned claims and receive an inbox of credit instructions; the original administrator can manage and reassign all claims. Technical-report delivery status and claim-tracking progress are stored separately.
+The backend seeds both administrators after applying migrations at startup. The second administrator defaults to `claims@royaltyres.co.za` with the **Claims Administrator** role. Configure `SEED_CLAIMS_ADMIN_EMAIL` and `SEED_CLAIMS_ADMIN_PASSWORD`; a blank claims password uses `SEED_ADMIN_PASSWORD`. Existing account passwords and assignments are preserved on restart. You can also create another user under **Administration → Users** with the **Claims Administrator** role. After a technical report is submitted, use **Hand over claim** to assign it to this user. Claims administrators see only their assigned claims and receive an inbox of credit instructions; the original administrator can manage and reassign all claims. Technical-report delivery status and claim-tracking progress are stored separately.
 
 The four screens follow the Claims Management workbook: **Claim Tracker**, **Instruction to Credit**, **Supplier Scorecard**, and **Other Metrics**. All 23 tracker columns and 15 credit-instruction columns are included in the app and exports. Customer credit percentage is entered manually from 0 to 100; remaining tread percentage is calculated as RTD / OTD × 100. Tyre size is captured separately from rim size. Supplier suggestions come from `SUPPLIER_JSON_PATH` (default `backend/data/suppliers.json`), with manual entry supported. Mock supplier codes must be replaced with real supplier codes before downstream integration.
 
@@ -211,3 +211,11 @@ Deploy the backend migration before opening the new screens:
 ```bash
 python -m alembic -c backend/alembic.ini upgrade head
 ```
+
+To apply migrations and seed both administrators manually from the repository root:
+
+```bash
+python -m backend.app.seed
+```
+
+When updating a local checkout, fetching downloads commits but does not update your working files. Use `git switch tyre-technical-reporting` followed by `git pull --ff-only origin tyre-technical-reporting`, then restart/rebuild the app.

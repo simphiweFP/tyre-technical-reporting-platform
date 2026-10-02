@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:4200"
     seed_admin_email: str = "admin@royaltyres.co.za"
     seed_admin_password: str = "ChangeMe123!"
+    seed_claims_admin_email: str = "claims@royaltyres.co.za"
+    seed_claims_admin_password: str = ""
     smtp_host: str = "smtp.office365.com"
     smtp_port: int = 587
     smtp_username: str = "royaladmin@royaltyres.co.za"
@@ -90,6 +92,8 @@ class Settings(BaseSettings):
             errors.append("JWT_SECRET must be replaced")
         if self.seed_admin_password == "ChangeMe123!":
             errors.append("SEED_ADMIN_PASSWORD must be replaced")
+        if self.seed_claims_admin_password == "ChangeMe123!":
+            errors.append("SEED_CLAIMS_ADMIN_PASSWORD must be replaced")
         if len(self.jwt_secret) < 32:
             errors.append("JWT_SECRET must contain at least 32 characters")
         if self.database_url.startswith("sqlite"):
