@@ -88,12 +88,6 @@ export const routes: Routes = [
           import('./features/admin/users.component').then((m) => m.UsersComponent),
       },
       {
-        path: 'admin/recipients',
-        canActivate: [roleGuard('administrator')],
-        loadComponent: () =>
-          import('./features/admin/recipients.component').then((m) => m.RecipientsComponent),
-      },
-      {
         path: 'admin/branches',
         canActivate: [roleGuard('administrator')],
         loadComponent: () =>
