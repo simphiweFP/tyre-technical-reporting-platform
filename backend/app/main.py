@@ -14,6 +14,7 @@ from backend.app.core.migrations import run_database_migrations
 from backend.app.modules.administration.presentation import (
     router as administration_router,
 )
+from backend.app.modules.delivery.bounce_monitor import process_microsoft_bounces
 from backend.app.modules.delivery.presentation import router as delivery_router
 from backend.app.modules.identity.presentation import router as auth_router
 from backend.app.modules.reports.customer_lookup import refresh_customer_cache_if_due
@@ -32,18 +33,32 @@ async def customer_cache_scheduler() -> None:
         await asyncio.sleep(60 * 60)
 
 
+async def bounce_monitor_scheduler() -> None:
+    while True:
+        try:
+            await process_microsoft_bounces(settings)
+        except Exception:
+            # Mailbox monitoring must never prevent the reporting API from running.
+            pass
+        await asyncio.sleep(max(settings.bounce_monitor_poll_seconds, 30))
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     settings.validate_for_startup()
     if settings.environment != "test":
         run_database_migrations()
     customer_sync_task = asyncio.create_task(customer_cache_scheduler())
+    bounce_monitor_task = asyncio.create_task(bounce_monitor_scheduler())
     try:
         yield
     finally:
         customer_sync_task.cancel()
+        bounce_monitor_task.cancel()
         with suppress(asyncio.CancelledError):
             await customer_sync_task
+        with suppress(asyncio.CancelledError):
+            await bounce_monitor_task
 
 
 app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
