@@ -7,7 +7,6 @@ import { AuthService } from '../../core/auth/auth.service';
 import { SweetAlertService } from '../../core/ui/sweet-alert.service';
 import {
   DeliveryAttempt,
-  ReportRecipient,
   TechnicalReport,
 } from '../../shared/models/report.models';
 
@@ -26,8 +25,10 @@ export class ReportDetailComponent {
   private readonly alerts = inject(SweetAlertService);
   readonly report = signal<TechnicalReport | null>(null);
   readonly deliveries = signal<DeliveryAttempt[]>([]);
-  readonly recipients = signal<ReportRecipient[]>([]);
-  readonly selectedRecipient = signal('');
+  readonly recipientEmail = signal('');
+  readonly ccInput = signal('');
+  readonly ccRecipients = signal<string[]>([]);
+  readonly ccError = signal('');
   readonly busy = signal('');
   readonly message = signal('');
   constructor() {
@@ -41,15 +42,6 @@ export class ReportDetailComponent {
     } catch {
       this.message.set('The report could not be loaded.');
       return;
-    }
-    if (!this.auth.hasRole('administrator', 'report_capturer')) return;
-    try {
-      const item = this.report()!;
-      const recipients = await this.delivery.recipients(true, item.branch, item.category);
-      this.recipients.set(recipients);
-      if (recipients.length) this.selectedRecipient.set(recipients[0].id);
-    } catch {
-      this.recipients.set([]);
     }
   }
   async generatePdf() {
@@ -75,24 +67,49 @@ export class ReportDetailComponent {
       this.busy.set('');
     }
   }
+  addCcRecipient(): void {
+    const email = this.ccInput().trim().toLowerCase();
+    this.ccError.set('');
+
+    if (!email) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.ccError.set('Enter a valid email address.');
+      return;
+    }
+    if (email === this.recipientEmail().trim().toLowerCase()) {
+      this.ccError.set('This email is already the main recipient.');
+      return;
+    }
+    if (this.ccRecipients().includes(email)) {
+      this.ccError.set('This CC email has already been added.');
+      return;
+    }
+    if (this.ccRecipients().length >= 5) {
+      this.ccError.set('You can add up to 5 CC email addresses.');
+      return;
+    }
+
+    this.ccRecipients.update((items) => [...items, email]);
+    this.ccInput.set('');
+  }
+
+  removeCcRecipient(email: string): void {
+    this.ccRecipients.update((items) => items.filter((item) => item !== email));
+    this.ccError.set('');
+  }
+
   async send() {
     const r = this.report();
-    const recipientId = this.selectedRecipient();
-    if (!r || !recipientId) {
+    const recipientEmail = this.recipientEmail().trim().toLowerCase();
+    if (!r || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
       await this.alerts.warning(
         'Recipient required',
-        'Select a recipient before sending this report.',
+        'Enter a valid recipient email address before sending this report.',
       );
       return;
     }
 
-    const recipient = this.recipients().find((item) => item.id === recipientId);
-    if (
-      !(await this.alerts.confirmReportSend(
-        recipient?.email ?? 'Selected recipient',
-        r.claimReference,
-      ))
-    ) {
+    if (!(await this.alerts.confirmReportSend(recipientEmail, r.claimReference))) {
       return;
     }
 
@@ -101,7 +118,7 @@ export class ReportDetailComponent {
     this.alerts.sending();
 
     try {
-      const result = await this.delivery.deliver(r, recipientId);
+      const result = await this.delivery.deliver(r, recipientEmail, this.ccRecipients());
 
       const updated = {
         ...r,
