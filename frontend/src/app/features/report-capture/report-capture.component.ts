@@ -12,7 +12,6 @@ import {
   DeliveryAttempt,
   PHOTO_CATEGORIES,
   ReportPhoto,
-  ReportRecipient,
   TechnicalReport,
 } from '../../shared/models/report.models';
 @Component({
@@ -41,10 +40,9 @@ export class ReportCaptureComponent implements OnDestroy {
   readonly tyrePositionModalOpen = signal(false);
   readonly tyreVehicleType = signal<'Car' | 'Horse' | 'Trailer'>('Horse');
   readonly readonlyView = computed(() => this.auth.hasRole('viewer'));
-  readonly recipients = signal<ReportRecipient[]>([]);
-  readonly selectedRecipient = signal('');
-  readonly hasSelectedRecipient = computed(() =>
-    this.recipients().some((recipient) => recipient.id === this.selectedRecipient()),
+  readonly recipientEmail = signal('');
+  readonly hasRecipientEmail = computed(() =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.recipientEmail().trim()),
   );
   readonly confirmed = signal(false);
   readonly submitting = signal(false);
@@ -138,7 +136,6 @@ export class ReportCaptureComponent implements OnDestroy {
     this.customerSearch$
       .pipe(debounceTime(400), takeUntil(this.destroy$))
       .subscribe((term) => void this.loadCustomerSuggestions(term));
-    void this.loadDeliveryData();
     void this.loadReferenceData();
     if (this.route.snapshot.paramMap.get('id')) void this.loadServerReport();
     else this.persist();
@@ -169,7 +166,6 @@ export class ReportCaptureComponent implements OnDestroy {
       const ready = { ...this.currentReport(), status: 'Ready to Submit' as const };
       this.report.set(ready);
       await this.workflow.saveNow(ready);
-      await this.loadDeliveryData();
       this.previewMode.set(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch {
@@ -515,14 +511,10 @@ export class ReportCaptureComponent implements OnDestroy {
     ];
   }
   async sendReport(): Promise<'Queued' | DeliveryAttempt> {
-    if (!(await this.validateStep(3)) || !this.hasSelectedRecipient()) {
-      throw new Error('The report is not ready to send.');
+    const recipientEmail = this.recipientEmail().trim().toLowerCase();
+    if (!(await this.validateStep(3)) || !this.hasRecipientEmail()) {
+      throw new Error('Enter a valid recipient email address before sending.');
     }
-
-    const recipient = this.recipients().find(
-      (item) => item.id === this.selectedRecipient(),
-    );
-    if (!recipient) throw new Error('The selected recipient is not available.');
 
     const current = {
       ...this.currentReport(),
@@ -532,17 +524,13 @@ export class ReportCaptureComponent implements OnDestroy {
     await this.workflow.saveNow(current);
 
     if (!this.offline.online()) {
-      await this.workflow.queueDelivery(
-        current,
-        recipient.id,
-        recipient.email,
-      );
+      await this.workflow.queueDelivery(current, recipientEmail);
       this.deliveryStatus.set('Queued');
-      this.deliveryEmail.set(recipient.email);
+      this.deliveryEmail.set(recipientEmail);
       return 'Queued';
     }
 
-    const result = await this.workflow.deliver(current, recipient.id);
+    const result = await this.workflow.deliver(current, recipientEmail);
     const updated = {
       ...this.report(),
       status: result.status === 'Sent'
@@ -587,18 +575,17 @@ export class ReportCaptureComponent implements OnDestroy {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   async sendFromPreview(): Promise<void> {
-    const recipientId = this.selectedRecipient();
-    if (!this.hasSelectedRecipient()) {
+    const recipientEmail = this.recipientEmail().trim().toLowerCase();
+    if (!this.hasRecipientEmail()) {
       await this.alerts.error(
         'Recipient required',
-        'Select an email recipient before sending the report.',
+        'Enter a valid email address before sending the report.',
       );
       return;
     }
 
-    const recipient = this.recipients().find((item) => item.id === recipientId);
     const confirmed = await this.alerts.confirmReportSend(
-      recipient?.email ?? 'Selected recipient',
+      recipientEmail,
       this.report().claimReference,
     );
     if (!confirmed) return;
@@ -625,7 +612,7 @@ export class ReportCaptureComponent implements OnDestroy {
       if (result.status === 'Sent') {
         await this.alerts.success(
           'Report accepted',
-          `${this.report().claimReference} was accepted by the mail server for ${this.deliveryEmail() || recipient?.email || 'the selected recipient'}.`,
+          `${this.report().claimReference} was accepted by the mail server for ${this.deliveryEmail() || recipientEmail}.`,
         );
         this.previewMode.set(false);
         this.successMode.set(true);
@@ -691,22 +678,6 @@ export class ReportCaptureComponent implements OnDestroy {
     }
   }
 
-  private async loadDeliveryData(): Promise<void> {
-    try {
-      const current = this.currentReport();
-      const recipients = await this.workflow.recipients(current);
-      this.recipients.set(recipients);
-
-      // Recipient selection must always be an explicit user choice.
-      // Clear stale selections when branch/category changes or no longer matches.
-      if (!recipients.some((recipient) => recipient.id === this.selectedRecipient())) {
-        this.selectedRecipient.set('');
-      }
-    } catch {
-      this.recipients.set([]);
-      this.captureMessage.set('Delivery contacts are temporarily unavailable.');
-    }
-  }
   private async loadReferenceData(): Promise<void> {
     try {
       const data = await this.workflow.referenceData();
