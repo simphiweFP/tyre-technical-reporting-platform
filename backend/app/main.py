@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
@@ -21,6 +22,7 @@ from backend.app.modules.reports.customer_lookup import refresh_customer_cache_i
 from backend.app.modules.reports.presentation import router as reports_router
 
 settings = get_settings()
+logger = logging.getLogger("tyre-reporting-api")
 
 
 async def customer_cache_scheduler() -> None:
@@ -39,7 +41,7 @@ async def bounce_monitor_scheduler() -> None:
             await process_microsoft_bounces(settings)
         except Exception:
             # Mailbox monitoring must never prevent the reporting API from running.
-            pass
+            logger.exception("Microsoft 365 bounce monitoring failed")
         await asyncio.sleep(max(settings.bounce_monitor_poll_seconds, 30))
 
 
