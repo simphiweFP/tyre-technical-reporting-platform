@@ -22,7 +22,11 @@ from backend.app.modules.claims.application import (
     required_owner,
     visible_cases,
 )
-from backend.app.modules.claims.automation import ensure_credit_instruction
+from backend.app.modules.claims.automation import (
+    ensure_credit_instruction,
+    report_has_sent_email,
+    sent_report_query,
+)
 from backend.app.modules.claims.documents import (
     EXTRA_COLUMNS,
     INSTRUCTION_COLUMNS,
@@ -59,7 +63,7 @@ router = APIRouter(prefix="/claims", tags=["Claims management"])
 read_access = require_roles(
     Role.ADMINISTRATOR, Role.CLAIMS_ADMINISTRATOR, Role.REPORT_CAPTURER
 )
-write_access = require_roles(Role.ADMINISTRATOR, Role.CLAIMS_ADMINISTRATOR)
+write_access = require_roles(Role.CLAIMS_ADMINISTRATOR)
 
 
 @router.get("/suppliers")
@@ -88,6 +92,7 @@ def available_reports(
 ):
     query = select(TechnicalReportRecord).where(
         TechnicalReportRecord.status != "Draft",
+        TechnicalReportRecord.claim_reference.in_(sent_report_query()),
         TechnicalReportRecord.archived.is_(False),
         ~TechnicalReportRecord.id.in_(select(ClaimCase.report_id)),
     )
@@ -123,9 +128,10 @@ def handover(
         or (user.role == Role.REPORT_CAPTURER and report.created_by != user.id)
     ):
         raise HTTPException(status_code=404, detail="Report not found")
-    if report.status == "Draft":
+    if report.status == "Draft" or not report_has_sent_email(db, report):
         raise HTTPException(
-            status_code=422, detail="Submit the technical report before handover"
+            status_code=422,
+            detail="Send the technical report email successfully before handover",
         )
     if db.scalar(select(ClaimCase).where(ClaimCase.report_id == report.id)):
         raise HTTPException(
@@ -557,7 +563,7 @@ def receive_instruction(
     instruction = db.get(CreditInstruction, instruction_id)
     if not instruction or instruction.case_id != case.id:
         raise HTTPException(status_code=404, detail="Instruction not found")
-    if user.role != Role.ADMINISTRATOR and instruction.assigned_to != user.id:
+    if instruction.assigned_to != user.id:
         raise HTTPException(
             status_code=403, detail="This instruction is assigned to another user"
         )

@@ -9,9 +9,28 @@ from backend.app.core.config import get_settings
 from backend.app.modules.claims.application import audit, case_view, initial_data
 from backend.app.modules.claims.documents import INSTRUCTION_COLUMNS, flat_claim
 from backend.app.modules.claims.infrastructure import ClaimCase, CreditInstruction
+from backend.app.modules.delivery.infrastructure import DeliveryAttempt
 from backend.app.modules.identity.domain import Role
 from backend.app.modules.identity.infrastructure import User
 from backend.app.modules.reports.infrastructure import TechnicalReportRecord
+
+
+def sent_report_query():
+    return select(DeliveryAttempt.claim_reference).where(
+        DeliveryAttempt.document_type == "technical",
+        DeliveryAttempt.status == "Sent",
+    )
+
+
+def report_has_sent_email(db: Session, report: TechnicalReportRecord) -> bool:
+    return (
+        db.scalar(
+            sent_report_query()
+            .where(DeliveryAttempt.claim_reference == report.claim_reference)
+            .limit(1)
+        )
+        is not None
+    )
 
 
 def continue_report(
@@ -53,6 +72,8 @@ def continue_report(
                 )
             ensure_credit_instruction(db, existing, actor)
         return existing
+    if not report_has_sent_email(db, report):
+        return None
     owners = db.scalars(
         select(User).where(
             User.role == Role.CLAIMS_ADMINISTRATOR,
@@ -70,7 +91,7 @@ def continue_report(
         report_id=report.id,
         assigned_to=owner.id,
         handed_over_by=actor.id,
-        handover_notes="Automatically continued from the technical report",
+        handover_notes="Automatic handover after the technical report email was sent",
         data=initial_data(report),
     )
     db.add(case)
@@ -93,6 +114,7 @@ def continue_existing_reports(db: Session):
             TechnicalReportRecord.status.in_(
                 ["Submitted", "Email Sent", "Email Failed"]
             ),
+            TechnicalReportRecord.claim_reference.in_(sent_report_query()),
             ~TechnicalReportRecord.id.in_(select(ClaimCase.report_id)),
         )
         .order_by(TechnicalReportRecord.created_at)

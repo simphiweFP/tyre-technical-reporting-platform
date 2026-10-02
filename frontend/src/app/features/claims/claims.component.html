@@ -16,10 +16,18 @@
     <header class="page-title">
       <div>
         <h1>{{ auth.hasRole('claims_administrator') ? 'My Claims' : 'Claims Management' }}</h1>
-        <p>One claim, from inspection to customer credit and supplier recovery.</p>
-        <small>Submitted technical reports flow into this queue automatically.</small>
+        <p>
+          {{
+            canWrite()
+              ? 'Manage supplier feedback, customer credit and supplier recovery.'
+              : 'View claim progress managed by the assigned Claims Administrator.'
+          }}
+        </p>
+        <small
+          >Claims move to the Claims Administrator after the technical report email is sent.</small
+        >
       </div>
-      @if (canHandover()) {
+      @if (canHandover() && available().length) {
         <button class="primary" (click)="handoverOpen.set(true)" [disabled]="busy()">
           Hand over a claim
         </button>
@@ -77,7 +85,9 @@
     </div>
     @if (tab() === 'credit' && pendingInstructions().length) {
       <section class="card">
-        <header><h2>Credit instruction inbox</h2></header>
+        <header>
+          <h2>{{ canWrite() ? 'Credit instruction inbox' : 'Credit instruction status' }}</h2>
+        </header>
         <div class="inbox">
           @for (entry of pendingInstructions(); track entry.instruction.id) {
             <article>
@@ -171,7 +181,7 @@
                     {{
                       busy()
                         ? 'Loading claims…'
-                        : 'No matching claims. Submitted technical reports appear here automatically when a Claims Administrator is active.'
+                        : 'No matching claims. Successfully emailed technical reports appear here automatically when a Claims Administrator is active.'
                     }}
                   </td>
                 </tr>
@@ -345,6 +355,12 @@
           <p>Assigned to {{ c.owner_name }} · Received {{ c.received_at | date: 'medium' }}</p>
         </div>
       </header>
+      @if (!canWrite()) {
+        <p class="handover-note" role="status">
+          View only · {{ c.owner_name }} manages supplier feedback, customer credit, recovery and
+          claim reports.
+        </p>
+      }
       <p class="handover-note">
         <strong>Next action: {{ nextAction(c) }}</strong> · Customer and tyre details come from the
         technical report.

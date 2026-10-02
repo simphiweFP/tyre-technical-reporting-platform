@@ -13,6 +13,7 @@ from backend.app.core.security import hash_password
 from backend.app.main import app
 from backend.app.modules.claims.documents import TRACKER_COLUMNS
 from backend.app.modules.delivery import presentation as delivery_presentation
+from backend.app.modules.delivery.infrastructure import DeliveryAttempt
 from backend.app.modules.identity.infrastructure import User
 from backend.app.modules.reports.infrastructure import TechnicalReportRecord
 
@@ -64,6 +65,17 @@ def claims_setup(client):
             },
         )
         db.add(report)
+        db.flush()
+        db.add(
+            DeliveryAttempt(
+                claim_reference=report.claim_reference,
+                recipient_email="supplier@example.com",
+                requested_by=admin.id,
+                status="Sent",
+                document_type="technical",
+                report_payload={"claimReference": report.claim_reference},
+            )
+        )
         db.commit()
         report_id = str(report.id)
     return {
@@ -157,7 +169,7 @@ def test_credit_workflow_and_manual_percentages(client, claims_setup, monkeypatc
     assert claim["credit_outstanding"] and claim["supplier_offset_outstanding"]
     response = client.post(
         f"/api/v1/claims/{claim['id']}/instructions",
-        headers=crew["admin"],
+        headers=crew["claims"],
         json={"notes": "Pass the agreed 91% credit"},
     )
     assert response.status_code == 201, response.text
@@ -487,3 +499,65 @@ def test_workbook_import_preserves_all_tracker_values(client, claims_setup):
         ).status_code
         == 403
     )
+
+
+def test_first_admin_views_but_cannot_run_claim_operations(client, claims_setup):
+    crew = claims_setup
+    claim = handover(client, crew)
+    claim = update(
+        client,
+        crew,
+        claim,
+        supplier="Supplier",
+        supplier_status="Accepted",
+        supplier_feedback_date="2026-10-02",
+        accepted_percentage=100,
+        customer_credit_percentage=75,
+    )
+    base = f"/api/v1/claims/{claim['id']}"
+    before = client.get(base, headers=crew["admin"])
+    assert before.status_code == 200
+    instruction = claim["instructions"][0]["id"]
+    operations = [
+        (
+            "put",
+            base,
+            {"data": claim["data"], "expected_updated_at": claim["updated_at"]},
+        ),
+        ("post", base + "/instructions", {"notes": "Credit"}),
+        ("post", base + f"/instructions/{instruction}/receive", None),
+        (
+            "post",
+            base + "/documents/tracker/send",
+            {"recipient_email": "supplier@example.com"},
+        ),
+        (
+            "post",
+            "/api/v1/claims/scorecard/send",
+            {"recipient_email": "supplier@example.com"},
+        ),
+    ]
+    for method, url, body in operations:
+        response = getattr(client, method)(url, headers=crew["admin"], json=body)
+        assert response.status_code == 403, (url, response.text)
+    viewed = client.get(base, headers=crew["admin"]).json()
+    assert viewed["updated_at"] == before.json()["updated_at"]
+    assert viewed["instructions"][0]["acknowledged_at"] is None
+
+
+def test_manual_handover_waits_for_sent_email(client, claims_setup):
+    crew = claims_setup
+    with next(app.dependency_overrides[get_db]()) as db:
+        attempt = db.scalar(select(DeliveryAttempt))
+        attempt.status = "Failed"
+        db.commit()
+    assert (
+        client.get("/api/v1/claims/available-reports", headers=crew["admin"]).json()
+        == []
+    )
+    response = client.post(
+        "/api/v1/claims/handover",
+        headers=crew["admin"],
+        json={"report_id": crew["report"], "assigned_to": crew["owner"]},
+    )
+    assert response.status_code == 422

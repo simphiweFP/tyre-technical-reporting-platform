@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session
 
 from backend.app.core.config import get_settings
 from backend.app.modules.auditing.infrastructure import AuditEvent
+from backend.app.modules.claims.automation import continue_report
 from backend.app.modules.delivery.domain import EmailGateway, EmailMessage
 from backend.app.modules.delivery.infrastructure import DeliveryAttempt
 from backend.app.modules.document_generation.application import GenerateTechnicalReport
+from backend.app.modules.identity.infrastructure import User
 from backend.app.modules.reports.infrastructure import (
     ReportImage,
     TechnicalReportRecord,
@@ -262,7 +264,11 @@ class ReportDeliveryService:
             attempt.next_attempt_at = datetime.now(UTC) + timedelta(
                 minutes=settings.delivery_retry_minutes * attempt.attempt_count
             )
-            if report_record and attempt.status == "Failed" and attempt.document_type == "technical":
+            if (
+                report_record
+                and attempt.status == "Failed"
+                and attempt.document_type == "technical"
+            ):
                 report_record.status = "Email Failed"
         self.db.add(
             AuditEvent(
@@ -281,6 +287,14 @@ class ReportDeliveryService:
                 },
             )
         )
+        if (
+            attempt.status == "Sent"
+            and report_record
+            and attempt.document_type == "technical"
+        ):
+            actor = self.db.get(User, actor_id)
+            if actor:
+                continue_report(self.db, report_record, actor)
         self.db.commit()
         self.db.refresh(attempt)
         return attempt

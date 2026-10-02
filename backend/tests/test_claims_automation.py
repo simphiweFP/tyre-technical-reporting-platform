@@ -35,7 +35,7 @@ def report_data():
     }
 
 
-def test_submit_automatically_continues_same_claim_and_syncs_source(
+def test_sent_email_continues_same_claim_and_syncs_source(
     client, claims_setup, monkeypatch
 ):
     crew = claims_setup
@@ -48,6 +48,13 @@ def test_submit_automatically_continues_same_claim_and_syncs_source(
         json={"report": data},
     )
     assert saved.status_code == 200, saved.text
+    assert client.get("/api/v1/claims", headers=crew["claims"]).json()["total"] == 0
+    sent = client.post(
+        "/api/v1/reports/deliver",
+        headers=crew["admin"],
+        json={"recipient_email": "supplier@example.com", "report": {"id": report_id}},
+    )
+    assert sent.status_code == 200 and sent.json()["status"] == "Sent", sent.text
     claims = client.get("/api/v1/claims", headers=crew["claims"]).json()["items"]
     assert len(claims) == 1
     claim = claims[0]
@@ -173,3 +180,59 @@ def test_manual_percentage_auto_issues_once_and_keeps_previous_snapshot(
         ).status_code
         == 200
     )
+
+
+def test_failed_email_stays_with_first_admin_and_successful_retry_hands_over(
+    client, claims_setup, monkeypatch
+):
+    import smtplib
+
+    from backend.app.modules.delivery import presentation as delivery_presentation
+
+    crew = claims_setup
+    monkeypatch.setattr(get_settings(), "seed_claims_admin_email", "claims@example.com")
+    report_id = str(uuid4())
+    saved = client.put(
+        f"/api/v1/reports/records/{report_id}",
+        headers=crew["admin"],
+        json={"report": report_data()},
+    )
+    assert saved.status_code == 200
+
+    def fail(self, message):
+        raise smtplib.SMTPRecipientsRefused(
+            {"supplier@example.com": (550, b"Unavailable")}
+        )
+
+    monkeypatch.setattr(delivery_presentation.SmtpEmailGateway, "send", fail)
+    failed = client.post(
+        "/api/v1/reports/deliver",
+        headers=crew["admin"],
+        json={"recipient_email": "supplier@example.com", "report": {"id": report_id}},
+    )
+    assert failed.status_code == 200 and failed.json()["status"] == "Failed", (
+        failed.text
+    )
+    assert client.get("/api/v1/claims", headers=crew["claims"]).json()["total"] == 0
+    monkeypatch.setattr(
+        delivery_presentation.SmtpEmailGateway,
+        "send",
+        lambda self, message: "retry-message",
+    )
+    retried = client.post(
+        f"/api/v1/reports/deliveries/{failed.json()['id']}/retry", headers=crew["admin"]
+    )
+    assert retried.status_code == 200 and retried.json()["status"] == "Sent", (
+        retried.text
+    )
+    claims = client.get("/api/v1/claims", headers=crew["claims"]).json()["items"]
+    assert len(claims) == 1 and claims[0]["report_id"] == report_id
+    assert claims[0]["assigned_to"] == crew["owner"]
+    # Sending another email continues the same case and keeps its assigned owner.
+    again = client.post(
+        "/api/v1/reports/deliver",
+        headers=crew["admin"],
+        json={"recipient_email": "another@example.com", "report": {"id": report_id}},
+    )
+    assert again.status_code == 200 and again.json()["status"] == "Sent"
+    assert client.get("/api/v1/claims", headers=crew["claims"]).json()["total"] == 1

@@ -48,7 +48,7 @@ export class ClaimsComponent {
   readonly notice = signal('');
   readonly handoverOpen = signal(false);
   readonly sendOpen = signal(false);
-  readonly canWrite = computed(() => this.auth.hasRole('administrator', 'claims_administrator'));
+  readonly canWrite = computed(() => this.auth.hasRole('claims_administrator'));
   readonly canHandover = computed(() => this.auth.hasRole('administrator', 'report_capturer'));
   readonly credits = computed(() =>
     this.items().filter(
