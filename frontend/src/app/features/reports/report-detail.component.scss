@@ -1,1 +1,57 @@
 @use './operations.component.scss';
+
+
+.direct-recipient {
+  display: grid;
+  gap: 6px;
+  min-width: 250px;
+}
+
+.direct-recipient > input,
+.detail-cc-row input {
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #cdd2d7;
+  border-radius: 6px;
+  background: #fff;
+  color: #25303c;
+}
+
+.detail-cc-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.detail-cc-row .cc-add {
+  white-space: nowrap;
+}
+
+.detail-cc-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.detail-cc-list > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  border: 1px solid #d7dce4;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 11px;
+}
+
+.detail-cc-list button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.detail-email-error {
+  color: #c7192c;
+}
