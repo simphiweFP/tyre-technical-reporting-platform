@@ -240,7 +240,7 @@ async def process_microsoft_bounces(settings: Settings) -> tuple[int, int]:
         response = await client.get(
             (
                 "https://graph.microsoft.com/v1.0/users/"
-                f"{quote(mailbox)}/mailFolders/inbox/messages"
+                f"{quote(mailbox, safe='')}/mailFolders/inbox/messages"
             ),
             headers=headers,
             params={
@@ -276,7 +276,7 @@ async def process_microsoft_bounces(settings: Settings) -> tuple[int, int]:
                 mime_response = await client.get(
                     (
                         "https://graph.microsoft.com/v1.0/users/"
-                        f"{quote(mailbox)}/messages/{quote(message_id)}/$value"
+                        f"{quote(mailbox, safe='')}/messages/{quote(message_id, safe='')}/$value"
                     ),
                     headers=headers,
                 )
@@ -287,14 +287,15 @@ async def process_microsoft_bounces(settings: Settings) -> tuple[int, int]:
                     if attempt and _mark_delivery_failed(attempt.id, notice):
                         processed += 1
 
-                await client.patch(
+                mark_read_response = await client.patch(
                     (
                         "https://graph.microsoft.com/v1.0/users/"
-                        f"{quote(mailbox)}/messages/{quote(message_id)}"
+                        f"{quote(mailbox, safe='')}/messages/{quote(message_id, safe='')}"
                     ),
                     headers={**headers, "Content-Type": "application/json"},
                     json={"isRead": True},
                 )
+                mark_read_response.raise_for_status()
             except Exception:
                 errors += 1
 
