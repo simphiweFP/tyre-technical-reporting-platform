@@ -4,7 +4,7 @@ from backend.app.modules.administration.infrastructure import (
 )
 from backend.app.modules.auditing.infrastructure import AuditEvent
 from backend.app.modules.branches.infrastructure import Branch
-from backend.app.modules.delivery.infrastructure import DeliveryAttempt, Recipient
+from backend.app.modules.delivery.infrastructure import DeliveryAttempt
 from backend.app.modules.identity.infrastructure import (
     PasswordResetToken,
     RefreshSession,
@@ -22,7 +22,6 @@ __all__ = [
     "Branch",
     "DeliveryAttempt",
     "PasswordResetToken",
-    "Recipient",
     "RefreshSession",
     "ReportImage",
     "TechnicalReportRecord",
