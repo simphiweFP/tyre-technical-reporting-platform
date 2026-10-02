@@ -2,7 +2,7 @@ name: Quality
 
 on:
   push:
-    branches: [main, tyre-technical-reporting]
+    branches: [main]
   pull_request:
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -e ".[dev]"
-      - run: python -m ruff check backend || true
+      - run: python -m ruff check backend
       - run: python -m pytest --cov=backend.app --cov-report=term-missing
 
   frontend:
