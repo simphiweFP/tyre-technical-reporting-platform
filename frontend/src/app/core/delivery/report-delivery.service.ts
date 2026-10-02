@@ -48,12 +48,16 @@ export class ReportDeliveryService {
     );
   }
 
-  deliver(report: TechnicalReport, recipientEmail: string): Promise<DeliveryAttempt> {
+  deliver(
+    report: TechnicalReport,
+    recipientEmail: string,
+    cc: string[] = [],
+  ): Promise<DeliveryAttempt> {
     return firstValueFrom(
       this.http.post<DeliveryAttempt>(`${environment.apiUrl}/reports/deliver`, {
         recipient_email: recipientEmail,
         report,
-        cc: [],
+        cc,
       }),
     );
   }
