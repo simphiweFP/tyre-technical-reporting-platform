@@ -1,0 +1,26 @@
+[
+  {
+    "CardCode": "MOCK-SUP001",
+    "CardName": "Anchee",
+    "CardType": "S",
+    "VATNumber": null
+  },
+  {
+    "CardCode": "MOCK-SUP002",
+    "CardName": "Aeolus Tyre Co",
+    "CardType": "S",
+    "VATNumber": null
+  },
+  {
+    "CardCode": "MOCK-SUP003",
+    "CardName": "Prometeon Group",
+    "CardType": "S",
+    "VATNumber": null
+  },
+  {
+    "CardCode": "MOCK-SUP004",
+    "CardName": "Techhero",
+    "CardType": "S",
+    "VATNumber": null
+  }
+]
