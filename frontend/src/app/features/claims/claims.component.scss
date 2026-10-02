@@ -567,7 +567,7 @@ fieldset:disabled select {
   }
   th {
     height: 39px;
-    padding: 0 8px;
+    padding: 0 10px;
     border-right: 1px solid #c5d9ed;
     background: #cce6ff;
     color: #0a2148;
@@ -576,7 +576,10 @@ fieldset:disabled select {
   }
   td {
     height: 53px;
-    padding: 0 8px;
+    padding: 12px 10px;
+    box-sizing: border-box;
+    vertical-align: middle;
+    line-height: 1.5;
     border-right: 1px solid #dce5ee;
     border-bottom: 1px solid #dce5ee;
   }
@@ -663,7 +666,7 @@ fieldset:disabled select {
   }
   .table-scroll td {
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
   .claim-editor {
     max-width: 1200px;
