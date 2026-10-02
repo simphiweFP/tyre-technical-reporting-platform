@@ -1,5 +1,5 @@
-<section id="delivery-centre" class="operation-page workspace-view">
-  <header class="operation-title workspace-heading">
+<section class="operation-page">
+  <header class="operation-title">
     <div>
       <h1>Delivery Centre</h1>
       <p>Track delivery status for technical claims</p>
@@ -54,7 +54,7 @@
             <tbody>
               @for (row of items(); track row.id) {
                 <tr>
-                  <td>{{ row.created_at | date: 'dd MMM yyyy, HH:mm' }}</td>
+                  <td>{{ row.created_at }}</td>
                   <td class="reference">{{ row.claim_reference }}</td>
                   <td>{{ row.document_type.replaceAll('_', ' ') }}</td>
                   <td>{{ row.recipient_email }}</td>

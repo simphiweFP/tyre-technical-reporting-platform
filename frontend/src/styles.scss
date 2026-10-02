@@ -1,4 +1,3 @@
-@use './app/shared/styles/workspace-view' as workspace;
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
 :root {
   --red: #d71920;
@@ -197,6 +196,7 @@ h3 {
   }
 }
 
+
 /* SweetAlert2 - Royal Tyres */
 .royal-swal {
   border-radius: 16px !important;
@@ -242,6 +242,7 @@ h3 {
   }
 }
 
+
 /* Auto-dismiss SweetAlert success state: never show action buttons. */
 .royal-swal-auto .swal2-actions,
 .royal-swal-auto .swal2-confirm,
@@ -249,5 +250,3 @@ h3 {
 .royal-swal-auto .swal2-deny {
   display: none !important;
 }
-
-@include workspace.layout;

@@ -447,3 +447,182 @@ fieldset:disabled select {
     padding-top: 8vh;
   }
 }
+
+/* Match the established Technical Claims workspace; scoped to this feature. */
+#claims-management {
+  max-width: none;
+  margin: 0;
+  padding: 18px 22px;
+  color: #0a2148;
+  font-size: 12px;
+
+  .page-title {
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .page-title h1 {
+    margin: 0 0 3px;
+    font-size: 23px;
+  }
+  .page-title p {
+    color: #5c6e88;
+    font-size: 12px;
+  }
+  .page-title small {
+    color: #5c6e88;
+    font-size: 10px;
+  }
+  button {
+    min-height: 34px;
+    padding: 0 13px;
+    border-color: #cbd7e5;
+    border-radius: 4px;
+    color: #173158;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .primary {
+    border-color: #ed001b;
+    background: #ed001b;
+    color: #fff;
+  }
+  .page-title > .primary {
+    height: 42px;
+    padding: 0 27px;
+    border-radius: 5px;
+    font-size: 12px;
+  }
+  .filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 13px;
+    padding: 9px;
+    border: 1px solid #d0dbe8;
+    border-radius: 6px;
+    background: #fff;
+    margin-bottom: 14px;
+  }
+  .filters label:first-child {
+    grid-column: 1 / -1;
+  }
+  .filters label {
+    min-width: 0;
+  }
+  label {
+    gap: 5px;
+    font-size: 9px;
+    font-weight: 800;
+  }
+  input,
+  select,
+  textarea,
+  output {
+    min-height: 34px;
+    padding: 8px 10px;
+    border-color: #cbd7e5;
+    border-radius: 4px;
+    color: #173158;
+    font-size: 10px;
+  }
+  .filters button {
+    background: #f7f9fc;
+  }
+  .tabs {
+    gap: 9px;
+    margin: 14px 0;
+  }
+  .tabs button {
+    min-height: 34px;
+    padding: 8px 13px;
+    border: 0;
+    border-radius: 5px;
+    color: #4e6382;
+    background: #f0f4fa;
+  }
+  .tabs button.active {
+    color: #fff;
+    background: #122e5a;
+  }
+  .card {
+    border-color: #d0dbe8;
+    border-radius: 6px;
+    box-shadow: none;
+    margin: 14px 0;
+  }
+  .card > header {
+    padding: 14px;
+  }
+  h2 {
+    font-size: 15px;
+  }
+  h3 {
+    font-size: 12px;
+  }
+  .card header p {
+    color: #5c6e88;
+    font-size: 10px;
+  }
+  table {
+    font-size: 9px;
+  }
+  th {
+    height: 39px;
+    padding: 0 8px;
+    border-right: 1px solid #c5d9ed;
+    background: #cce6ff;
+    color: #0a2148;
+    font-size: 9px;
+    font-weight: 800;
+  }
+  td {
+    height: 53px;
+    padding: 0 8px;
+    border-right: 1px solid #dce5ee;
+    border-bottom: 1px solid #dce5ee;
+  }
+  .reference {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    color: #006fd7;
+    background: transparent;
+    font-size: 9px;
+  }
+  .decision-state {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 9px;
+    border-radius: 12px;
+    color: #526581;
+    background: #edf1f6;
+    font-size: 9px;
+  }
+  .decision-state.accepted {
+    color: #078a4e;
+    background: #e6f8ed;
+  }
+  .decision-state.rejected {
+    color: #c9152e;
+    background: #ffeaed;
+  }
+  .card footer {
+    min-height: 65px;
+    padding: 12px;
+    color: #5c6d87;
+    font-size: 9px;
+  }
+  @media (max-width: 800px) {
+    padding: 16px 12px;
+    .page-title {
+      align-items: flex-start;
+    }
+    .filters {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 480px) {
+    .filters {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}

@@ -1,5 +1,5 @@
-<section id="technical-claims" class="claims-page workspace-view">
-  <header class="claims-title workspace-heading">
+<section class="claims-page">
+  <header class="claims-title">
     <div>
       <h1>Technical Claims</h1>
       <p>Manage, view and send tyre technical claims</p>
@@ -11,14 +11,11 @@
 
   <section class="filter-card">
     <label class="wide-search"
-      ><span>Search</span>
-      <div class="search-control">
-        ⌕<input
-          [ngModel]="query()"
-          (ngModelChange)="searchChanged($event)"
-          placeholder="Search by claim ref, customer, DOT or serial..."
-        /></div
-    ></label>
+      >⌕<input
+        [ngModel]="query()"
+        (ngModelChange)="searchChanged($event)"
+        placeholder="Search by claim ref, customer, DOT or serial..."
+    /></label>
     <div class="filter-grid">
       <label
         >Branch<select [(ngModel)]="branch" (change)="load(true)">
@@ -132,11 +129,7 @@
           } @empty {
             <tr>
               <td colspan="9">
-                {{
-                  archived()
-                    ? 'No archived claims match these filters.'
-                    : 'No claims match these filters.'
-                }}
+                {{ archived() ? 'No archived claims match these filters.' : 'No claims match these filters.' }}
               </td>
             </tr>
           }
