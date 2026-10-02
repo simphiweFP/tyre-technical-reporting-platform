@@ -1,9 +1,9 @@
 import smtplib
 from datetime import UTC, datetime
-from html import escape
-from pathlib import Path
 from email.message import EmailMessage as SmtpMessage
 from email.utils import make_msgid
+from html import escape
+from pathlib import Path
 from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
@@ -15,111 +15,137 @@ from backend.app.modules.delivery.domain import EmailMessage
 
 
 def _royal_tyres_signature_html(body: str) -> tuple[str, dict[str, Path]]:
-    """Build the standard Royal Tyres email signature used by company mail."""
+    """Build the Royal Tyres business-standard email signature."""
     assets_dir = Path(__file__).resolve().parents[3] / "assets" / "email"
 
     logo = assets_dir / "royal-tyres-logo.png"
     aeo = assets_dir / "aeo.png"
     rmi = assets_dir / "rmi.png"
-    social = assets_dir / "social-media.png"
+    facebook = assets_dir / "facebook.png"
+    instagram = assets_dir / "instagram.png"
+    youtube = assets_dir / "youtube.png"
 
     inline_images: dict[str, Path] = {}
-    if logo.exists():
-        inline_images["royal-tyres-logo"] = logo
-    if aeo.exists():
-        inline_images["aeo-logo"] = aeo
-    if rmi.exists():
-        inline_images["rmi-logo"] = rmi
-    if social.exists():
-        inline_images["social-media"] = social
+    for cid, path in (
+        ("royal-tyres-logo", logo),
+        ("aeo-logo", aeo),
+        ("rmi-logo", rmi),
+        ("facebook-logo", facebook),
+        ("instagram-logo", instagram),
+        ("youtube-logo", youtube),
+    ):
+        if path.exists():
+            inline_images[cid] = path
 
     safe_body = escape(body).replace("\n", "<br>")
 
+    logo_html = (
+        '<img src="cid:royal-tyres-logo" alt="Royal Tyres" width="287" '
+        'style="display:block;border:0;width:287px;max-width:100%;height:auto;">'
+        if logo.exists()
+        else ""
+    )
     aeo_html = (
-        '<img src="cid:aeo-logo" alt="AEO" width="68" '
-        'style="display:block;border:0;width:68px;height:auto;">'
+        '<img src="cid:aeo-logo" alt="AEO" width="50" height="50" '
+        'style="display:block;border:0;width:50px;height:50px;">'
         if aeo.exists()
-        else '<strong style="font-size:14px;color:#777777;">AEO</strong>'
+        else ""
     )
     rmi_html = (
-        '<img src="cid:rmi-logo" alt="RMI" width="82" '
-        'style="display:block;border:0;width:82px;height:auto;">'
+        '<img src="cid:rmi-logo" alt="RMI" width="55" height="46" '
+        'style="display:block;border:0;width:55px;height:46px;">'
         if rmi.exists()
-        else '<strong style="font-size:14px;color:#30369a;">RMI</strong>'
+        else ""
     )
 
-    logo_html = (
-        '<img src="cid:royal-tyres-logo" alt="Royal Tyres" width="291" '
-        'style="display:block;border:0;width:291px;max-width:100%;height:auto;">'
-        if logo.exists()
-        else '<strong style="font-size:34px;color:#30369a;">ROYAL TYRES</strong>'
+    facebook_html = (
+        '<a href="https://www.facebook.com/royaltyresza" style="text-decoration:none;">'
+        '<img src="cid:facebook-logo" alt="Facebook" width="28" height="28" '
+        'style="display:block;border:0;width:28px;height:28px;"></a>'
+        if facebook.exists()
+        else ""
     )
-    aeo_html = (
-        '<img src="cid:aeo-logo" alt="AEO" width="61" '
-        'style="display:block;border:0;width:61px;height:auto;">'
-        if aeo.exists()
-        else '<strong style="font-size:14px;color:#777777;">AEO</strong>'
+    instagram_html = (
+        '<a href="https://www.instagram.com/royaltyres1159/" style="text-decoration:none;">'
+        '<img src="cid:instagram-logo" alt="Instagram" width="28" height="28" '
+        'style="display:block;border:0;width:28px;height:28px;"></a>'
+        if instagram.exists()
+        else ""
     )
-    rmi_html = (
-        '<img src="cid:rmi-logo" alt="RMI" width="64" '
-        'style="display:block;border:0;width:64px;height:auto;">'
-        if rmi.exists()
-        else '<strong style="font-size:14px;color:#30369a;">RMI</strong>'
-    )
-    social_html = (
-        '<img src="cid:social-media" alt="Follow us on Facebook, Instagram and YouTube" width="245" '
-        'style="display:block;border:0;width:245px;max-width:100%;height:auto;">'
-        if social.exists()
-        else '<strong style="font-size:14px;">Follow us</strong>'
+    youtube_html = (
+        '<a href="https://www.youtube.com/user/RoyalVulcanizing" '
+        'style="text-decoration:none;">'
+        '<img src="cid:youtube-logo" alt="YouTube" width="28" height="28" '
+        'style="display:block;border:0;width:28px;height:28px;"></a>'
+        if youtube.exists()
+        else ""
     )
 
     html = f"""<!doctype html>
 <html>
 <body style="margin:0;padding:0;background:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#111111;">
-  <div style="font-size:16px;line-height:1.35;">
+  <div style="font-size:14px;line-height:1.35;">
     <div>{safe_body}</div>
 
-    <div style="margin-top:26px;">Kind Regards,</div>
+    <div style="margin-top:18px;">Kind Regards,</div>
 
     <table role="presentation" cellpadding="0" cellspacing="0" border="0"
-           style="width:515px;max-width:100%;margin-top:24px;border-collapse:collapse;">
+           style="margin-top:8px;border-collapse:collapse;">
       <tr>
-        <td align="left" style="padding:0 0 14px 0;">
+        <td style="padding:0 0 8px 0;">
           {logo_html}
         </td>
       </tr>
 
       <tr>
-        <td style="padding:0;font-size:14px;line-height:19px;">
-          <div style="color:#ed1c24;font-weight:700;">
-            Tel: +27 (031) 303 2935 | Ext: 2609
-          </div>
-          <div>
-            <a href="https://www.google.com/maps/search/?api=1&amp;query=50+Aberdare+Drive+Phoenix+Industrial+Park+Phoenix"
-               style="color:#0563c1;text-decoration:underline;">
-              50 Aberdare Drive, Phoenix Industrial Park, Phoenix
-            </a>
-            <span style="color:#ed1c24;"> | </span>
-            <a href="https://www.royaltyres.co.za"
-               style="color:#0563c1;text-decoration:underline;font-weight:700;">
-              www.royaltyres.co.za
-            </a>
-          </div>
+        <td style="padding:0 0 4px 0;font-size:12px;line-height:16px;color:#111111;">
+          <span style="color:#ed1c24;font-weight:700;">Fax:</span>
+          <span> 031 312 0532 </span>
+          <span style="color:#ed1c24;font-weight:700;">| Tel:</span>
+          <span> 031 303 2933 </span>
+          <span style="color:#ed1c24;font-weight:700;">|</span>
         </td>
       </tr>
 
       <tr>
-        <td style="padding:14px 0 0 38px;">
-          {social_html}
+        <td style="padding:0 0 8px 0;font-size:12px;line-height:16px;">
+          <a href="https://www.google.com/maps/search/?api=1&amp;query=1159+Umgeni+Road+Durban+4001"
+             style="color:#0563c1;text-decoration:underline;">
+            1159 Umgeni Road, Durban, 4001
+          </a>
+          <span style="color:#ed1c24;font-weight:700;"> | </span>
+          <a href="https://www.royaltyres.co.za"
+             style="color:#0563c1;text-decoration:underline;font-weight:700;">
+            www.royaltyres.co.za
+          </a>
         </td>
       </tr>
 
       <tr>
-        <td style="padding:10px 0 0 4px;">
+        <td style="padding:0 0 3px 0;font-size:12px;font-weight:700;color:#111111;">
+          Follow us
+        </td>
+      </tr>
+
+      <tr>
+        <td style="padding:0 0 7px 0;">
           <table role="presentation" cellpadding="0" cellspacing="0" border="0"
                  style="border-collapse:collapse;">
             <tr>
-              <td style="padding-right:58px;vertical-align:middle;">{aeo_html}</td>
+              <td style="padding-right:4px;">{facebook_html}</td>
+              <td style="padding-right:4px;">{instagram_html}</td>
+              <td>{youtube_html}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <tr>
+        <td style="padding:0 0 10px 0;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0"
+                 style="border-collapse:collapse;">
+            <tr>
+              <td style="padding-right:8px;vertical-align:middle;">{aeo_html}</td>
               <td style="vertical-align:middle;">{rmi_html}</td>
             </tr>
           </table>
@@ -127,24 +153,24 @@ def _royal_tyres_signature_html(body: str) -> tuple[str, dict[str, Path]]:
       </tr>
     </table>
 
-    <div style="margin-top:14px;max-width:1360px;font-size:12px;line-height:1.2;color:#111111;">
+    <div style="margin-top:4px;max-width:1360px;font-size:10px;line-height:1.25;color:#111111;">
       <strong>Disclaimer:</strong><br>
-      <strong>
-        This message contains confidential information and is intended only for the recipients
-        that the sender has addressed this mail to. If you are not the intended recipient then
-        you should not disseminate, distribute or copy this e-mail. Please notify
-        <a href="mailto:info@royaltyres.co.za" style="color:#0563c1;text-decoration:underline;">info@royaltyres.co.za</a>
-        immediately by e-mail if you have received this e-mail by mistake and delete this e-mail
-        from your system. E-mail transmission cannot be guaranteed to be secure or error-free as
-        information could be intercepted, corrupted, lost, destroyed, arrive late or incomplete,
-        or contain viruses. Royal Tyres therefore does not accept liability for any errors or
-        omissions in the contents of this message, which arise as a result of e-mail transmission.
-      </strong>
+      This message contains confidential information and is intended only for the recipients
+      that the sender has addressed this mail to. If you are not the intended recipient then
+      you should not disseminate, distribute or copy this e-mail. Please notify
+      <a href="mailto:info@royaltyres.co.za"
+         style="color:#0563c1;text-decoration:underline;">info@royaltyres.co.za</a>
+      immediately by e-mail if you have received this e-mail by mistake and delete this e-mail
+      from your system. E-mail transmission cannot be guaranteed to be secure or error-free as
+      information could be intercepted, corrupted, lost, destroyed, arrive late or incomplete,
+      or contain viruses. Royal Tyres therefore does not accept liability for any errors or
+      omissions in the contents of this message, which arise as a result of e-mail transmission.
     </div>
   </div>
 </body>
 </html>"""
     return html, inline_images
+
 
 def _attach_inline_image(html_part, cid: str, path: Path) -> None:
     subtype = path.suffix.lower().lstrip(".") or "png"
@@ -215,17 +241,21 @@ class SmtpEmailGateway:
             f"{message.body}\n\n"
             "Kind Regards,\n\n"
             "Royal Tyres\n"
-            "Tel: +27 (031) 303 2935 | Ext: 2609\n"
-            "50 Aberdare Drive, Phoenix Industrial Park, Phoenix | www.royaltyres.co.za\n"
-            "Facebook: https://www.facebook.com/RoyalTyresGroup\n"
-            "Instagram: https://www.instagram.com/royaltyresza/\n"
-            "YouTube: https://www.youtube.com/@RoyalVulcanizing\n\n"
+            "Fax: 031 312 0532 | Tel: 031 303 2933 |\n"
+            "1159 Umgeni Road, Durban, 4001 | www.royaltyres.co.za\n"
+            "Facebook: https://www.facebook.com/royaltyresza\n"
+            "Instagram: https://www.instagram.com/royaltyres1159/\n"
+            "YouTube: https://www.youtube.com/user/RoyalVulcanizing\n\n"
             "Disclaimer:\n"
             "This message contains confidential information and is intended only for the "
             "recipients that the sender has addressed this mail to. If you are not the intended "
             "recipient then you should not disseminate, distribute or copy this e-mail. Please "
             "notify info@royaltyres.co.za immediately by e-mail if you have received this e-mail "
-            "by mistake and delete this e-mail from your system."
+            "by mistake and delete this e-mail from your system. E-mail transmission cannot be "
+            "guaranteed to be secure or error-free as information could be intercepted, "
+            "corrupted, lost, destroyed, arrive late or incomplete, or contain viruses. Royal "
+            "Tyres therefore does not accept liability for any errors or omissions in the "
+            "contents of this message, which arise as a result of e-mail transmission."
         )
 
         html_body, inline_images = _royal_tyres_signature_html(message.body)
