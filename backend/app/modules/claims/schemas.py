@@ -50,12 +50,6 @@ class ClaimData(BaseModel):
             and self.remaining_tread_depth > self.original_tread_depth
         ):
             raise ValueError("Remaining tread depth cannot exceed original tread depth")
-        if bool(self.credit_note_reference.strip()) != bool(self.customer_credit_date):
-            raise ValueError("Enter both credit note reference and credit date")
-        if bool(self.supplier_offset_invoice.strip()) != bool(
-            self.supplier_offset_date
-        ):
-            raise ValueError("Enter both supplier offset invoice and offset date")
         for start, end, label in [
             (self.claim_date, self.supplier_submitted_date, "Supplier submission"),
             (
@@ -81,6 +75,23 @@ class ClaimUpdate(BaseModel):
     data: ClaimData
     workflow_status: Literal["Received", "In progress", "Closed"] = "In progress"
     expected_updated_at: datetime
+
+    @model_validator(mode="after")
+    def complete_records_before_closing(self):
+        if self.workflow_status == "Closed":
+            if bool(self.data.credit_note_reference.strip()) != bool(
+                self.data.customer_credit_date
+            ):
+                raise ValueError(
+                    "Enter both credit note reference and credit date before closing"
+                )
+            if bool(self.data.supplier_offset_invoice.strip()) != bool(
+                self.data.supplier_offset_date
+            ):
+                raise ValueError(
+                    "Enter both supplier offset invoice and offset date before closing"
+                )
+        return self
 
 
 class InstructionRequest(BaseModel):

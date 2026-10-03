@@ -120,11 +120,13 @@ def case_view(db: Session, case: ClaimCase) -> dict:
         "workflow_status": case.workflow_status,
         "credit_outstanding": credit_needed
         and not (
-            data.get("credit_note_reference") and data.get("customer_credit_date")
+            (data.get("credit_note_reference") or "").strip()
+            and data.get("customer_credit_date")
         ),
         "supplier_offset_outstanding": offset_needed
         and not (
-            data.get("supplier_offset_invoice") and data.get("supplier_offset_date")
+            (data.get("supplier_offset_invoice") or "").strip()
+            and data.get("supplier_offset_date")
         ),
         "instructions": [
             {
@@ -207,11 +209,17 @@ def metrics(views: list[dict]) -> dict:
                 ("supplier_submitted_date", "supplier_feedback_date", response_days),
                 ("claim_date", "customer_credit_date", resolution_days),
             ]:
+                if b == "customer_credit_date" and not (
+                    d.get("credit_note_reference") or ""
+                ).strip():
+                    continue
                 if d.get(a) and d.get(b):
                     days = (date.fromisoformat(d[b]) - date.fromisoformat(d[a])).days
                     if days >= 0:
                         target.append(days)
-            if d.get("supplier_offset_invoice") and d.get("supplier_offset_date"):
+            if (d.get("supplier_offset_invoice") or "").strip() and d.get(
+                "supplier_offset_date"
+            ):
                 if d.get("supplier_recovered_amount") is None:
                     missing_amounts += 1
                 else:

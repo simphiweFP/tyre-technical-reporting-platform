@@ -563,7 +563,11 @@
                     name="credit_date"
                     type="date"
                     [(ngModel)]="f.customer_credit_date"
-                /></label>
+                  /><small
+                    >You can save progress now. Complete the reference and date before
+                    closing.</small
+                  ></label
+                >
               </div>
             </fieldset>
           </details>
@@ -592,7 +596,10 @@
                   >Supplier offset date<input
                     name="offset_date"
                     type="date"
-                    [(ngModel)]="f.supplier_offset_date" /></label
+                    [(ngModel)]="f.supplier_offset_date"
+                  /><small
+                    >You can save progress now. Complete the invoice and date before closing.</small
+                  ></label
                 ><label
                   >Supplier recovered amount (ZAR)<input
                     name="recovered_amount"

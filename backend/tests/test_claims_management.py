@@ -261,7 +261,6 @@ def test_validation_stale_updates_and_missing_dates(client, claims_setup):
         {"supplier": "Typed supplier", "original_tread_depth": 0},
         {"supplier": "Typed supplier", "customer_credit_percentage": 101},
         {"supplier": "Typed supplier", "supplier_status": "Rejected"},
-        {"supplier": "Typed supplier", "credit_note_reference": "CN1"},
         {"supplier": "Typed supplier", "original_tread_depth": 40},
     ]:
         result = client.put(
@@ -290,6 +289,73 @@ def test_validation_stale_updates_and_missing_dates(client, claims_setup):
         },
     )
     assert closed.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "partial",
+    [
+        {"supplier_offset_invoice": "INV1"},
+        {"supplier_offset_date": "2026-09-10"},
+        {"credit_note_reference": "CN1"},
+        {"customer_credit_date": "2026-09-10"},
+        {"supplier_offset_invoice": "   ", "supplier_offset_date": "2026-09-10"},
+    ],
+)
+def test_partial_tracking_saves_but_remains_outstanding(client, claims_setup, partial):
+    crew = claims_setup
+    claim = update(
+        client,
+        crew,
+        handover(client, crew),
+        supplier="Typed supplier",
+        claim_date="2026-09-08",
+        supplier_status="Accepted",
+        supplier_feedback_date="2026-09-09",
+        accepted_percentage=50,
+        customer_credit_percentage=50,
+        **partial,
+    )
+    assert claim["credit_outstanding"] and claim["supplier_offset_outstanding"]
+    persisted = client.get(
+        f"/api/v1/claims/{claim['id']}", headers=crew["claims"]
+    ).json()
+    for field, value in partial.items():
+        assert persisted["data"][field] == value
+    metrics = client.get("/api/v1/claims/metrics", headers=crew["claims"]).json()
+    assert metrics["outstanding_supplier_offsets"] == 1
+    assert metrics["credit_notes_not_passed"] == 1
+    assert metrics["scorecard"][0]["average_resolution_days"] is None
+    closed = client.put(
+        f"/api/v1/claims/{claim['id']}",
+        headers=crew["claims"],
+        json={
+            "data": claim["data"],
+            "expected_updated_at": claim["updated_at"],
+            "workflow_status": "Closed",
+        },
+    )
+    assert closed.status_code == 422
+    claim = update(
+        client,
+        crew,
+        claim,
+        credit_note_reference="CN1",
+        customer_credit_date="2026-09-10",
+        supplier_offset_invoice="INV1",
+        supplier_offset_date="2026-09-10",
+    )
+    assert not claim["credit_outstanding"]
+    assert not claim["supplier_offset_outstanding"]
+    closed = client.put(
+        f"/api/v1/claims/{claim['id']}",
+        headers=crew["claims"],
+        json={
+            "data": claim["data"],
+            "expected_updated_at": claim["updated_at"],
+            "workflow_status": "Closed",
+        },
+    )
+    assert closed.status_code == 200
 
 
 def test_rejection_report_failure_is_visible_and_retry_uses_snapshot(
@@ -510,7 +576,7 @@ def test_first_admin_views_but_cannot_run_claim_operations(client, claims_setup)
         claim,
         supplier="Supplier",
         supplier_status="Accepted",
-        supplier_feedback_date="2026-10-02",
+        supplier_feedback_date=claim["data"]["claim_date"],
         accepted_percentage=100,
         customer_credit_percentage=75,
     )
