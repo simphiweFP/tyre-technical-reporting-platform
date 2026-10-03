@@ -173,7 +173,9 @@
               ? 'Download attachments'
               : detail.attachment_name.endsWith('.csv')
                 ? 'Download CSV'
-                : 'View PDF'
+                : detail.attachment_name.endsWith('.xlsx')
+                  ? 'Download Excel'
+                  : 'View PDF'
           }}
         </button>
       </section>

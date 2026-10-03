@@ -55,9 +55,13 @@ export class ClaimsComponent {
   attachmentSelection: Record<string, boolean> = {};
   readonly attachmentOptions = [
     { key: 'technical', label: 'Technical report (PDF)' },
+    { key: 'technical_excel', label: 'Technical report (Excel)' },
     { key: 'tracker', label: 'Claim tracker (PDF)' },
+    { key: 'tracker_excel', label: 'Claim tracker (Excel)' },
     { key: 'credit', label: 'Credit instruction (PDF)' },
+    { key: 'credit_excel', label: 'Credit instruction (Excel)' },
     { key: 'rejection', label: 'Rejection report (PDF)' },
+    { key: 'rejection_excel', label: 'Rejection report (Excel)' },
     { key: 'tracker_csv', label: 'Claim tracker (CSV)' },
   ];
   readonly canWrite = computed(() => this.auth.hasRole('claims_administrator'));
@@ -494,8 +498,9 @@ export class ClaimsComponent {
   attachmentAvailable(key: string): boolean {
     const claim = this.selected();
     if (!claim) return false;
-    if (key === 'credit') return claim.instructions.length > 0;
-    if (key === 'rejection') return claim.data.supplier_status === 'Rejected';
+    if (key === 'credit' || key === 'credit_excel') return claim.instructions.length > 0;
+    if (key === 'rejection' || key === 'rejection_excel')
+      return claim.data.supplier_status === 'Rejected';
     return true;
   }
   prepareSend(kind = 'technical', instruction?: string): void {

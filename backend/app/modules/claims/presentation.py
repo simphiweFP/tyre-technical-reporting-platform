@@ -36,6 +36,7 @@ from backend.app.modules.claims.documents import (
     flat_claim,
     generate_document,
 )
+from backend.app.modules.claims.excel import EXCEL_CONTENT_TYPE, generate_excel
 from backend.app.modules.claims.infrastructure import ClaimCase, CreditInstruction
 from backend.app.modules.claims.schemas import (
     ClaimEmailRequest,
@@ -600,7 +601,7 @@ def receive_instruction(
     return case_view(db, case)
 
 
-def _document(db, case, kind, instruction_id=None):
+def _document_data(db, case, kind, instruction_id=None):
     view = case_view(db, case)
     claim = view["claim_reference"]
     data = flat_claim(view)
@@ -623,9 +624,7 @@ def _document(db, case, kind, instruction_id=None):
                 ).all()
             ],
         }
-        return ReportLabTechnicalReportGenerator().generate(data), document_filename(
-            kind, claim
-        )
+        return data, document_filename(kind, claim)
     if kind not in {"tracker", "credit", "rejection"}:
         raise HTTPException(status_code=404, detail="Unknown document type")
     if kind == "rejection" and case.data["supplier_status"] != "Rejected":
@@ -648,7 +647,16 @@ def _document(db, case, kind, instruction_id=None):
                 status_code=422, detail="Issue a credit instruction first"
             )
         data = instruction.data
-    return generate_document(kind, data), document_filename(kind, claim)
+    return data, document_filename(kind, claim)
+
+
+def _document(db, case, kind, instruction_id=None, excel=False):
+    data, filename = _document_data(db, case, kind, instruction_id)
+    if excel:
+        return generate_excel(kind, data), filename.removesuffix(".pdf") + ".xlsx"
+    if kind == "technical":
+        return ReportLabTechnicalReportGenerator().generate(data), filename
+    return generate_document(kind, data), filename
 
 
 @router.get("/{case_id}/documents/{kind}")
@@ -656,14 +664,15 @@ def download_document(
     case_id: UUID,
     kind: str,
     instruction_id: UUID | None = None,
+    format: str = Query(default="pdf", pattern="^(pdf|xlsx)$"),
     db: Session = Depends(get_db),
     user: User = Depends(read_access),
 ):
     case = check_case(db, case_id, user)
-    pdf, filename = _document(db, case, kind, instruction_id)
+    pdf, filename = _document(db, case, kind, instruction_id, excel=format == "xlsx")
     return StreamingResponse(
         BytesIO(pdf),
-        media_type="application/pdf",
+        media_type=EXCEL_CONTENT_TYPE if format == "xlsx" else "application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
@@ -801,7 +810,9 @@ def email_claim(
             filename = f"Claim_Tracker_{case_view(db, case)['claim_reference']}.csv"
             content_type = "text/csv"
         else:
-            if kind == "credit" and request.instruction_id:
+            excel = kind.endswith("_excel")
+            document_kind = kind.removesuffix("_excel")
+            if document_kind == "credit" and request.instruction_id:
                 latest = db.scalar(
                     select(CreditInstruction)
                     .where(CreditInstruction.case_id == case.id)
@@ -811,8 +822,10 @@ def email_claim(
                     raise HTTPException(
                         status_code=409, detail="Select the latest credit instruction"
                     )
-            content, filename = _document(db, case, kind, request.instruction_id)
-            content_type = "application/pdf"
+            content, filename = _document(
+                db, case, document_kind, request.instruction_id, excel=excel
+            )
+            content_type = EXCEL_CONTENT_TYPE if excel else "application/pdf"
         files.append((content, filename, content_type))
     claim = case_view(db, case)["claim_reference"]
     if len(files) == 1:

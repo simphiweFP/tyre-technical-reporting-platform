@@ -113,5 +113,15 @@ class ReassignRequest(BaseModel):
 
 class ClaimEmailRequest(DocumentSendRequest):
     attachments: list[
-        Literal["technical", "tracker", "credit", "rejection", "tracker_csv"]
-    ] = Field(min_length=1, max_length=5)
+        Literal[
+            "technical",
+            "tracker",
+            "credit",
+            "rejection",
+            "tracker_csv",
+            "technical_excel",
+            "tracker_excel",
+            "credit_excel",
+            "rejection_excel",
+        ]
+    ] = Field(min_length=1, max_length=9)

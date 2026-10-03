@@ -370,7 +370,7 @@ def delivery_pdf(
                 "attachmentContentType", "application/pdf"
             ),
             headers={
-                "Content-Disposition": f'{"attachment" if filename.endswith((".csv", ".zip")) else "inline"}; filename="{filename}"',
+                "Content-Disposition": f'{"attachment" if filename.endswith((".csv", ".zip", ".xlsx")) else "inline"}; filename="{filename}"',
                 "X-Content-SHA256": attempt.sent_pdf_sha256 or "",
             },
         )

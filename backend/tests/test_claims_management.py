@@ -6,6 +6,7 @@ from xml.sax.saxutils import escape
 from zipfile import ZipFile
 
 import pytest
+from openpyxl import load_workbook
 from sqlalchemy import select
 
 from backend.app.core.database import get_db
@@ -683,10 +684,142 @@ def test_claim_email_only_attaches_selected_files_and_one_claim_csv(
     )
 
 
+@pytest.mark.parametrize("kind", ["technical", "tracker", "credit", "rejection"])
+@pytest.mark.parametrize("with_pdf", [False, True])
+def test_claim_email_pdf_and_excel_selection(
+    client, claims_setup, monkeypatch, kind, with_pdf
+):
+    from backend.app.modules.claims.documents import EXTRA_COLUMNS, INSTRUCTION_COLUMNS
+    from backend.app.modules.claims.excel import EXCEL_CONTENT_TYPE
+
+    crew = claims_setup
+    claim = update(
+        client,
+        crew,
+        handover(client, crew),
+        supplier="=Supplier text",
+        claim_date="2026-09-08",
+        supplier_status="Rejected" if kind == "rejection" else "Accepted",
+        supplier_feedback_date="2026-09-09",
+        supplier_feedback_comments="Decision comments",
+        accepted_percentage=0 if kind == "rejection" else 75,
+        customer_credit_percentage=0 if kind == "rejection" else 50,
+        customer_credit_amount=0 if kind == "rejection" else 4500,
+    )
+    captured = []
+    monkeypatch.setattr(
+        delivery_presentation.SmtpEmailGateway,
+        "send",
+        lambda self, message: captured.append(message) or "excel-mail",
+    )
+    sent = client.post(
+        f"/api/v1/claims/{claim['id']}/email",
+        headers=crew["claims"],
+        json={
+            "recipient_email": "accounts@example.com",
+            "attachments": ([kind] if with_pdf else []) + [f"{kind}_excel"],
+        },
+    )
+    assert sent.status_code == 200 and sent.json()["status"] == "Sent", sent.text
+    from backend.app.modules.delivery.domain import EmailAttachment
+
+    files = (
+        captured[0].attachments
+        if with_pdf
+        else (
+            EmailAttachment(
+                captured[0].attachment_name,
+                captured[0].attachment,
+                captured[0].attachment_content_type,
+            ),
+        )
+    )
+    assert len(files) == (2 if with_pdf else 1)
+    excel = next(file for file in files if file.content_type == EXCEL_CONTENT_TYPE)
+    assert excel.filename.endswith("_I000291.xlsx")
+    workbook = load_workbook(BytesIO(excel.content))
+    sheet = workbook.active
+    if kind == "technical":
+        fields = dict(sheet.values)
+        assert fields["Claim reference"] == "I000291"
+        assert fields["Customer name"] == "Morgado Plant Hire"
+    else:
+        columns = INSTRUCTION_COLUMNS if kind == "credit" else TRACKER_COLUMNS
+        headers = [cell.value for cell in sheet[1]]
+        assert headers[: len(columns) + len(EXTRA_COLUMNS)] == [
+            label for label, _ in [*columns, *EXTRA_COLUMNS]
+        ]
+        values = {
+            label: sheet.cell(2, index + 1) for index, label in enumerate(headers)
+        }
+        assert values["Claim Reference"].value == "I000291"
+        assert values["Supplier"].value == "=Supplier text"
+        assert values["Supplier"].data_type == "s"
+        assert values["Customer credit amount (ZAR)"].data_type == "n"
+        assert values["Date"].value.date().isoformat() == "2026-09-08"
+    downloaded = client.get(
+        f"/api/v1/claims/{claim['id']}/documents/{kind}?format=xlsx",
+        headers=crew["claims"],
+    )
+    assert downloaded.status_code == 200
+    assert downloaded.headers["content-type"] == EXCEL_CONTENT_TYPE
+    assert load_workbook(BytesIO(downloaded.content)).active.title == sheet.title
+    saved = client.get(
+        f"/api/v1/deliveries/{sent.json()['id']}/pdf", headers=crew["claims"]
+    )
+    assert saved.status_code == 200
+    if not with_pdf:
+        assert saved.headers["content-type"] == EXCEL_CONTENT_TYPE
+        assert saved.headers["content-disposition"].startswith("attachment;")
+        assert saved.content == excel.content
+    else:
+        with ZipFile(BytesIO(saved.content)) as archive:
+            assert archive.read(excel.filename) == excel.content
+
+
+def test_excel_technical_report_includes_photos_and_comments():
+    import base64
+
+    from PIL import Image
+
+    from backend.app.modules.claims.excel import generate_excel
+
+    image_bytes = BytesIO()
+    Image.new("RGB", (40, 30), "blue").save(image_bytes, format="PNG")
+    workbook = load_workbook(
+        BytesIO(
+            generate_excel(
+                "technical",
+                {
+                    "claimReference": "I000291",
+                    "photos": [
+                        {
+                            "category": "Sidewall",
+                            "comment": "Damage visible",
+                            "previewUrl": "data:image/png;base64,"
+                            + base64.b64encode(image_bytes.getvalue()).decode(),
+                        }
+                    ],
+                },
+            )
+        )
+    )
+    assert workbook["Photos"]["A2"].value == "Sidewall"
+    assert workbook["Photos"]["B2"].value == "Damage visible"
+    assert len(workbook["Photos"]._images) == 1
+
+
 def test_claim_email_rejects_empty_or_unavailable_attachments(client, claims_setup):
     crew = claims_setup
     claim = handover(client, crew)
-    for selections in [[], ["credit"], ["rejection"], ["scorecard"]]:
+    for selections in [
+        [],
+        ["credit"],
+        ["rejection"],
+        ["credit_excel"],
+        ["rejection_excel"],
+        ["scorecard"],
+    ]:
         response = client.post(
             f"/api/v1/claims/{claim['id']}/email",
             headers=crew["claims"],
@@ -714,7 +847,7 @@ def test_claim_email_retry_keeps_selected_attachments(
         headers=crew["claims"],
         json={
             "recipient_email": "accounts@example.com",
-            "attachments": ["tracker", "tracker_csv"],
+            "attachments": ["tracker", "tracker_excel"],
         },
     )
     assert response.status_code == 200 and response.json()["status"] == "Failed", (
@@ -736,7 +869,14 @@ def test_claim_email_retry_keeps_selected_attachments(
 
 @pytest.mark.parametrize(
     "content_type,filename",
-    [("text/csv", "Claims.csv"), ("application/pdf", "Claims.pdf")],
+    [
+        ("text/csv", "Claims.csv"),
+        ("application/pdf", "Claims.pdf"),
+        (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Claims.xlsx",
+        ),
+    ],
 )
 def test_smtp_attachment_uses_correct_mime_type(monkeypatch, content_type, filename):
     from backend.app.core.config import Settings

@@ -98,7 +98,9 @@ export class DeliveryCentreComponent implements OnDestroy {
       const detail = this.selected();
       if (
         detail &&
-        (detail.attachment_name.endsWith('.csv') || detail.attachment_name.endsWith('.zip'))
+        (detail.attachment_name.endsWith('.csv') ||
+          detail.attachment_name.endsWith('.zip') ||
+          detail.attachment_name.endsWith('.xlsx'))
       )
         await this.delivery.downloadAttachment(id, detail.attachment_name);
       else await this.delivery.openDeliveryPdf(id);
