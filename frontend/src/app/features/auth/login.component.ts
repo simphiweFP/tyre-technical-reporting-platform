@@ -21,6 +21,9 @@ export class LoginComponent {
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(8)]],
   });
+  constructor() {
+    void this.auth.ensureInitialized();
+  }
 
   submit(): void {
     if (this.form.invalid) return;
@@ -34,9 +37,10 @@ export class LoginComponent {
       },
       error: (response) => {
         this.loading.set(false);
-        const message = response.status === 0
-          ? 'Cannot reach the API. Check that the backend is running.'
-          : 'Email or password is incorrect.';
+        const message =
+          response.status === 0
+            ? 'Cannot reach the API. Check that the backend is running.'
+            : 'Email or password is incorrect.';
         this.error.set(message);
         void this.alerts.error('Sign-in failed', message);
       },

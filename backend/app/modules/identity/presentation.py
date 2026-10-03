@@ -46,7 +46,15 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 oauth = OAuth()
 
 
+def _local_identity_only():
+    if get_settings().auth_enabled:
+        raise HTTPException(
+            403, "Manage company accounts, passwords and roles in RT-Auth"
+        )
+
+
 def _microsoft_client():
+    _local_identity_only()
     settings = get_settings()
     if not settings.microsoft_client_id or not settings.microsoft_client_secret:
         raise HTTPException(
@@ -68,6 +76,7 @@ def _microsoft_client():
     "/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
 )
 def register(request: RegisterRequest, db: Session = Depends(get_db)):
+    _local_identity_only()
     email = str(request.email).lower()
     if db.scalar(select(User).where(User.email == email)):
         raise HTTPException(
@@ -208,9 +217,7 @@ def branches(
     ),
 ):
     return db.scalars(
-        select(Branch)
-        .where(Branch.deleted_at.is_(None))
-        .order_by(Branch.name)
+        select(Branch).where(Branch.deleted_at.is_(None)).order_by(Branch.name)
     ).all()
 
 
@@ -320,9 +327,7 @@ def users(
     db: Session = Depends(get_db), _: User = Depends(require_roles(Role.ADMINISTRATOR))
 ):
     return db.scalars(
-        select(User)
-        .where(User.deleted_at.is_(None))
-        .order_by(User.full_name)
+        select(User).where(User.deleted_at.is_(None)).order_by(User.full_name)
     ).all()
 
 
@@ -334,6 +339,7 @@ def create_user(
     db: Session = Depends(get_db),
     actor: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
+    _local_identity_only()
     if request.role not in {role.value for role in Role}:
         raise HTTPException(status_code=422, detail="Invalid role")
     email = str(request.email).lower()
@@ -399,6 +405,8 @@ def update_user(
     if not user or user.deleted_at is not None:
         raise HTTPException(status_code=404, detail="User not found")
     changes = request.model_dump(exclude_unset=True)
+    if get_settings().auth_enabled and "role" in changes:
+        _local_identity_only()
     if "role" in changes and changes["role"] not in {role.value for role in Role}:
         raise HTTPException(status_code=422, detail="Invalid role")
     if user.id == actor.id and changes.get("is_active") is False:
@@ -429,6 +437,7 @@ def admin_reset_password(
     db: Session = Depends(get_db),
     actor: User = Depends(require_roles(Role.ADMINISTRATOR)),
 ):
+    _local_identity_only()
     user = db.get(User, user_id)
     if not user or user.deleted_at is not None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -483,6 +492,7 @@ def forgot_password(
     tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    _local_identity_only()
     user = db.scalar(
         select(User).where(
             User.email == str(request.email).lower(), User.is_active.is_(True)
@@ -527,6 +537,7 @@ def forgot_password(
 
 @router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
 def reset_password(request: PasswordResetRequest, db: Session = Depends(get_db)):
+    _local_identity_only()
     reset = db.scalar(
         select(PasswordResetToken).where(
             PasswordResetToken.token_hash == token_digest(request.token),

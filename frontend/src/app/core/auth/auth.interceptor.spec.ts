@@ -62,4 +62,35 @@ describe('authInterceptor', () => {
     expect(retried.request.headers.get('Authorization')).toBe('Bearer renewed');
     retried.flush({ items: [], total: 0 });
   });
+
+  it('uses company session cookies without attaching legacy bearer tokens', () => {
+    auth.companyAuth.set(true);
+    http.get(`${environment.apiUrl}/reports/records`).subscribe();
+    const request = controller.expectOne(`${environment.apiUrl}/reports/records`);
+    expect(request.request.withCredentials).toBe(true);
+    expect(request.request.headers.has('Authorization')).toBe(false);
+    request.flush({ items: [] });
+  });
+
+  it('does not send app credentials to another host', () => {
+    auth.login('admin@royaltyres.co.za', 'Password123!').subscribe();
+    controller.expectOne(`${environment.apiUrl}/auth/login`).flush(tokens('private', 'refresh'));
+    http.get('https://unrelated.example/data').subscribe();
+    const request = controller.expectOne('https://unrelated.example/data');
+    expect(request.request.headers.has('Authorization')).toBe(false);
+    expect(request.request.withCredentials).toBe(false);
+    request.flush({});
+  });
+
+  it('reloads company identity without keeping provider tokens in localStorage', async () => {
+    const initialized = auth.ensureInitialized();
+    controller.expectOne(`${environment.apiUrl}/auth/config`).flush({ provider: 'rt-auth' });
+    await Promise.resolve();
+    controller.expectOne(`${environment.apiUrl}/auth/me`).flush(tokens('', '').user);
+    await initialized;
+    expect(auth.isAuthenticated()).toBe(true);
+    expect(auth.companyAuth()).toBe(true);
+    expect(auth.accessToken()).toBe('');
+    expect(localStorage.getItem('royal-tyres.session')).toBe(null);
+  });
 });

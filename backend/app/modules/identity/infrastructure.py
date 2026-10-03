@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.core.database import Base
@@ -10,6 +10,15 @@ from backend.app.modules.identity.domain import Role
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (
+        Index(
+            "uq_users_rt_auth_subject",
+            "external_subject",
+            unique=True,
+            sqlite_where=text("external_provider = 'rt-auth'"),
+            postgresql_where=text("external_provider = 'rt-auth'"),
+        ),
+    )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
@@ -53,3 +62,21 @@ class PasswordResetToken(Base):
     used_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+
+
+class CompanyLogin(Base):
+    __tablename__ = "company_auth_logins"
+    state_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    verifier: Mapped[str] = mapped_column(String(128))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class CompanySession(Base):
+    __tablename__ = "company_auth_sessions"
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    refresh_ciphertext: Mapped[str] = mapped_column(Text)
+    csrf_hash: Mapped[str] = mapped_column(String(64))
+    claims: Mapped[dict] = mapped_column(JSON)
+    renewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

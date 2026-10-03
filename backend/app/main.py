@@ -18,6 +18,7 @@ from backend.app.modules.administration.presentation import (
 from backend.app.modules.claims.presentation import router as claims_router
 from backend.app.modules.delivery.bounce_monitor import process_microsoft_bounces
 from backend.app.modules.delivery.presentation import router as delivery_router
+from backend.app.modules.identity.company_auth import router as company_auth_router
 from backend.app.modules.identity.presentation import router as auth_router
 from backend.app.modules.reports.customer_lookup import refresh_customer_cache_if_due
 from backend.app.modules.reports.presentation import router as reports_router
@@ -82,6 +83,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(company_auth_router)
 app.include_router(reports_router, prefix="/api/v1")
 app.include_router(delivery_router, prefix="/api/v1")
 app.include_router(administration_router, prefix="/api/v1")

@@ -15,6 +15,18 @@ export class MicrosoftCallbackComponent {
     void this.complete();
   }
   private async complete(): Promise<void> {
+    if (new URLSearchParams(location.search).get('provider') === 'rt-auth') {
+      this.message.set('Confirming your company account.');
+      history.replaceState(null, '', location.pathname);
+      try {
+        await this.auth.ensureInitialized();
+        await this.auth.completeCompany();
+        await this.router.navigate(['/dashboard']);
+      } catch {
+        this.message.set('Company sign-in could not be completed. Return to sign in.');
+      }
+      return;
+    }
     const params = new URLSearchParams(location.hash.slice(1));
     history.replaceState(null, '', location.pathname);
     try {

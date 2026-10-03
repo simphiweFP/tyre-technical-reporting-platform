@@ -18,9 +18,49 @@ export class AuthService {
   private readonly session = signal<SessionState | null>(this.readSession());
   private refreshInFlight: Observable<TokenResponse> | null = null;
   readonly user = computed(() => this.session()?.user ?? null);
-  readonly isAuthenticated = computed(() => !!this.session()?.accessToken);
+  readonly companyAuth = signal(false);
+  readonly authReady = signal(false);
+  private initialization: Promise<void> | null = null;
+  readonly isAuthenticated = computed(() => !!this.session()?.user);
   readonly accessToken = computed(() => this.session()?.accessToken ?? null);
   readonly refreshToken = computed(() => this.session()?.refreshToken ?? null);
+  ensureInitialized(): Promise<void> {
+    if (this.initialization) return this.initialization;
+    this.initialization = (async () => {
+      try {
+        const config = await firstValueFrom(
+          this.http.get<{ provider: string }>(`${environment.apiUrl}/auth/config`),
+        );
+        this.companyAuth.set(config.provider === 'rt-auth');
+        if (this.companyAuth()) {
+          localStorage.removeItem(SESSION_KEY);
+          this.session.set(null);
+          try {
+            await this.completeCompany();
+          } catch {
+            /* No existing company session. */
+          }
+        }
+      } catch {
+        this.session.set(null);
+        this.initialization = null;
+      } finally {
+        this.authReady.set(true);
+      }
+    })();
+    return this.initialization;
+  }
+  companyLoginUrl(): string {
+    return `${environment.apiUrl}/auth/company/login`;
+  }
+  async completeCompany(): Promise<void> {
+    this.companyAuth.set(true);
+    const user = await firstValueFrom(
+      this.http.get<CurrentUser>(`${environment.apiUrl}/auth/me`, { withCredentials: true }),
+    );
+    this.session.set({ accessToken: '', refreshToken: '', user });
+    localStorage.removeItem(SESSION_KEY);
+  }
   login(email: string, password: string): Observable<TokenResponse> {
     return this.http
       .post<TokenResponse>(`${environment.apiUrl}/auth/login`, { email, password })
@@ -78,6 +118,15 @@ export class AuthService {
     return !!role && roles.includes(role);
   }
   logout(): void {
+    if (this.companyAuth()) {
+      this.http
+        .post(`${environment.apiUrl}/auth/company/logout`, {}, { withCredentials: true })
+        .subscribe({
+          next: () => this.expireSession(),
+          error: () => this.expireSession(),
+        });
+      return;
+    }
     const refreshToken = this.session()?.refreshToken;
     if (refreshToken)
       this.http

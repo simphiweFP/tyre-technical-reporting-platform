@@ -12,6 +12,15 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_minutes: int = 15
     refresh_token_days: int = 7
+    auth_enabled: bool = False
+    auth_issuer_url: str = "https://192.168.1.236:8010"
+    auth_client_id: str = "RT-TechnicalClaim"
+    auth_client_secret: str = ""
+    auth_redirect_uri: str = "https://192.168.1.236:8020/api/auth/callback"
+    auth_ca_file: str = ""
+    auth_timeout_seconds: float = 10
+    auth_user_links: dict[str, str] = {}
+    auth_branch_scopes: dict[str, dict[str, str]] = {}
     allowed_origins: str = "http://localhost:4200"
     seed_admin_email: str = "admin@royaltyres.co.za"
     seed_admin_password: str = "ChangeMe123!"
@@ -86,6 +95,29 @@ class Settings(BaseSettings):
                 )
 
     def validate_for_startup(self) -> None:
+        if self.auth_enabled:
+            if not self.auth_client_secret or not self.auth_ca_file:
+                raise RuntimeError(
+                    "RT-Auth requires AUTH_CLIENT_SECRET and AUTH_CA_FILE"
+                )
+            if not all(
+                url.startswith("https://")
+                for url in (
+                    self.auth_issuer_url,
+                    self.auth_redirect_uri,
+                    self.public_app_url,
+                )
+            ):
+                raise RuntimeError("RT-Auth and app URLs must use HTTPS")
+            if (
+                len(self.jwt_secret) < 32
+                or self.jwt_secret == "development-secret-change-before-deployment"
+            ):
+                raise RuntimeError(
+                    "RT-Auth session encryption requires a strong JWT_SECRET"
+                )
+            if not Path(self.auth_ca_file).is_file():
+                raise RuntimeError("AUTH_CA_FILE must point to the trusted root CA")
         if self.environment != "production":
             return
         errors: list[str] = []

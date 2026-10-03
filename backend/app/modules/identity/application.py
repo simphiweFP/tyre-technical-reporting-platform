@@ -19,6 +19,8 @@ class AuthenticationService:
         self.db = db
 
     def login(self, email: str, password: str) -> tuple[User, str, str]:
+        if get_settings().auth_enabled:
+            raise HTTPException(403, "Sign in through company authentication")
         user = self.db.scalar(select(User).where(User.email == email.lower()))
         if (
             not user
@@ -31,6 +33,8 @@ class AuthenticationService:
         return user, *self._issue_tokens(user)
 
     def refresh(self, refresh_token: str) -> tuple[User, str, str]:
+        if get_settings().auth_enabled:
+            raise HTTPException(403, "Use the company session")
         try:
             payload = decode_token(refresh_token)
         except Exception as exc:
