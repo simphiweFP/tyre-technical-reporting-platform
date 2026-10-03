@@ -917,3 +917,48 @@ fieldset:disabled select {
     }
   }
 }
+
+#claims-management {
+  .claim-cc-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    margin-top: 6px;
+    .cc-add {
+      white-space: nowrap;
+    }
+  }
+  .claim-cc-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+    > span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 7px;
+      border: 1px solid #d7dce4;
+      border-radius: 999px;
+      background: #fff;
+      font-size: 11px;
+      overflow-wrap: anywhere;
+    }
+    button {
+      padding: 0 3px;
+      min-height: 24px;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+  }
+  #claim-cc-help {
+    display: block;
+    margin-top: 6px;
+    color: #5c6e88;
+  }
+  #claim-cc-error {
+    display: block;
+    margin: 5px 0 14px;
+  }
+}

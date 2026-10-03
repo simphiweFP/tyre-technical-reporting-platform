@@ -49,6 +49,9 @@ export class ClaimsComponent {
   readonly notice = signal('');
   readonly handoverOpen = signal(false);
   readonly sendOpen = signal(false);
+  readonly ccInput = signal('');
+  readonly ccRecipients = signal<string[]>([]);
+  readonly ccError = signal('');
   attachmentSelection: Record<string, boolean> = {};
   readonly attachmentOptions = [
     { key: 'technical', label: 'Technical report (PDF)' },
@@ -86,7 +89,7 @@ export class ClaimsComponent {
   handover = { report_id: '', assigned_to: '', notes: '' };
   reassignment = '';
   instructionNotes = '';
-  sendForm = { kind: 'tracker', email: '', cc: '', body: '', instruction_id: '' };
+  sendForm = { kind: 'tracker', email: '', body: '', instruction_id: '' };
   importFile: File | null = null;
   importOwner = '';
   private searchTimer?: ReturnType<typeof setTimeout>;
@@ -498,23 +501,59 @@ export class ClaimsComponent {
   prepareSend(kind = 'technical', instruction?: string): void {
     if (!this.selected()) return;
     this.attachmentSelection = { [kind]: true };
+    this.ccInput.set('');
+    this.ccRecipients.set([]);
+    this.ccError.set('');
+    this.error.set('');
     this.sendForm = {
       kind,
       email: kind === 'credit' ? (this.selected()?.owner_email ?? '') : '',
-      cc: '',
       body: '',
       instruction_id: instruction ?? '',
     };
     this.sendOpen.set(true);
+  }
+  addCcRecipient(): void {
+    if (this.busy()) return;
+    const email = this.ccInput().trim().toLowerCase();
+    this.ccError.set('');
+    if (!email) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.ccError.set('Enter a valid email address.');
+      return;
+    }
+    if (email === this.sendForm.email.trim().toLowerCase()) {
+      this.ccError.set('This email is already the main recipient.');
+      return;
+    }
+    if (this.ccRecipients().includes(email)) {
+      this.ccError.set('This CC email has already been added.');
+      return;
+    }
+    if (this.ccRecipients().length >= 5) {
+      this.ccError.set('You can add up to 5 CC email addresses.');
+      return;
+    }
+    this.ccRecipients.update((items) => [...items, email]);
+    this.ccInput.set('');
+  }
+  removeCcRecipient(email: string): void {
+    if (this.busy()) return;
+    this.ccRecipients.update((items) => items.filter((item) => item !== email));
+    this.ccError.set('');
   }
   async send(form: NgForm): Promise<void> {
     if (form.invalid) {
       form.control.markAllAsTouched();
       return;
     }
-    const cc = this.sendForm.cc.split(/[,;\s]+/).filter(Boolean);
-    if (cc.length > 5 || cc.some((e) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))) {
-      this.error.set('Enter up to five valid CC addresses.');
+    if (this.ccInput().trim()) {
+      this.ccError.set('Click + CC to add the address before sending.');
+      return;
+    }
+    const cc = this.ccRecipients();
+    if (cc.includes(this.sendForm.email.trim().toLowerCase())) {
+      this.ccError.set('The main recipient is also in CC. Remove that CC address.');
       return;
     }
     this.busy.set(true);

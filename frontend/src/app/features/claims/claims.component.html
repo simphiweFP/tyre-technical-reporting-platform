@@ -837,14 +837,53 @@
             >
           }
         </fieldset>
-        <label>To<input name="to" type="email" email [(ngModel)]="sendForm.email" required /></label
-        ><label
-          >CC emails<input
-            name="cc"
-            [(ngModel)]="sendForm.cc"
-            placeholder="Separate addresses with commas"
-          /><small>Up to five CC recipients.</small></label
-        ><label
+        <label
+          >To<input name="to" type="email" email [(ngModel)]="sendForm.email" required
+        /></label>
+
+        <label for="claim-cc-email">CC email</label>
+        <div class="claim-cc-row">
+          <input
+            id="claim-cc-email"
+            type="email"
+            autocomplete="email"
+            placeholder="CC email"
+            [value]="ccInput()"
+            [disabled]="busy() || ccRecipients().length >= 5"
+            (input)="ccInput.set($any($event.target).value); ccError.set('')"
+            (keydown.enter)="$event.preventDefault(); addCcRecipient()"
+            [attr.aria-invalid]="ccError() ? true : null"
+            aria-describedby="claim-cc-help claim-cc-error"
+          />
+          <button
+            type="button"
+            class="cc-add"
+            [disabled]="busy() || !ccInput().trim() || ccRecipients().length >= 5"
+            (click)="addCcRecipient()"
+          >
+            + CC
+          </button>
+        </div>
+        <small id="claim-cc-help">{{ ccRecipients().length }} of 5 CC recipients added.</small>
+        @if (ccRecipients().length) {
+          <div class="claim-cc-list">
+            @for (email of ccRecipients(); track email) {
+              <span
+                >{{ email
+                }}<button
+                  type="button"
+                  (click)="removeCcRecipient(email)"
+                  [disabled]="busy()"
+                  [attr.aria-label]="'Remove CC ' + email"
+                >
+                  ×
+                </button></span
+              >
+            }
+          </div>
+        }
+        <small id="claim-cc-error" class="field-error" role="status">{{ ccError() }}</small>
+        <label
           >Email message<textarea
             name="body"
             [(ngModel)]="sendForm.body"
