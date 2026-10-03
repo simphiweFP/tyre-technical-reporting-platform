@@ -57,6 +57,17 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "rt-auth": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.production.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -69,6 +80,13 @@
             },
             "development": {
               "buildTarget": "frontend:build:development"
+            },
+            "rt-auth": {
+              "buildTarget": "frontend:build:rt-auth",
+              "ssl": true,
+              "host": "localhost",
+              "port": 4200,
+              "proxyConfig": "proxy.rt-auth.json"
             }
           },
           "defaultConfiguration": "development"

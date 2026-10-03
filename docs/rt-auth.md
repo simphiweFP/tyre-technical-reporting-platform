@@ -30,6 +30,41 @@ JWT_SECRET=<strong random secret of at least 32 characters>
 
 The API runs migrations on startup; the new migration creates server-side login transactions and company sessions. Existing users, report IDs, claims, ownership and history remain intact. RT-Auth is disabled by default until the deployment config enables it.
 
+## Test locally before deployment
+
+Keep the server callback registered. Add this **additional** redirect URI to the same RT-Auth client through its supported client registration settings:
+
+```text
+https://localhost:4200/api/auth/callback
+```
+
+Use a test database and an assigned test user. In the app's root `.env`, retain the issuer, client ID, client secret, trusted issuer CA and strong JWT secret above, and override:
+
+```dotenv
+AUTH_ENABLED=true
+AUTH_REDIRECT_URI=https://localhost:4200/api/auth/callback
+PUBLIC_APP_URL=https://localhost:4200
+ALLOWED_ORIGINS=https://localhost:4200
+```
+
+Start the API from the repository root in its virtual environment:
+
+```powershell
+python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+In another terminal, from the repository root, start the HTTPS frontend with a certificate covering `localhost` and a matching private key. The browser must trust its issuing CA. These paths are examples; use your actual local certificate paths:
+
+```powershell
+npm run start:rt-auth --prefix frontend -- --ssl-cert C:/certs/localhost.crt --ssl-key C:/certs/localhost.key
+```
+
+Open **https://localhost:4200/login**. This development configuration uses `/api/v1` and proxies all `/api/**` requests, including the callback, to the local API. The browser therefore receives Secure session and CSRF cookies on the same HTTPS origin. The API's connection to RT-Auth still validates `AUTH_CA_FILE`; do not disable TLS checks. The normal HTTP development command remains available for local authentication mode.
+
+Check `https://localhost:4200/api/v1/auth/config` returns `{"provider":"rt-auth"}`. If it returns `local`, check the root `.env` and restart the API. If it fails, the login page shows a retryable settings error. The button must say **Continue with RT-Auth**. Complete the acceptance checks below locally, including sign-in, an authorized write and sign-out. Check existing-account links and branch mappings above if sign-in succeeds but access is denied.
+
+The workspace tests validate the mocked provider flow and local HTTPS proxy routing. A successful sign-in against your real RT-Auth server still needs the registered local callback, trusted certificates, client secret and assigned user on your machine.
+
 ## Roles and branch access
 
 In RT-Auth's admin console select **RT-TechnicalClaim**, then **Manage Roles**. Register these exact codes and assign the appropriate role to each user:

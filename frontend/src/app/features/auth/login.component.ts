@@ -40,7 +40,10 @@ export class LoginComponent {
         const message =
           response.status === 0
             ? 'Cannot reach the API. Check that the backend is running.'
-            : 'Email or password is incorrect.';
+            : response.status === 403
+              ? 'Company sign-in is required. Loading RT-Auth sign-in…'
+              : 'Email or password is incorrect.';
+        if (response.status === 403) void this.auth.retryInitialization();
         this.error.set(message);
         void this.alerts.error('Sign-in failed', message);
       },

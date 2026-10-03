@@ -72,8 +72,16 @@
         <h2>Welcome back</h2>
         <p class="subtext">Sign in to the Royal Tyres technical reporting platform.</p>
 
-        @if (auth.authReady() && auth.companyAuth()) {
-          <a class="button primary" [href]="auth.companyLoginUrl()">Sign in securely</a>
+        @if (auth.authError()) {
+          <div class="login-error">{{ auth.authError() }}</div>
+          <button class="button primary" type="button" (click)="auth.retryInitialization()">
+            Retry sign-in
+          </button>
+        } @else if (!auth.authReady()) {
+          <p class="subtext">Loading sign-in…</p>
+        } @else if (auth.companyAuth()) {
+          <p class="subtext">Use your company account through RT-Auth.</p>
+          <a class="button primary" [href]="auth.companyLoginUrl()">Continue with RT-Auth</a>
         } @else if (auth.authReady()) {
           <a class="button microsoft" [href]="auth.microsoftLoginUrl()">
             <span class="microsoft-mark">M</span>

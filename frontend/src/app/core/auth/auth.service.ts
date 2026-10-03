@@ -20,17 +20,22 @@ export class AuthService {
   readonly user = computed(() => this.session()?.user ?? null);
   readonly companyAuth = signal(false);
   readonly authReady = signal(false);
+  readonly authError = signal('');
   private initialization: Promise<void> | null = null;
   readonly isAuthenticated = computed(() => !!this.session()?.user);
   readonly accessToken = computed(() => this.session()?.accessToken ?? null);
   readonly refreshToken = computed(() => this.session()?.refreshToken ?? null);
   ensureInitialized(): Promise<void> {
     if (this.initialization) return this.initialization;
+    this.authReady.set(false);
+    this.authError.set('');
     this.initialization = (async () => {
       try {
         const config = await firstValueFrom(
           this.http.get<{ provider: string }>(`${environment.apiUrl}/auth/config`),
         );
+        if (!['local', 'rt-auth'].includes(config.provider))
+          throw new Error('Unknown authentication provider');
         this.companyAuth.set(config.provider === 'rt-auth');
         if (this.companyAuth()) {
           localStorage.removeItem(SESSION_KEY);
@@ -41,14 +46,20 @@ export class AuthService {
             /* No existing company session. */
           }
         }
+        this.authReady.set(true);
       } catch {
         this.session.set(null);
         this.initialization = null;
-      } finally {
-        this.authReady.set(true);
+        this.authError.set(
+          'Sign-in settings could not be loaded. Check that the updated API is running, then retry.',
+        );
       }
     })();
     return this.initialization;
+  }
+  retryInitialization(): Promise<void> {
+    this.initialization = null;
+    return this.ensureInitialized();
   }
   companyLoginUrl(): string {
     return `${environment.apiUrl}/auth/company/login`;

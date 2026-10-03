@@ -93,4 +93,24 @@ describe('authInterceptor', () => {
     expect(auth.accessToken()).toBe('');
     expect(localStorage.getItem('royal-tyres.session')).toBe(null);
   });
+
+  it('does not fall back to local sign-in when configuration fails and can retry', async () => {
+    const initialized = auth.ensureInitialized();
+    controller
+      .expectOne(`${environment.apiUrl}/auth/config`)
+      .flush({}, { status: 404, statusText: 'Not Found' });
+    await initialized;
+    expect(auth.authReady()).toBe(false);
+    expect(auth.authError()).toContain('Sign-in settings could not be loaded');
+    const retried = auth.retryInitialization();
+    controller.expectOne(`${environment.apiUrl}/auth/config`).flush({ provider: 'rt-auth' });
+    await Promise.resolve();
+    controller
+      .expectOne(`${environment.apiUrl}/auth/me`)
+      .flush({}, { status: 401, statusText: 'Unauthorized' });
+    await retried;
+    expect(auth.authReady()).toBe(true);
+    expect(auth.companyAuth()).toBe(true);
+    expect(auth.authError()).toBe('');
+  });
 });
