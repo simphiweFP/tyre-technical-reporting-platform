@@ -147,6 +147,24 @@ def validate_identity(token):
         raise HTTPException(401, "Company identity could not be verified") from exc
 
 
+def role_from_auth_claims(role_codes: list[str]) -> Role:
+    """Map RT-Auth role codes to the application's canonical role values."""
+    normalized_roles = {
+        str(role).strip().lower().replace("-", "_").replace(" ", "_")
+        for role in role_codes
+    }
+    role_priority = (
+        Role.ADMINISTRATOR,
+        Role.CLAIMS_ADMINISTRATOR,
+        Role.REPORT_CAPTURER,
+        Role.VIEWER,
+    )
+    return next(
+        (role for role in role_priority if role.value in normalized_roles),
+        Role.PENDING,
+    )
+
+
 def local_profile(db, claims):
     subject, email = claims["sub"], claims["email"].lower()
     user = db.scalar(
@@ -181,19 +199,7 @@ def local_profile(db, claims):
         user.external_provider, user.external_subject = "rt-auth", subject
     if not user.is_active or user.deleted_at:
         raise HTTPException(403, "User account is inactive")
-    user.role = next(
-        (
-            r
-            for r in [
-                Role.ADMINISTRATOR,
-                Role.CLAIMS_ADMINISTRATOR,
-                Role.REPORT_CAPTURER,
-                Role.VIEWER,
-            ]
-            if r.value in claims["roles"]
-        ),
-        Role.PENDING,
-    )
+    user.role = role_from_auth_claims(claims.get("roles", []))
     user.full_name = claims.get("name") or user.full_name
     db.flush()
     return user
@@ -380,19 +386,7 @@ def company_user(request, db):
 
     apply_scope(db, session.claims)
     db.info["company_user_id"] = user.id
-    user.role = next(
-        (
-            r
-            for r in [
-                Role.ADMINISTRATOR,
-                Role.CLAIMS_ADMINISTRATOR,
-                Role.REPORT_CAPTURER,
-                Role.VIEWER,
-            ]
-            if r.value in session.claims["roles"]
-        ),
-        Role.PENDING,
-    )
+    user.role = role_from_auth_claims(session.claims.get("roles", []))
     ids = db.info["company_branch_ids"]
     if user.branch_id not in ids:
         user.branch_id = ids[0] if ids else None
