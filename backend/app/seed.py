@@ -9,6 +9,7 @@ DEFAULT_BRANCHES: dict[str, str] = {
     "PHX": "Phoenix",
     "DBN": "Durban",
     "JHB": "Johannesburg",
+    "CPT": "Cape Town",
 }
 
 
