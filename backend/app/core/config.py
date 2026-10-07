@@ -1,7 +1,16 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+DEFAULT_AUTH_BRANCH_SCOPES: dict[str, list[str]] = {
+    "PHX": ["Phoenix", "PHX"],
+    "DBN": ["Durban", "Umgeni"],
+    "JHB": ["Johannesburg", "JHB", "RTCJHB"],
+    "CPT": ["Cape Town", "CPT"],
+}
 
 
 class Settings(BaseSettings):
@@ -20,7 +29,11 @@ class Settings(BaseSettings):
     auth_ca_file: str = ""
     auth_timeout_seconds: float = 10
     auth_user_links: dict[str, str] = {}
-    auth_branch_scopes: dict[str, dict[str, str]] = {}
+    auth_branch_scopes: dict[str, list[str]] = Field(
+        default_factory=lambda: {
+            code: aliases.copy() for code, aliases in DEFAULT_AUTH_BRANCH_SCOPES.items()
+        }
+    )
     allowed_origins: str = "http://localhost:4200"
     seed_admin_email: str = "admin@royaltyres.co.za"
     seed_admin_password: str = "ChangeMe123!"
