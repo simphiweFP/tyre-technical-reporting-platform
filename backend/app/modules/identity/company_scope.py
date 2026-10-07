@@ -17,25 +17,60 @@ from backend.app.modules.reports.infrastructure import (
 )
 
 
+def _normalize_scope_value(value: str) -> str:
+    """Normalize warehouse/branch labels so RT-Auth display names match reliably."""
+    return " ".join(
+        value.strip().casefold().replace("-", " ").replace("_", " ").split()
+    )
+
+
+def _assigned_warehouses(claims: dict) -> set[str]:
+    """Return normalized warehouses assigned to the user for authorized companies."""
+    assigned: set[str] = set()
+    for company in claims.get("companies", []):
+        for warehouse in claims.get("warehouses", {}).get(company, []):
+            if isinstance(warehouse, str) and warehouse.strip():
+                assigned.add(_normalize_scope_value(warehouse))
+    return assigned
+
+
+def _branch_aliases(branch: Branch) -> tuple[str, ...]:
+    """Use configured aliases, falling back to branch code/name for user-added branches."""
+    configured = get_settings().auth_branch_scopes.get(branch.code.upper(), [])
+    aliases = configured or [branch.code, branch.name]
+    return tuple(
+        normalized
+        for alias in aliases
+        if isinstance(alias, str) and (normalized := _normalize_scope_value(alias))
+    )
+
+
+def _warehouse_matches_branch(warehouse: str, aliases: tuple[str, ...]) -> bool:
+    return any(alias in warehouse for alias in aliases)
+
+
 def apply_scope(db, claims):
     allowed = []
     branch_ids = []
     branches = db.scalars(select(Branch)).all()
     names = Counter(branch.name for branch in branches)
+    warehouses = _assigned_warehouses(claims)
+
     for branch in branches:
         if not branch.is_active or branch.deleted_at:
             continue
-        scope = get_settings().auth_branch_scopes.get(branch.code)
-        if not scope:
-            continue
-        company, warehouse = scope.get("company"), scope.get("warehouse")
-        if company in claims["companies"] and warehouse in claims["warehouses"].get(
-            company, []
+
+        aliases = _branch_aliases(branch)
+        if not aliases or not any(
+            _warehouse_matches_branch(warehouse, aliases) for warehouse in warehouses
         ):
-            allowed.append(branch.code)
-            if names[branch.name] == 1:
-                allowed.append(branch.name)
-            branch_ids.append(branch.id)
+            continue
+
+        allowed.append(branch.code)
+        if names[branch.name] == 1:
+            allowed.append(branch.name)
+        branch_ids.append(branch.id)
+
     db.info["company_branches"] = tuple(allowed)
     db.info["company_branch_ids"] = tuple(branch_ids)
 
@@ -128,8 +163,3 @@ def restrict_writes(db, *_):
             and record.branch_name not in allowed
         ):
             raise HTTPException(403, "This branch is outside your company access")
-        if (
-            isinstance(record, Branch)
-            and record.id not in db.info["company_branch_ids"]
-        ):
-            raise HTTPException(403, "Branch access is managed through RT-Auth")
