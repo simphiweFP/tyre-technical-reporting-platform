@@ -8,9 +8,17 @@ from backend.app.core.config import get_settings
 from backend.app.core.database import Base
 
 config = context.config
-config.set_main_option("sqlalchemy.url", get_settings().database_url)
+
+database_url = get_settings().database_url
+
+config.set_main_option(
+    "sqlalchemy.url",
+    database_url.replace("%", "%%"),
+)
+
 if config.config_file_name:
     fileConfig(config.config_file_name, disable_existing_loggers=False)
+
 target_metadata = Base.metadata
 
 
@@ -20,6 +28,7 @@ def run_migrations_offline():
         target_metadata=target_metadata,
         literal_binds=True,
     )
+
     with context.begin_transaction():
         context.run_migrations()
 
@@ -30,8 +39,13 @@ def run_migrations_online():
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
+
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+        )
+
         with context.begin_transaction():
             context.run_migrations()
 
